@@ -1,4 +1,4 @@
-import { useMediaQuery, Paper } from '@mui/material';
+import { Paper } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import { useTheme } from '@mui/material/styles';
 import LogoImage from './LogoImage';
@@ -6,37 +6,43 @@ import LogoImage from './LogoImage';
 const useStyles = makeStyles()((theme) => ({
   root: {
     display: 'flex',
-    height: '100%',
-  },
-  sidebar: {
-    display: 'flex',
-    justifyContent: 'center',
+    height: '100vh',
+    backgroundImage: 'url(https://pisahprotocol.satelliteforce.net/img/login-background.jpg)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
     alignItems: 'center',
-    background: theme.palette.primary.main,
-    paddingBottom: theme.spacing(5),
-    width: theme.dimensions.sidebarWidth,
-    [theme.breakpoints.down('lg')]: {
-      width: theme.dimensions.sidebarWidthTablet,
-    },
-    [theme.breakpoints.down('sm')]: {
-      width: '0px',
-    },
+    justifyContent: 'center',
   },
   paper: {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flex: 1,
-    boxShadow: '-2px 0px 16px rgba(0, 0, 0, 0.25)',
-    [theme.breakpoints.up('lg')]: {
-      padding: theme.spacing(0, 25, 0, 0),
+    padding: theme.spacing(3),
+    width: '450px',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: theme.spacing(1),
+    boxShadow: 'none',
+    [theme.breakpoints.down('sm')]: {
+      width: '90%',
+      minWidth: '280px',
+      padding: theme.spacing(2),
+    },
+    [theme.breakpoints.between('sm', 'md')]: {
+      width: '400px',
     },
   },
   form: {
-    maxWidth: theme.spacing(52),
-    padding: theme.spacing(5),
     width: '100%',
+    marginTop: theme.spacing(2),
+  },
+  mobileLinks: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: theme.spacing(2),
+    marginTop: theme.spacing(3),
+  },
+  appButton: {
+    height: '40px',
+    cursor: 'pointer',
   },
 }));
 
@@ -46,13 +52,19 @@ const LoginLayout = ({ children }) => {
 
   return (
     <main className={classes.root}>
-      <div className={classes.sidebar}>
-        {!useMediaQuery(theme.breakpoints.down('lg')) && <LogoImage color={theme.palette.secondary.contrastText} />}
-      </div>
       <Paper className={classes.paper}>
+        <LogoImage color={theme.palette.primary.main} />
         <form className={classes.form}>
           {children}
         </form>
+        <div className={classes.mobileLinks}>
+          <a href="https://play.google.com/store/apps/details?id=org.traccar.client" target="_blank" rel="noopener noreferrer">
+            <img src="https://pisahprotocol.satelliteforce.net/img/android_app_button.png" alt="Android App" className={classes.appButton} />
+          </a>
+          <a href="https://apps.apple.com/us/app/traccar-client/id843156974" target="_blank" rel="noopener noreferrer">
+            <img src="https://pisahprotocol.satelliteforce.net/img/app-store-logo.jpg" alt="iOS App" className={classes.appButton} />
+          </a>
+        </div>
       </Paper>
     </main>
   );

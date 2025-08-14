@@ -91,11 +91,6 @@ const DeviceRow = ({ data, index, style }) => {
         selected={selectedDeviceId === item.id}
         className={selectedDeviceId === item.id ? classes.selected : null}
       >
-        <ListItemAvatar>
-          <Avatar>
-            <img className={classes.icon} src={mapIcons[mapIconKey(item.category)]} alt="" />
-          </Avatar>
-        </ListItemAvatar>
         <ListItemText
           primary={item[devicePrimary]}
           secondary={secondaryText()}

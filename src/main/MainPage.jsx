@@ -1,64 +1,185 @@
 import {
   useState, useCallback, useEffect,
 } from 'react';
-import { Paper } from '@mui/material';
+import { 
+  Tabs, 
+  Tab,
+  Box,
+  TextField,
+  IconButton,
+  InputAdornment,
+  Typography,
+  Toolbar,
+  Divider,
+} from '@mui/material';
+import RoomIcon from '@mui/icons-material/Room';
+import InfoIcon from '@mui/icons-material/Info';
+import LayersIcon from '@mui/icons-material/Layers';
+import HistoryIcon from '@mui/icons-material/History';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import SearchIcon from '@mui/icons-material/Search';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import PrintIcon from '@mui/icons-material/Print';
+import BuildIcon from '@mui/icons-material/Build';
+import StorageIcon from '@mui/icons-material/Storage';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import ChatIcon from '@mui/icons-material/Chat';
+import LanguageIcon from '@mui/icons-material/Language';
+import SettingsIcon from '@mui/icons-material/Settings';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import LogoutIcon from '@mui/icons-material/Logout';
+import SyncIcon from '@mui/icons-material/Sync';
+import AddIcon from '@mui/icons-material/Add';
 import { makeStyles } from 'tss-react/mui';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useDispatch, useSelector } from 'react-redux';
 import DeviceList from './DeviceList';
-import BottomMenu from '../common/components/BottomMenu';
 import StatusCard from '../common/components/StatusCard';
 import { devicesActions } from '../store';
 import usePersistedState from '../common/util/usePersistedState';
 import EventsDrawer from './EventsDrawer';
 import useFilter from './useFilter';
-import MainToolbar from './MainToolbar';
 import MainMap from './MainMap';
 import { useAttributePreference } from '../common/util/preferences';
 
 const useStyles = makeStyles()((theme) => ({
   root: {
     height: '100%',
-  },
-  sidebar: {
-    pointerEvents: 'none',
     display: 'flex',
     flexDirection: 'column',
-    [theme.breakpoints.up('md')]: {
+  },
+  navbar: {
+    height: '36px',
+    backgroundColor: 'white',
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    display: 'flex',
+    alignItems: 'center',
+    padding: 0,
+    zIndex: 1000,
+  },
+  toolbar: {
+    minHeight: '36px',
+    width: '100%',
+    padding: theme.spacing(0, 1),
+    display: 'flex',
+    gap: '2px',
+  },
+  navButton: {
+    padding: 6,
+    borderRadius: 0,
+    '&:hover': {
+      backgroundColor: '#f5f5f5',
+    },
+    '& .MuiSvgIcon-root': {
+      fontSize: '20px',
+      color: '#444444',
+    },
+  },
+  divider: {
+    margin: theme.spacing(0.5, 0.25),
+    borderColor: theme.palette.divider,
+  },
+  rightSection: {
+    marginLeft: 'auto',
+    display: 'flex',
+    gap: '2px',
+  },
+  mainContainer: {
+    flex: 1,
+    display: 'flex',
+    overflow: 'hidden',
+  },
+  sidebar: {
+    width: '366px',
+    backgroundColor: 'white',
+    borderRight: `1px solid ${theme.palette.divider}`,
+    display: 'flex',
+    flexDirection: 'column',
+    [theme.breakpoints.down('md')]: {
       position: 'fixed',
       left: 0,
-      top: 0,
-      height: `calc(100% - ${theme.spacing(3)})`,
-      width: theme.dimensions.drawerWidthDesktop,
-      margin: theme.spacing(1.5),
-      zIndex: 3,
+      top: '36px',
+      bottom: 0,
+      zIndex: 900,
+      transform: 'translateX(-100%)',
+      transition: 'transform 0.3s ease-in-out',
+      '&.open': {
+        transform: 'translateX(0)',
+      },
     },
-    [theme.breakpoints.down('md')]: {
-      height: '100%',
-      width: '100%',
-    },
   },
-  header: {
-    pointerEvents: 'auto',
-    zIndex: 6,
-  },
-  footer: {
-    pointerEvents: 'auto',
-    zIndex: 5,
-  },
-  middle: {
+  content: {
     flex: 1,
-    display: 'grid',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  contentMap: {
-    pointerEvents: 'auto',
-    gridArea: '1 / 1',
+  mapContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  contentList: {
-    pointerEvents: 'auto',
-    gridArea: '1 / 1',
-    zIndex: 4,
+  deviceList: {
+    height: '100%',
+    overflow: 'auto',
+  },
+  tabs: {
+    backgroundColor: '#f5f5f5',
+    minHeight: '36px',
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    '& .MuiTab-root': {
+      minHeight: '36px',
+      textTransform: 'none',
+      fontSize: '12px',
+      fontWeight: 'normal',
+      padding: '6px 16px',
+      color: '#444444',
+    },
+  },
+  searchContainer: {
+    padding: theme.spacing(1.5),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+  searchField: {
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: '#f5f5f5',
+      height: '28px',
+      fontSize: '11px',
+      color: '#444444',
+      '& fieldset': {
+        border: 'none',
+      },
+    },
+  },
+  searchActions: {
+    display: 'flex',
+    gap: theme.spacing(1),
+  },
+  iconButton: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: '0px',
+    '&:hover': {
+      backgroundColor: '#e0e0e0',
+    },
+  },
+  deviceListContainer: {
+    flex: 1,
+    overflow: 'auto',
+  },
+  deviceItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: theme.spacing(1, 2),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    '&:hover': {
+      backgroundColor: '#f5f5f5',
+    },
   },
 }));
 
@@ -88,8 +209,22 @@ const MainPage = () => {
 
   const [devicesOpen, setDevicesOpen] = useState(desktop);
   const [eventsOpen, setEventsOpen] = useState(false);
+  const [currentTab, setCurrentTab] = useState(0);
 
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
+  
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/session', { method: 'DELETE' });
+      window.location.replace('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   useEffect(() => {
     if (!desktop && mapOnSelect && selectedDeviceId) {
@@ -101,56 +236,170 @@ const MainPage = () => {
 
   return (
     <div className={classes.root}>
-      {desktop && (
-        <MainMap
-          filteredPositions={filteredPositions}
-          selectedPosition={selectedPosition}
-          onEventsClick={onEventsClick}
-        />
-      )}
-      <div className={classes.sidebar}>
-        <Paper square elevation={3} className={classes.header}>
-          <MainToolbar
-            filteredDevices={filteredDevices}
-            devicesOpen={devicesOpen}
-            setDevicesOpen={setDevicesOpen}
-            keyword={keyword}
-            setKeyword={setKeyword}
-            filter={filter}
-            setFilter={setFilter}
-            filterSort={filterSort}
-            setFilterSort={setFilterSort}
-            filterMap={filterMap}
-            setFilterMap={setFilterMap}
-          />
-        </Paper>
-        <div className={classes.middle}>
-          {!desktop && (
-            <div className={classes.contentMap}>
-              <MainMap
-                filteredPositions={filteredPositions}
-                selectedPosition={selectedPosition}
-                onEventsClick={onEventsClick}
-              />
-            </div>
-          )}
-          <Paper square className={classes.contentList} style={devicesOpen ? {} : { visibility: 'hidden' }}>
-            <DeviceList devices={filteredDevices} />
-          </Paper>
-        </div>
-        {desktop && (
-          <div className={classes.footer}>
-            <BottomMenu />
+      {/* Navbar */}
+      <div className={classes.navbar}>
+        <Toolbar className={classes.toolbar}>
+          {/* Left section */}
+          <IconButton className={classes.navButton}>
+            <RoomIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <InfoIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <LayersIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <HistoryIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <LocationOnIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <SearchIcon />
+          </IconButton>
+
+          <Divider orientation="vertical" flexItem className={classes.divider} />
+
+          <IconButton className={classes.navButton}>
+            <AssignmentIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <CheckCircleIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <MenuBookIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <PrintIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <BuildIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <StorageIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <CameraAltIcon />
+          </IconButton>
+          <IconButton className={classes.navButton}>
+            <ChatIcon />
+          </IconButton>
+
+          {/* Right section */}
+          <div className={classes.rightSection}>
+            <IconButton className={classes.navButton}>
+              <LanguageIcon />
+            </IconButton>
+            <IconButton className={classes.navButton}>
+              <SettingsIcon />
+            </IconButton>
+            <IconButton className={classes.navButton}>
+              <AccountCircleIcon />
+            </IconButton>
+            <IconButton className={classes.navButton}>
+              <PhoneAndroidIcon />
+            </IconButton>
+            <IconButton className={classes.navButton}>
+              <VolumeUpIcon />
+            </IconButton>
+            <Divider orientation="vertical" flexItem className={classes.divider} />
+            {/* <Tooltip title="Logout"> */}
+              <IconButton className={classes.navButton} onClick={handleLogout}>
+                <LogoutIcon />
+              </IconButton>
+            {/* </Tooltip> */}
           </div>
-        )}
+        </Toolbar>
       </div>
+
+      {/* Main Container */}
+      <div className={classes.mainContainer}>
+        {/* Sidebar */}
+        <div className={`${classes.sidebar} ${devicesOpen ? 'open' : ''}`}>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons={false}
+            className={classes.tabs}
+          >
+            <Tab label="Objects" />
+            <Tab label="Events" />
+            <Tab label="Places" />
+            <Tab label="History" />
+          </Tabs>
+
+          {currentTab === 0 && (
+            <>
+              <div className={classes.searchContainer}>
+                <Box display="flex" gap={1}>
+                  <TextField
+                    fullWidth
+                    placeholder="Search"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    className={classes.searchField}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon fontSize="small" sx={{ color: '#444444' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <div className={classes.searchActions}>
+                    <IconButton size="small" className={classes.iconButton}>
+                      <SyncIcon fontSize="small" sx={{ color: '#444444' }} />
+                    </IconButton>
+                    <IconButton size="small" className={classes.iconButton}>
+                      <AddIcon fontSize="small" sx={{ color: '#444444' }} />
+                    </IconButton>
+                  </div>
+                </Box>
+              </div>
+              <div className={classes.deviceListContainer}>
+                <DeviceList devices={filteredDevices} />
+              </div>
+            </>
+          )}
+          {currentTab === 1 && (
+            <Box p={2}>
+              <Typography variant="body2" color="textSecondary">Events content will go here</Typography>
+            </Box>
+          )}
+          {currentTab === 2 && (
+            <Box p={2}>
+              <Typography variant="body2" color="textSecondary">Places content will go here</Typography>
+            </Box>
+          )}
+          {currentTab === 3 && (
+            <Box p={2}>
+              <Typography variant="body2" color="textSecondary">History content will go here</Typography>
+            </Box>
+          )}
+        </div>
+
+        {/* Content Area with Map */}
+        <div className={classes.content}>
+          <div className={classes.mapContainer}>
+            <MainMap
+              filteredPositions={filteredPositions}
+              selectedPosition={selectedPosition}
+              onEventsClick={onEventsClick}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Drawers and Overlays */}
       <EventsDrawer open={eventsOpen} onClose={() => setEventsOpen(false)} />
       {selectedDeviceId && (
         <StatusCard
           deviceId={selectedDeviceId}
           position={selectedPosition}
           onClose={() => dispatch(devicesActions.selectId(null))}
-          desktopPadding={theme.dimensions.drawerWidthDesktop}
+          desktopPadding={0}
         />
       )}
     </div>

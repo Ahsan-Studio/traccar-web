@@ -200,12 +200,12 @@ const MainPage = () => {
   const [filteredDevices, setFilteredDevices] = useState([]);
 
   const [keyword, setKeyword] = useState('');
-  const [filter, setFilter] = usePersistedState('filter', {
+  const [filter] = usePersistedState('filter', {
     statuses: [],
     groups: [],
   });
-  const [filterSort, setFilterSort] = usePersistedState('filterSort', '');
-  const [filterMap, setFilterMap] = usePersistedState('filterMap', false);
+  const [filterSort] = usePersistedState('filterSort', '');
+  const [filterMap] = usePersistedState('filterMap', false);
 
   const [devicesOpen, setDevicesOpen] = useState(desktop);
   const [eventsOpen, setEventsOpen] = useState(false);

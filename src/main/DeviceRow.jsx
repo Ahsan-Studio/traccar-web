@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 import {
-  IconButton, Tooltip, Avatar, ListItemAvatar, ListItemText, ListItemButton,
+  IconButton, Tooltip, ListItemText, ListItemButton,
   Typography,
 } from '@mui/material';
 import BatteryFullIcon from '@mui/icons-material/BatteryFull';
@@ -18,7 +18,7 @@ import {
   formatAlarm, formatBoolean, formatPercentage, formatStatus, getStatusColor,
 } from '../common/util/formatter';
 import { useTranslation } from '../common/components/LocalizationProvider';
-import { mapIconKey, mapIcons } from '../map/core/preloadImages';
+// import { mapIconKey, mapIcons } from '../map/core/preloadImages';
 import { useAdministrator } from '../common/util/permissions';
 import EngineIcon from '../resources/images/data/engine.svg?react';
 import { useAttributePreference } from '../common/util/preferences';

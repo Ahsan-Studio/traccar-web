@@ -5,7 +5,7 @@ import {
 import { useDispatch } from 'react-redux';
 import MainPage from './main/MainPage';
 import CombinedReportPage from './reports/CombinedReportPage';
-import RouteReportPage from './reports/RouteReportPage';
+import PositionsReportPage from './reports/PositionsReportPage';
 import ServerPage from './settings/ServerPage';
 import UsersPage from './settings/UsersPage';
 import DevicePage from './settings/DevicePage';
@@ -60,6 +60,8 @@ import EmulatorPage from './other/EmulatorPage';
 import Loader from './common/components/Loader';
 import { generateLoginToken } from './common/components/NativeInterface';
 import { useLocalization } from './common/components/LocalizationProvider';
+import fetchOrThrow from './common/util/fetchOrThrow';
+import AuditPage from './reports/AuditPage';
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -78,27 +80,23 @@ const Navigation = () => {
     if (query.get('token')) {
       const token = query.get('token');
       await fetch(`/api/session?token=${encodeURIComponent(token)}`);
-      navigate(pathname);
-    } else if (query.get('deviceId')) {
+      navigate(pathname, { replace: true });
+    } else if (pathname == '/' && query.get('deviceId')) {
       const deviceId = query.get('deviceId');
-      const response = await fetch(`/api/devices?uniqueId=${deviceId}`);
-      if (response.ok) {
-        const items = await response.json();
-        if (items.length > 0) {
-          dispatch(devicesActions.selectId(items[0].id));
-        }
-      } else {
-        throw Error(await response.text());
+      const response = await fetchOrThrow(`/api/devices?uniqueId=${deviceId}`);
+      const items = await response.json();
+      if (items.length > 0) {
+        dispatch(devicesActions.selectId(items[0].id));
       }
-      navigate('/');
+      navigate('/', { replace: true });
     } else if (query.get('eventId')) {
       const eventId = parseInt(query.get('eventId'), 10);
-      navigate(`/event/${eventId}`);
+      navigate(`/event/${eventId}`, { replace: true });
     } else if (query.get('openid')) {
       if (query.get('openid') === 'success') {
         generateLoginToken();
       }
-      navigate('/');
+      navigate('/', { replace: true });
     } else {
       setRedirectsHandled(true);
     }
@@ -168,13 +166,14 @@ const Navigation = () => {
         <Route path="reports">
           <Route path="combined" element={<CombinedReportPage />} />
           <Route path="chart" element={<ChartReportPage />} />
-          <Route path="event" element={<EventReportPage />} />
-          <Route path="route" element={<RouteReportPage />} />
-          <Route path="stop" element={<StopReportPage />} />
+          <Route path="events" element={<EventReportPage />} />
+          <Route path="route" element={<PositionsReportPage />} />
+          <Route path="stops" element={<StopReportPage />} />
           <Route path="summary" element={<SummaryReportPage />} />
-          <Route path="trip" element={<TripReportPage />} />
+          <Route path="trips" element={<TripReportPage />} />
           <Route path="scheduled" element={<ScheduledPage />} />
           <Route path="statistics" element={<StatisticsPage />} />
+          <Route path="audit" element={<AuditPage />} />
           <Route path="logs" element={<LogsPage />} />
         </Route>
       </Route>

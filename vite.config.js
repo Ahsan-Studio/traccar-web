@@ -8,8 +8,17 @@ export default defineConfig(() => ({
   server: {
     port: 3000,
     proxy: {
-      '/api/socket': 'ws://localhost:8082',
-      '/api': 'http://localhost:8082',
+      '/api/socket': {
+        target: 'https://gsi-traccar-traccar.bwlm85.easypanel.host',
+        ws: true,
+        changeOrigin: true,
+        secure: false
+      },
+      '/api': {
+        target: 'https://gsi-traccar-traccar.bwlm85.easypanel.host',
+        changeOrigin: true,
+        secure: false
+      },
     },
   },
   build: {

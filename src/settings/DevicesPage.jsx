@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import {
   Table, TableRow, TableCell, TableHead, TableBody, Button, TableFooter, FormControlLabel, Switch,
 } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
+import { useTheme } from '@mui/material/styles';
 import { useEffectAsync } from '../reactHelper';
 import { useTranslation } from '../common/components/LocalizationProvider';
 import PageLayout from '../common/components/PageLayout';
@@ -18,9 +21,11 @@ import { useDeviceReadonly, useManager } from '../common/util/permissions';
 import useSettingsStyles from './common/useSettingsStyles';
 import DeviceUsersValue from './components/DeviceUsersValue';
 import usePersistedState from '../common/util/usePersistedState';
+import fetchOrThrow from '../common/util/fetchOrThrow';
 
 const DevicesPage = () => {
   const { classes } = useSettingsStyles();
+  const theme = useTheme();
   const navigate = useNavigate();
   const t = useTranslation();
 
@@ -39,19 +44,61 @@ const DevicesPage = () => {
     setLoading(true);
     try {
       const query = new URLSearchParams({ all: showAll });
-      const response = await fetch(`/api/devices?${query.toString()}`);
-      if (response.ok) {
-        setItems(await response.json());
-      } else {
-        throw Error(await response.text());
-      }
+      const response = await fetchOrThrow(`/api/devices?${query.toString()}`);
+      setItems(await response.json());
     } finally {
       setLoading(false);
     }
   }, [timestamp, showAll]);
 
-  const handleExport = () => {
-    window.location.assign('/api/reports/devices/xlsx');
+  const handleExport = async () => {
+    const data = items.filter(filterByKeyword(searchKeyword)).map((item) => ({
+      [t('sharedName')]: item.name,
+      [t('deviceIdentifier')]: item.uniqueId,
+      [t('groupParent')]: item.groupId ? groups[item.groupId]?.name : null,
+      [t('sharedPhone')]: item.phone,
+      [t('deviceModel')]: item.model,
+      [t('deviceContact')]: item.contact,
+      [t('userExpirationTime')]: formatTime(item.expirationTime, 'date'),
+    }));
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(t('deviceTitle'));
+    const headers = Object.keys(data[0]);
+
+    const titleRow = worksheet.addRow([t('deviceTitle')]);
+    worksheet.mergeCells(1, 1, 1, headers.length);
+    titleRow.font = { bold: true };
+
+    const border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+    const headerRow = worksheet.addRow(headers);
+    headerRow.eachCell((cell) => {
+      cell.border = border;
+      cell.font = {};
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: `FF${theme.palette.primary.main.replace('#', '').toUpperCase()}` },
+      };
+    });
+    data.forEach((item) => {
+      const row = worksheet.addRow(headers.map((h) => item[h]));
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = border;
+        cell.font = {};
+      });
+    });
+
+    const blob = new Blob(
+      [await workbook.xlsx.writeBuffer()],
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+    );
+    saveAs(blob, 'devices.xlsx');
   };
 
   const actionConnections = {

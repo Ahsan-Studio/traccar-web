@@ -1,7 +1,6 @@
 import {
   Fragment, useCallback, useEffect, useRef, useState,
 } from 'react';
-import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
   IconButton, Table, TableBody, TableCell, TableHead, TableRow,
@@ -28,15 +27,15 @@ import scheduleReport from './common/scheduleReport';
 import MapScale from '../map/MapScale';
 import { useRestriction } from '../common/util/permissions';
 import CollectionActions from '../settings/components/CollectionActions';
+import fetchOrThrow from '../common/util/fetchOrThrow';
 
-const RouteReportPage = () => {
+const PositionsReportPage = () => {
   const navigate = useNavigate();
   const { classes } = useReportStyles();
   const t = useTranslation();
 
   const positionAttributes = usePositionAttributes(t);
 
-  const devices = useSelector((state) => state.devices.items);
   const readonly = useRestriction('readonly');
 
   const [available, setAvailable] = useState([]);
@@ -57,61 +56,49 @@ const RouteReportPage = () => {
     setSelectedItem(items.find((it) => it.id === positionId));
   }, [items, setSelectedItem]);
 
-  const handleSubmit = useCatch(async ({ deviceIds, groupIds, from, to, type }) => {
+  const onShow = useCatch(async ({ deviceIds, from, to }) => {
     const query = new URLSearchParams({ from, to });
     deviceIds.forEach((deviceId) => query.append('deviceId', deviceId));
-    groupIds.forEach((groupId) => query.append('groupId', groupId));
-    if (type === 'export') {
-      window.location.assign(`/api/reports/route/xlsx?${query.toString()}`);
-    } else if (type === 'mail') {
-      const response = await fetch(`/api/reports/route/mail?${query.toString()}`);
-      if (!response.ok) {
-        throw Error(await response.text());
-      }
-    } else {
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/reports/route?${query.toString()}`, {
-          headers: { Accept: 'application/json' },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const keySet = new Set();
-          const keyList = [];
-          data.forEach((position) => {
-            Object.keys(position).forEach((it) => keySet.add(it));
-            Object.keys(position.attributes).forEach((it) => keySet.add(it));
-          });
-          ['id', 'deviceId', 'outdated', 'network', 'attributes'].forEach((key) => keySet.delete(key));
-          Object.keys(positionAttributes).forEach((key) => {
-            if (keySet.has(key)) {
-              keyList.push(key);
-              keySet.delete(key);
-            }
-          });
-          setAvailable([...keyList, ...keySet].map((key) => [key, positionAttributes[key]?.name || key]));
-          setItems(data);
-        } else {
-          throw Error(await response.text());
+    setLoading(true);
+    try {
+      const response = await fetchOrThrow(`/api/reports/route?${query.toString()}`, {
+        headers: { Accept: 'application/json' },
+      });
+      const data = await response.json();
+      const keySet = new Set();
+      const keyList = [];
+      data.forEach((position) => {
+        Object.keys(position).forEach((it) => keySet.add(it));
+        Object.keys(position.attributes).forEach((it) => keySet.add(it));
+      });
+      ['id', 'deviceId', 'outdated', 'network', 'attributes'].forEach((key) => keySet.delete(key));
+      Object.keys(positionAttributes).forEach((key) => {
+        if (keySet.has(key)) {
+          keyList.push(key);
+          keySet.delete(key);
         }
-      } finally {
-        setLoading(false);
-      }
+      });
+      setAvailable([...keyList, ...keySet].map((key) => [key, positionAttributes[key]?.name || key]));
+      setItems(data);
+    } finally {
+      setLoading(false);
     }
   });
 
-  const handleSchedule = useCatch(async (deviceIds, groupIds, report) => {
+  const onExport = useCatch(async ({ deviceIds, from, to }) => {
+    const query = new URLSearchParams({ from, to });
+    deviceIds.forEach((deviceId) => query.append('deviceId', deviceId));
+    window.location.assign(`/api/positions/csv?${query.toString()}`);
+  });
+
+  const onSchedule = useCatch(async (deviceIds, groupIds, report) => {
     report.type = 'route';
-    const error = await scheduleReport(deviceIds, groupIds, report);
-    if (error) {
-      throw Error(error);
-    } else {
-      navigate('/reports/scheduled');
-    }
+    await scheduleReport(deviceIds, groupIds, report);
+    navigate('/reports/scheduled');
   });
 
   return (
-    <PageLayout menu={<ReportsMenu />} breadcrumbs={['reportTitle', 'reportRoute']}>
+    <PageLayout menu={<ReportsMenu />} breadcrumbs={['reportTitle', 'reportPositions']}>
       <div className={classes.container}>
         {selectedItem && (
           <div className={classes.containerMap}>
@@ -134,7 +121,7 @@ const RouteReportPage = () => {
         )}
         <div className={classes.containerMain}>
           <div className={classes.header}>
-            <ReportFilter handleSubmit={handleSubmit} handleSchedule={handleSchedule} multiDevice includeGroups loading={loading}>
+            <ReportFilter onShow={onShow} onExport={onExport} onSchedule={onSchedule} deviceType="single" loading={loading}>
               <ColumnSelect
                 columns={columns}
                 setColumns={setColumns}
@@ -148,7 +135,6 @@ const RouteReportPage = () => {
             <TableHead>
               <TableRow>
                 <TableCell className={classes.columnAction} />
-                <TableCell>{t('sharedDevice')}</TableCell>
                 {columns.map((key) => (<TableCell key={key}>{positionAttributes[key]?.name || key}</TableCell>))}
                 <TableCell className={classes.columnAction} />
               </TableRow>
@@ -167,7 +153,6 @@ const RouteReportPage = () => {
                       </IconButton>
                     )}
                   </TableCell>
-                  <TableCell>{devices[item.deviceId].name}</TableCell>
                   {columns.map((key) => (
                     <TableCell key={key}>
                       <PositionValue
@@ -183,13 +168,12 @@ const RouteReportPage = () => {
                       endpoint="positions"
                       readonly={readonly}
                       setTimestamp={() => {
-                        // NOTE: Gets called when an item was removed
                         setItems(items.filter((position) => position.id !== item.id));
                       }}
                     />
                   </TableCell>
                 </TableRow>
-              )) : (<TableShimmer columns={columns.length + 2} startAction />)}
+              )) : (<TableShimmer columns={columns.length + 1} startAction />)}
             </TableBody>
           </Table>
         </div>
@@ -198,4 +182,4 @@ const RouteReportPage = () => {
   );
 };
 
-export default RouteReportPage;
+export default PositionsReportPage;

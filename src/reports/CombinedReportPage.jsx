@@ -18,6 +18,7 @@ import { prefixString } from '../common/util/stringUtils';
 import MapMarkers from '../map/MapMarkers';
 import MapRouteCoordinates from '../map/MapRouteCoordinates';
 import MapScale from '../map/MapScale';
+import fetchOrThrow from '../common/util/fetchOrThrow';
 
 const CombinedReportPage = () => {
   const { classes } = useReportStyles();
@@ -38,18 +39,14 @@ const CombinedReportPage = () => {
       longitude: position.longitude,
     })));
 
-  const handleSubmit = useCatch(async ({ deviceIds, groupIds, from, to }) => {
+  const onShow = useCatch(async ({ deviceIds, groupIds, from, to }) => {
     const query = new URLSearchParams({ from, to });
     deviceIds.forEach((deviceId) => query.append('deviceId', deviceId));
     groupIds.forEach((groupId) => query.append('groupId', groupId));
     setLoading(true);
     try {
-      const response = await fetch(`/api/reports/combined?${query.toString()}`);
-      if (response.ok) {
-        setItems(await response.json());
-      } else {
-        throw Error(await response.text());
-      }
+      const response = await fetchOrThrow(`/api/reports/combined?${query.toString()}`);
+      setItems(await response.json());
     } finally {
       setLoading(false);
     }
@@ -78,7 +75,7 @@ const CombinedReportPage = () => {
         )}
         <div className={classes.containerMain}>
           <div className={classes.header}>
-            <ReportFilter handleSubmit={handleSubmit} showOnly multiDevice includeGroups loading={loading} />
+            <ReportFilter onShow={onShow} deviceType="multiple" loading={loading} />
           </div>
           <Table>
             <TableHead>

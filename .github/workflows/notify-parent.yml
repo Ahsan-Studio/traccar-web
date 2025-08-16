@@ -14,7 +14,7 @@ jobs:
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.PARENT_REPO_TOKEN }}
-          repository: Ahsan-Studio/traccar
+          repository: Ahsan-Studio/gsi-traccar
           event-type: submodule-update
           client-payload: |
             {

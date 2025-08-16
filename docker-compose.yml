@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Traccar Web Application (Production)
+  traccar-web:
+    build:
+      context: .
+      target: production
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://localhost:8082
+    restart: unless-stopped
+    networks:
+      - traccar-network
+
+  # Traccar Web Application (Development)
+  traccar-web-dev:
+    build:
+      context: .
+      target: development
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - VITE_APP_VERSION=dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - traccar-network
+    profiles:
+      - dev
+
+networks:
+  traccar-network:
+    driver: bridge

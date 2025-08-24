@@ -12,26 +12,7 @@ import {
   Toolbar,
   Divider,
 } from '@mui/material';
-import RoomIcon from '@mui/icons-material/Room';
-import InfoIcon from '@mui/icons-material/Info';
-import LayersIcon from '@mui/icons-material/Layers';
-import HistoryIcon from '@mui/icons-material/History';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SearchIcon from '@mui/icons-material/Search';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import PrintIcon from '@mui/icons-material/Print';
-import BuildIcon from '@mui/icons-material/Build';
-import StorageIcon from '@mui/icons-material/Storage';
-import CameraAltIcon from '@mui/icons-material/CameraAlt';
-import ChatIcon from '@mui/icons-material/Chat';
-import LanguageIcon from '@mui/icons-material/Language';
-import SettingsIcon from '@mui/icons-material/Settings';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import LogoutIcon from '@mui/icons-material/Logout';
 import SyncIcon from '@mui/icons-material/Sync';
 import AddIcon from '@mui/icons-material/Add';
 import { makeStyles } from 'tss-react/mui';
@@ -39,12 +20,16 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useDispatch, useSelector } from 'react-redux';
 import DeviceList from './DeviceList';
-import StatusCard from '../common/components/StatusCard';
 import { devicesActions } from '../store';
+import AddDeviceDialog from './AddDeviceDialog';
+import fetchOrThrow from '../common/util/fetchOrThrow';
+import { CircularProgress } from '@mui/material';
 import usePersistedState from '../common/util/usePersistedState';
 import EventsDrawer from './EventsDrawer';
 import useFilter from './useFilter';
 import MainMap from './MainMap';
+import DeviceInfoPanel from './DeviceInfoPanel';
+import EventsList from './EventsList';
 import { useAttributePreference } from '../common/util/preferences';
 
 const useStyles = makeStyles()((theme) => ({
@@ -56,22 +41,26 @@ const useStyles = makeStyles()((theme) => ({
   navbar: {
     height: '36px',
     backgroundColor: 'white',
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    borderBottom: `1px solid transparent`,
     display: 'flex',
     alignItems: 'center',
     padding: 0,
     zIndex: 1000,
   },
   toolbar: {
-    minHeight: '36px',
+    minHeight: '36px !important',
     width: '100%',
-    padding: theme.spacing(0, 1),
+    padding: '0px !important',
     display: 'flex',
     gap: '2px',
   },
   navButton: {
-    padding: 6,
-    borderRadius: 0,
+    height: '36px !important',
+    width: '44px !important',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '0px !important',
     '&:hover': {
       backgroundColor: '#f5f5f5',
     },
@@ -93,6 +82,7 @@ const useStyles = makeStyles()((theme) => ({
     flex: 1,
     display: 'flex',
     overflow: 'hidden',
+    position: 'relative',
   },
   sidebar: {
     width: '366px',
@@ -131,15 +121,23 @@ const useStyles = makeStyles()((theme) => ({
   },
   tabs: {
     backgroundColor: '#f5f5f5',
-    minHeight: '36px',
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    minHeight: '31px !important',
     '& .MuiTab-root': {
-      minHeight: '36px',
+      marginTop: '6px',
+      minHeight: '25px',
       textTransform: 'none',
       fontSize: '12px',
       fontWeight: 'normal',
       padding: '6px 16px',
       color: '#444444',
+      borderRadius: 0,
+      '&.Mui-selected': {
+        backgroundColor: '#ffffff',
+        color: '#444444',
+      },
+    },
+    '& .MuiTabs-indicator': {
+      display: 'none',
     },
   },
   searchContainer: {
@@ -210,6 +208,8 @@ const MainPage = () => {
   const [devicesOpen, setDevicesOpen] = useState(desktop);
   const [eventsOpen, setEventsOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+  const [addDeviceOpen, setAddDeviceOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
   
@@ -241,72 +241,69 @@ const MainPage = () => {
         <Toolbar className={classes.toolbar}>
           {/* Left section */}
           <IconButton className={classes.navButton}>
-            <RoomIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/img/logo_small.png" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <InfoIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/info.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <LayersIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/settings.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <HistoryIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/dashboard.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <LocationOnIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/marker.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <SearchIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/search.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
 
           <Divider orientation="vertical" flexItem className={classes.divider} />
 
           <IconButton className={classes.navButton}>
-            <AssignmentIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/report.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <CheckCircleIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/tasks.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <MenuBookIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/logbook.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <PrintIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/dtc.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <BuildIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/maintenance.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <StorageIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/expenses.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <CameraAltIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/gallery.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <ChatIcon />
+            <img src="https://pisahprotocol.satelliteforce.net/theme/images/chat.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
 
           {/* Right section */}
           <div className={classes.rightSection}>
-            <IconButton className={classes.navButton}>
-              <LanguageIcon />
-            </IconButton>
-            <IconButton className={classes.navButton}>
-              <SettingsIcon />
-            </IconButton>
-            <IconButton className={classes.navButton}>
-              <AccountCircleIcon />
-            </IconButton>
-            <IconButton className={classes.navButton}>
-              <PhoneAndroidIcon />
-            </IconButton>
-            <IconButton className={classes.navButton}>
-              <VolumeUpIcon />
-            </IconButton>
+            {/* <IconButton className={classes.navButton}>
+              <img src="https://pisahprotocol.satelliteforce.net/theme/images/language.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            </IconButton> */}
+            {/* <IconButton className={classes.navButton}>
+              <img src="https://pisahprotocol.satelliteforce.net/theme/images/cogs-white.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            </IconButton> */}
+            {/* <IconButton className={classes.navButton}>
+              <img src="https://pisahprotocol.satelliteforce.net/theme/images/user.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            </IconButton> */}
+            {/* <IconButton className={classes.navButton}>
+              <img src="https://pisahprotocol.satelliteforce.net/theme/images/mobile.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            </IconButton> */}
             <Divider orientation="vertical" flexItem className={classes.divider} />
             {/* <Tooltip title="Logout"> */}
-              <IconButton className={classes.navButton} onClick={handleLogout}>
-                <LogoutIcon />
+              <IconButton className={classes.navButton} onClick={handleLogout} style={{ backgroundColor: '#6c6c6c' }}>
+                <img src="https://pisahprotocol.satelliteforce.net/theme/images/logout.svg" border="0" style={{ width: '16px', height: '16px' }} />
               </IconButton>
             {/* </Tooltip> */}
           </div>
@@ -349,10 +346,31 @@ const MainPage = () => {
                     }}
                   />
                   <div className={classes.searchActions}>
-                    <IconButton size="small" className={classes.iconButton}>
-                      <SyncIcon fontSize="small" sx={{ color: '#444444' }} />
+                    <IconButton 
+                      size="small" 
+                      className={classes.iconButton}
+                      onClick={async () => {
+                        setSyncing(true);
+                        try {
+                          const response = await fetchOrThrow('/api/devices');
+                          dispatch(devicesActions.refresh(await response.json()));
+                        } finally {
+                          setSyncing(false);
+                        }
+                      }}
+                      disabled={syncing}
+                    >
+                      {syncing ? (
+                        <CircularProgress size={16} sx={{ color: '#444444' }} />
+                      ) : (
+                        <SyncIcon fontSize="small" sx={{ color: '#444444' }} />
+                      )}
                     </IconButton>
-                    <IconButton size="small" className={classes.iconButton}>
+                    <IconButton 
+                      size="small" 
+                      className={classes.iconButton}
+                      onClick={() => setAddDeviceOpen(true)}
+                    >
                       <AddIcon fontSize="small" sx={{ color: '#444444' }} />
                     </IconButton>
                   </div>
@@ -364,9 +382,9 @@ const MainPage = () => {
             </>
           )}
           {currentTab === 1 && (
-            <Box p={2}>
-              <Typography variant="body2" color="textSecondary">Events content will go here</Typography>
-            </Box>
+            <div className={classes.deviceListContainer}>
+              <EventsList />
+            </div>
           )}
           {currentTab === 2 && (
             <Box p={2}>
@@ -394,13 +412,9 @@ const MainPage = () => {
 
       {/* Drawers and Overlays */}
       <EventsDrawer open={eventsOpen} onClose={() => setEventsOpen(false)} />
+      <AddDeviceDialog open={addDeviceOpen} onClose={() => setAddDeviceOpen(false)} />
       {selectedDeviceId && (
-        <StatusCard
-          deviceId={selectedDeviceId}
-          position={selectedPosition}
-          onClose={() => dispatch(devicesActions.selectId(null))}
-          desktopPadding={0}
-        />
+        <DeviceInfoPanel deviceId={selectedDeviceId} />
       )}
     </div>
   );

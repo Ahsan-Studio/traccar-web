@@ -1,9 +1,12 @@
-import { forwardRef, useEffect, useState } from 'react';
+import {
+ forwardRef, useEffect, useState, useMemo 
+} from 'react';
 import { useDispatch } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useTheme } from '@mui/material/styles';
+import { Typography } from '@mui/material';
 import { devicesActions } from '../store';
 import { useEffectAsync } from '../reactHelper';
 import DeviceRow from './DeviceRow';
@@ -53,19 +56,90 @@ const DeviceList = ({ devices }) => {
     dispatch(devicesActions.refresh(await response.json()));
   }, []);
 
+  // Group devices
+  const groupedDevices = useMemo(() => {
+    const groups = {};
+    const ungrouped = [];
+
+    devices.forEach(device => {
+      if (device.groupId) {
+        if (!groups[device.groupId]) {
+          groups[device.groupId] = {
+            name: `GROUP ${device.groupId}`,
+            devices: []
+          };
+        }
+        groups[device.groupId].devices.push(device);
+      } else {
+        ungrouped.push(device);
+      }
+    });
+
+    // Create final array with headers and devices
+    const result = [];
+    
+    // Add ungrouped section
+    if (ungrouped.length > 0) {
+      result.push({ 
+        type: 'header', 
+        content: `Tidak digrup (${ungrouped.length})`
+      });
+      ungrouped.forEach(device => {
+        result.push({ type: 'device', content: device });
+      });
+    }
+
+    // Add grouped sections
+    Object.entries(groups).forEach(([groupId, group]) => {
+      result.push({ 
+        type: 'header', 
+        content: `${group.name} (${group.devices.length})`
+      });
+      group.devices.forEach(device => {
+        result.push({ type: 'device', content: device });
+      });
+    });
+
+    return result;
+  }, [devices]);
+
+  const renderRow = ({ index, style }) => {
+    const item = groupedDevices[index];
+    if (item.type === 'header') {
+      return (
+        <div style={style}>
+          <Typography
+            sx={{
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '0 16px',
+              backgroundColor: '#f5f5f5',
+              borderTop: '1px solid #e0e0e0',
+              borderBottom: '1px solid #e0e0e0',
+              height: '33px',
+              lineHeight: '33px'
+            }}
+          >
+            {item.content}
+          </Typography>
+        </div>
+      );
+    }
+    return <DeviceRow data={[item.content]} index={0} style={style} />;
+  };
+
   return (
     <AutoSizer className={classes.list}>
       {({ height, width }) => (
         <FixedSizeList
           width={width}
           height={height}
-          itemCount={devices.length}
-          itemData={devices}
-          itemSize={72}
+          itemCount={groupedDevices.length}
+          itemSize={33}
           overscanCount={10}
           outerElementType={OuterElement}
         >
-          {DeviceRow}
+          {renderRow}
         </FixedSizeList>
       )}
     </AutoSizer>

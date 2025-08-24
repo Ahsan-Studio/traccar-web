@@ -1,26 +1,22 @@
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 import {
   IconButton, Tooltip, ListItemText, ListItemButton,
-  Typography,
+  Typography, Box, Menu, MenuItem, ListItemIcon,
 } from '@mui/material';
-import BatteryFullIcon from '@mui/icons-material/BatteryFull';
-import BatteryChargingFullIcon from '@mui/icons-material/BatteryChargingFull';
-import Battery60Icon from '@mui/icons-material/Battery60';
-import BatteryCharging60Icon from '@mui/icons-material/BatteryCharging60';
-import Battery20Icon from '@mui/icons-material/Battery20';
-import BatteryCharging20Icon from '@mui/icons-material/BatteryCharging20';
-import ErrorIcon from '@mui/icons-material/Error';
+import HistoryIcon from '@mui/icons-material/History';
+import NearMeIcon from '@mui/icons-material/NearMe';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import NavigationIcon from '@mui/icons-material/Navigation';
+import SendIcon from '@mui/icons-material/Send';
+import EditIcon from '@mui/icons-material/Edit';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import WifiIcon from '@mui/icons-material/Wifi';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { devicesActions } from '../store';
-import {
-  formatAlarm, formatBoolean, formatPercentage, formatStatus, getStatusColor,
-} from '../common/util/formatter';
-import { useTranslation } from '../common/components/LocalizationProvider';
-// import { mapIconKey, mapIcons } from '../map/core/preloadImages';
 import { useAdministrator } from '../common/util/permissions';
-import EngineIcon from '../resources/images/data/engine.svg?react';
 import { useAttributePreference } from '../common/util/preferences';
 
 dayjs.extend(relativeTime);
@@ -56,7 +52,6 @@ const useStyles = makeStyles()((theme) => ({
 const DeviceRow = ({ data, index, style }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
-  const t = useTranslation();
 
   const admin = useAdministrator();
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
@@ -64,86 +59,163 @@ const DeviceRow = ({ data, index, style }) => {
   const item = data[index];
   const position = useSelector((state) => state.session.positions[item.id]);
 
-  const devicePrimary = useAttributePreference('devicePrimary', 'name');
-  const deviceSecondary = useAttributePreference('deviceSecondary', '');
+  // Context menu state
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const menuOpen = Boolean(menuAnchorEl);
 
-  const secondaryText = () => {
-    let status;
-    if (item.status === 'online' || !item.lastUpdate) {
-      status = formatStatus(item.status, t);
-    } else {
-      status = dayjs(item.lastUpdate).fromNow();
-    }
-    return (
-      <>
-        {deviceSecondary && item[deviceSecondary] && `${item[deviceSecondary]} • `}
-        <span className={classes[getStatusColor(item.status)]}>{status}</span>
-      </>
-    );
+  const handleMenuOpen = (event) => {
+    event.stopPropagation();
+    setMenuAnchorEl(event.currentTarget);
   };
 
+  const handleMenuClose = (event) => {
+    if (event) event.stopPropagation();
+    setMenuAnchorEl(null);
+  };
+  const devicePrimary = useAttributePreference('devicePrimary', 'name');
+
   return (
-    <div style={style}>
+    <div style={style} >
       <ListItemButton
         key={item.id}
         onClick={() => dispatch(devicesActions.selectId(item.id))}
         disabled={!admin && item.disabled}
         selected={selectedDeviceId === item.id}
         className={selectedDeviceId === item.id ? classes.selected : null}
+        sx={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 2,
+          height: '33px',
+          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+          '&:hover': {
+            backgroundColor: '#f5f5f5'
+          },
+          '&.Mui-selected': {
+            backgroundColor: '#e3f2fd'
+          },
+          '&.Mui-selected:hover': {
+            backgroundColor: '#e3f2fd'
+          }
+        }}
       >
-        <ListItemText
-          primary={item[devicePrimary]}
-          secondary={secondaryText()}
-          slots={{
-            primary: Typography,
-            secondary: Typography,
-          }}
-          slotProps={{
-            primary: { noWrap: true },
-            secondary: { noWrap: true },
-          }}
+        <Box
+          component="img"
+          src={`/img/markers/objects/land-car.svg`}
+          sx={{ width: 18, height: 18, marginTop: '2px' }}
         />
-        {position && (
-          <>
-            {position.attributes.hasOwnProperty('alarm') && (
-              <Tooltip title={`${t('eventAlarm')}: ${formatAlarm(position.attributes.alarm, t)}`}>
-                <IconButton size="small">
-                  <ErrorIcon fontSize="small" className={classes.error} />
-                </IconButton>
-              </Tooltip>
-            )}
-            {position.attributes.hasOwnProperty('ignition') && (
-              <Tooltip title={`${t('positionIgnition')}: ${formatBoolean(position.attributes.ignition, t)}`}>
-                <IconButton size="small">
-                  {position.attributes.ignition ? (
-                    <EngineIcon width={20} height={20} className={classes.success} />
-                  ) : (
-                    <EngineIcon width={20} height={20} className={classes.neutral} />
-                  )}
-                </IconButton>
-              </Tooltip>
-            )}
-            {position.attributes.hasOwnProperty('batteryLevel') && (
-              <Tooltip title={`${t('positionBatteryLevel')}: ${formatPercentage(position.attributes.batteryLevel)}`}>
-                <IconButton size="small">
-                  {(position.attributes.batteryLevel > 70 && (
-                    position.attributes.charge
-                      ? (<BatteryChargingFullIcon fontSize="small" className={classes.success} />)
-                      : (<BatteryFullIcon fontSize="small" className={classes.success} />)
-                  )) || (position.attributes.batteryLevel > 30 && (
-                    position.attributes.charge
-                      ? (<BatteryCharging60Icon fontSize="small" className={classes.warning} />)
-                      : (<Battery60Icon fontSize="small" className={classes.warning} />)
-                  )) || (
-                    position.attributes.charge
-                      ? (<BatteryCharging20Icon fontSize="small" className={classes.error} />)
-                      : (<Battery20Icon fontSize="small" className={classes.error} />)
-                  )}
-                </IconButton>
-              </Tooltip>
-            )}
-          </>
-        )}
+
+        {/* Device Info */}
+        <Box sx={{ flex: 1 }}>
+          <ListItemText
+            primary={item[devicePrimary]}
+            secondary={item.lastUpdate ? dayjs(item.lastUpdate).format('YYYY-MM-DD HH:mm:ss') : ''}
+            slots={{
+              primary: Typography,
+              secondary: Typography,
+            }}
+            slotProps={{
+              primary: { noWrap: true, fontSize: '11px' },
+              secondary: { noWrap: true, fontSize: '10px', color: 'text.secondary' },
+            }}
+          />
+        </Box>
+
+        {/* Status Icons */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+
+          {/* Speed */}
+          <Typography sx={{ fontSize: '11px' }}>
+            {position ? `${position.speed.toFixed(1) || 0} kph` : '0 kph'}
+          </Typography>
+
+          {/* <Tooltip title={position?.outdated === false && position?.valid === true ? 'Terkoneksi ke server, sinyal satelit normal' : 'Tidak ada koneksi ke server, tidak ada sinyal satelit'}>
+            <WifiIcon sx={{ 
+              fontSize: 16, 
+              color: position?.outdated === false && position?.valid === true ? '#4CAF50' : '#9e9e9e',
+            }} />
+          </Tooltip> */}
+          {position?.attributes?.ignition === false && (
+            <Tooltip title='Mesin Mati'>
+              <Box
+                component="img"
+                src="https://s5.gsi-tracking.com/theme/images/engine-off.svg"
+                sx={{ 
+                  width: 16, 
+                  height: 16,
+                }}
+              />
+            </Tooltip>
+          )}
+          {position?.attributes?.ignition === true && (
+            <Tooltip title='Mesin Menyala'> 
+            <Box
+              component="img"
+              src="https://s5.gsi-tracking.com/theme/images/engine-on.svg"
+              sx={{ 
+                width: 16, 
+                height: 16,
+              }}
+            />
+            </Tooltip>
+          )}
+          <Tooltip title={position?.outdated === false && position?.valid === true ? 'Terkoneksi ke server, sinyal satelit normal' : 'Tidak ada koneksi ke server, tidak ada sinyal satelit'}>
+            <WifiIcon sx={{ 
+              fontSize: 16, 
+              color: position?.outdated === false && position?.valid === true ? '#4CAF50' : '#9e9e9e',
+            }} />
+          </Tooltip>
+          <IconButton size="small" onClick={handleMenuOpen}>
+            <MoreVertIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchorEl}
+            open={menuOpen}
+            onClose={handleMenuClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MenuItem onClick={handleMenuClose} dense>
+              <ListItemIcon>
+                <HistoryIcon fontSize="small" />
+              </ListItemIcon>
+              Show history
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose} dense>
+              <ListItemIcon>
+                <NearMeIcon fontSize="small" />
+              </ListItemIcon>
+              Ikuti
+            </MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); window.open(`#follow/${item.id}`, '_blank'); }} dense>
+              <ListItemIcon>
+                <OpenInNewIcon fontSize="small" />
+              </ListItemIcon>
+              Ikuti (jendela baru)
+            </MenuItem>
+            <MenuItem onClick={() => { handleMenuClose(); window.open(`#street/${item.id}`, '_blank'); }} dense>
+              <ListItemIcon>
+                <NavigationIcon fontSize="small" />
+              </ListItemIcon>
+              Tampilan jalan (jendela baru)
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose} dense>
+              <ListItemIcon>
+                <SendIcon fontSize="small" />
+              </ListItemIcon>
+              Send command
+            </MenuItem>
+            <MenuItem onClick={handleMenuClose} dense>
+              <ListItemIcon>
+                <EditIcon fontSize="small" />
+              </ListItemIcon>
+              Ubah
+            </MenuItem>
+          </Menu>
+        </Box>
       </ListItemButton>
     </div>
   );

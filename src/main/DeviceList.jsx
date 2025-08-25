@@ -90,7 +90,7 @@ const DeviceList = ({ devices }) => {
     }
 
     // Add grouped sections
-    Object.entries(groups).forEach(([groupId, group]) => {
+    Object.entries(groups).forEach(([group]) => {
       result.push({ 
         type: 'header', 
         content: `${group.name} (${group.devices.length})`

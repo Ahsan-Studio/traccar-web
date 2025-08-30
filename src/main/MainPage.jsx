@@ -30,6 +30,7 @@ import useFilter from './useFilter';
 import MainMap from './MainMap';
 import DeviceInfoPanel from './DeviceInfoPanel';
 import EventsList from './EventsList';
+import SettingsDialog from './SettingsDialog';
 import { useAttributePreference } from '../common/util/preferences';
 
 const useStyles = makeStyles()((theme) => ({
@@ -209,6 +210,7 @@ const MainPage = () => {
   const [eventsOpen, setEventsOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
@@ -246,7 +248,7 @@ const MainPage = () => {
           <IconButton className={classes.navButton}>
             <img src="/img/top-nav/info.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setSettingsOpen(true)}>
             <img src="/img/top-nav/settings.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
@@ -413,6 +415,7 @@ const MainPage = () => {
       {/* Drawers and Overlays */}
       <EventsDrawer open={eventsOpen} onClose={() => setEventsOpen(false)} />
       <AddDeviceDialog open={addDeviceOpen} onClose={() => setAddDeviceOpen(false)} />
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       {selectedDeviceId && (
         <DeviceInfoPanel deviceId={selectedDeviceId} />
       )}

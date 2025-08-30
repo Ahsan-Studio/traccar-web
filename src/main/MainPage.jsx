@@ -241,69 +241,69 @@ const MainPage = () => {
         <Toolbar className={classes.toolbar}>
           {/* Left section */}
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/img/logo_small.png" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/logo_small.png" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/info.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/info.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/settings.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/settings.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/dashboard.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/dashboard.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/marker.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/marker.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/search.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/search.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
 
           <Divider orientation="vertical" flexItem className={classes.divider} />
 
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/report.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/report.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/tasks.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/tasks.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/logbook.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/logbook.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/dtc.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/dtc.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/maintenance.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/maintenance.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/expenses.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/expenses.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/gallery.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/gallery.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
           <IconButton className={classes.navButton}>
-            <img src="https://pisahprotocol.satelliteforce.net/theme/images/chat.svg" border="0" style={{ width: '16px', height: '16px' }} />
+            <img src="/img/top-nav/chat.svg" border="0" style={{ width: '16px', height: '16px' }} />
           </IconButton>
 
           {/* Right section */}
           <div className={classes.rightSection}>
             {/* <IconButton className={classes.navButton}>
-              <img src="https://pisahprotocol.satelliteforce.net/theme/images/language.svg" border="0" style={{ width: '16px', height: '16px' }} />
+              <img src="/img/top-nav/language.svg" border="0" style={{ width: '16px', height: '16px' }} />
             </IconButton> */}
             {/* <IconButton className={classes.navButton}>
-              <img src="https://pisahprotocol.satelliteforce.net/theme/images/cogs-white.svg" border="0" style={{ width: '16px', height: '16px' }} />
+              <img src="/img/top-nav/cogs-white.svg" border="0" style={{ width: '16px', height: '16px' }} />
             </IconButton> */}
             {/* <IconButton className={classes.navButton}>
-              <img src="https://pisahprotocol.satelliteforce.net/theme/images/user.svg" border="0" style={{ width: '16px', height: '16px' }} />
+              <img src="/img/top-nav/user.svg" border="0" style={{ width: '16px', height: '16px' }} />
             </IconButton> */}
             {/* <IconButton className={classes.navButton}>
-              <img src="https://pisahprotocol.satelliteforce.net/theme/images/mobile.svg" border="0" style={{ width: '16px', height: '16px' }} />
+              <img src="/img/top-nav/mobile.svg" border="0" style={{ width: '16px', height: '16px' }} />
             </IconButton> */}
             <Divider orientation="vertical" flexItem className={classes.divider} />
             {/* <Tooltip title="Logout"> */}
               <IconButton className={classes.navButton} onClick={handleLogout} style={{ backgroundColor: '#6c6c6c' }}>
-                <img src="https://pisahprotocol.satelliteforce.net/theme/images/logout.svg" border="0" style={{ width: '16px', height: '16px' }} />
+                <img src="/img/top-nav/logout.svg" border="0" style={{ width: '16px', height: '16px' }} />
               </IconButton>
             {/* </Tooltip> */}
           </div>

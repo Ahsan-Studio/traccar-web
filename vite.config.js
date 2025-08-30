@@ -1,13 +1,13 @@
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
-import svgr from 'vite-plugin-svgr';
-import { VitePWA } from 'vite-plugin-pwa';
-import { viteStaticCopy } from 'vite-plugin-static-copy';
-
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+import svgr from "vite-plugin-svgr";
+import { VitePWA } from "vite-plugin-pwa";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  const backendUrl = env.VITE_BACKEND_URL || "https://gsi-traccar-traccar.bwlm85.easypanel.host";
+  const env = loadEnv(mode, "", "");
+  const backendUrl =
+    env.VITE_BACKEND_URL || "https://gsi-traccar-traccar.bwlm85.easypanel.host";
 
   return {
     server: {

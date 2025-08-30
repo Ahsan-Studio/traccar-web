@@ -1,21 +1,41 @@
 import Button from '@mui/material/Button';
-import { Snackbar } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Typography,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { makeStyles } from 'tss-react/mui';
-import { useTranslation } from './LocalizationProvider';
 import { useCatch } from '../../reactHelper';
-import { snackBarDurationLongMs } from '../util/duration';
 import fetchOrThrow from '../util/fetchOrThrow';
 
 const useStyles = makeStyles()((theme) => ({
-  root: {
-    [theme.breakpoints.down('md')]: {
-      bottom: `calc(${theme.dimensions.bottomBarHeight}px + ${theme.spacing(1)})`,
-    },
+  titleRoot: {
+    backgroundColor: "#4a90e2",
+    color: theme.palette.primary.contrastText,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing(1.5, 2),
   },
-  button: {
-    height: 'auto',
-    marginTop: 0,
-    marginBottom: 0,
+  closeButton: {
+    color: theme.palette.primary.contrastText,
+  },
+  content: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(3),
+    textAlign: "center",
+  },
+  actions: {
+    justifyContent: "center",
+    paddingBottom: theme.spacing(3),
+  },
+  actionButton: {
+    minWidth: 100,
+    margin: theme.spacing(0, 1),
   },
 }));
 
@@ -23,7 +43,6 @@ const RemoveDialog = ({
   open, endpoint, itemId, onResult,
 }) => {
   const { classes } = useStyles();
-  const t = useTranslation();
 
   const handleRemove = useCatch(async () => {
     await fetchOrThrow(`/api/${endpoint}/${itemId}`, { method: 'DELETE' });
@@ -31,18 +50,31 @@ const RemoveDialog = ({
   });
 
   return (
-    <Snackbar
-      className={classes.root}
+    <Dialog
       open={open}
-      autoHideDuration={snackBarDurationLongMs}
       onClose={() => onResult(false)}
-      message={t('sharedRemoveConfirm')}
-      action={(
-        <Button size="small" className={classes.button} color="error" onClick={handleRemove}>
-          {t('sharedRemove')}
+      aria-labelledby="remove-dialog-title"
+      maxWidth="xs"
+      fullWidth
+    >
+      <DialogTitle id="remove-dialog-title" disableTypography className={classes.titleRoot}>
+        <span />
+        <IconButton aria-label="close" size="small" onClick={() => onResult(false)} className={classes.closeButton}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent className={classes.content}>
+        <Typography variant="body1">Anda yakin akan menghapus?</Typography>
+      </DialogContent>
+      <DialogActions className={classes.actions}>
+        <Button size="small" variant="outlined" onClick={handleRemove} className={classes.actionButton}>
+          Ya
         </Button>
-      )}
-    />
+        <Button size="small" variant="outlined" onClick={() => onResult(false)} className={classes.actionButton}>
+          Tidak
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

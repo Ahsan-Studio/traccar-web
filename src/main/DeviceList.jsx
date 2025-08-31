@@ -138,7 +138,7 @@ const DeviceList = ({ devices }) => {
           itemSize={33}
           overscanCount={10}
           outerElementType={OuterElement}
-        >
+        > 
           {renderRow}
         </FixedSizeList>
       )}

@@ -1,5 +1,5 @@
 import { useSelector } from 'react-redux';
-import { ThemeProvider, useMediaQuery } from '@mui/material';
+import { ThemeProvider } from '@mui/material';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import { prefixer } from 'stylis';
@@ -22,9 +22,7 @@ const AppThemeProvider = ({ children }) => {
   const server = useSelector((state) => state.session.server);
   const { direction } = useLocalization();
 
-  const serverDarkMode = server?.attributes?.darkMode;
-  const preferDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-  const darkMode = serverDarkMode !== undefined ? serverDarkMode : preferDarkMode;
+  const darkMode = false;
 
   const themeInstance = theme(server, darkMode, direction);
 

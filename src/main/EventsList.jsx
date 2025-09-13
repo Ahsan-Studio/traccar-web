@@ -18,17 +18,23 @@ import dayjs from 'dayjs';
 import fetchOrThrow from '../common/util/fetchOrThrow';
 
 const useStyles = makeStyles()((theme) => ({
+  root: {
+    height: '100%',
+    overflow: 'auto',
+    backgroundColor: 'white',
+    padding: '10px',
+  },
   toolbar: {
     display: 'flex',
-    gap: theme.spacing(1),
-    padding: theme.spacing(1.5),
-    backgroundColor: '#f5f5f5',
-    borderBottom: '1px solid #e0e0e0',
+    gap: '5px',
+    padding: '0px',
+    backgroundColor: 'white',
+    marginBottom: '10px',
   },
   searchField: {
     flex: 1,
     '& .MuiOutlinedInput-root': {
-      backgroundColor: 'white',
+      backgroundColor: '#f5f5f5',
       height: '28px',
       fontSize: '11px',
       '& fieldset': {
@@ -39,7 +45,7 @@ const useStyles = makeStyles()((theme) => ({
   actionButton: {
     width: '28px',
     height: '28px',
-    backgroundColor: 'white',
+    backgroundColor: '#f5f5f5',
     borderRadius: 0,
     '&:hover': {
       backgroundColor: '#e0e0e0',
@@ -49,27 +55,22 @@ const useStyles = makeStyles()((theme) => ({
       color: '#666666',
     },
   },
-  root: {
-    height: '100%',
-    overflow: 'auto',
-    backgroundColor: 'white',
-  },
   header: {
     display: 'flex',
     backgroundColor: '#f5f5f5',
     borderBottom: '1px solid #e0e0e0',
-    padding: '8px 16px',
+    padding: '5px 10px',
     '& > div': {
-      fontSize: '13px',
-      fontWeight: 500,
-      color: '#000',
+      fontSize: '12px',
+      fontWeight: 400,
+      color: '#444444',
     },
   },
   headerTime: {
-    width: '100px',
+    width: '55px',
   },
   headerDevice: {
-    width: '200px',
+    width: '110px',
   },
   headerEvent: {
     flex: 1,
@@ -77,25 +78,29 @@ const useStyles = makeStyles()((theme) => ({
   listItem: {
     display: 'flex',
     alignItems: 'center',
-    padding: '6px 16px',
+    // padding: '4px 0px 4px 0px',
+    paddingLeft: '4px',
+    paddingRight: '4px',
+    paddingTop: '2px',
+    paddingBottom: '2px',
     borderBottom: '1px solid #e0e0e0',
-    '&:nth-of-type(even)': {
-      backgroundColor: '#f8f9fa',
+    ":hover": {
+      backgroundColor: '#f5f5f5',
     },
   },
   time: {
-    width: '100px',
-    fontSize: '12px',
+    width: '55px',
+    fontSize: '11px',
     color: theme.palette.text.primary,
   },
   deviceName: {
-    width: '200px',
-    fontSize: '12px',
+    width: '110px',
+    fontSize: '11px',
     color: theme.palette.text.primary,
   },
   event: {
     flex: 1,
-    fontSize: '12px',
+    fontSize: '11px',
     color: theme.palette.text.primary,
   },
   loader: {

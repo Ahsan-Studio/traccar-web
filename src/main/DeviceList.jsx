@@ -1,7 +1,7 @@
 import {
- forwardRef, useEffect, useState, useMemo 
+  forwardRef, useEffect, useState, useMemo 
 } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -41,6 +41,7 @@ const OuterElement = forwardRef(function OuterElement(props, ref) {
 const DeviceList = ({ devices }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
+  const groups = useSelector((state) => state.groups.items);
 
   const [, setTime] = useState(Date.now());
 
@@ -58,18 +59,18 @@ const DeviceList = ({ devices }) => {
 
   // Group devices
   const groupedDevices = useMemo(() => {
-    const groups = {};
+    const deviceGroups = {};
     const ungrouped = [];
 
     devices.forEach(device => {
       if (device.groupId) {
-        if (!groups[device.groupId]) {
-          groups[device.groupId] = {
-            name: `GROUP ${device.groupId}`,
+        if (!deviceGroups[device.groupId]) {
+          deviceGroups[device.groupId] = {
+            name: groups[device.groupId]?.name || `Group ${device.groupId}`,
             devices: []
           };
         }
-        groups[device.groupId].devices.push(device);
+        deviceGroups[device.groupId].devices.push(device);
       } else {
         ungrouped.push(device);
       }
@@ -90,7 +91,7 @@ const DeviceList = ({ devices }) => {
     }
 
     // Add grouped sections
-    Object.entries(groups).forEach(([group]) => {
+    Object.entries(deviceGroups).forEach(([, group]) => {
       result.push({ 
         type: 'header', 
         content: `${group.name} (${group.devices.length})`
@@ -101,7 +102,7 @@ const DeviceList = ({ devices }) => {
     });
 
     return result;
-  }, [devices]);
+  }, [devices, groups]);
 
   const renderRow = ({ index, style }) => {
     const item = groupedDevices[index];

@@ -13,7 +13,7 @@ import {
   Divider,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import SyncIcon from '@mui/icons-material/Sync';
+import RefreshIcon from '@mui/icons-material/Sync';
 import AddIcon from '@mui/icons-material/Add';
 import { makeStyles } from 'tss-react/mui';
 import { useTheme } from '@mui/material/styles';
@@ -161,10 +161,16 @@ const useStyles = makeStyles()((theme) => ({
     gap: theme.spacing(1),
   },
   iconButton: {
+    width: '28px',
+    height: '28px',
     backgroundColor: '#f5f5f5',
     borderRadius: '0px',
     '&:hover': {
       backgroundColor: '#e0e0e0',
+    },
+    '& .MuiSvgIcon-root': {
+      fontSize: '16px',
+      color: '#666666',
     },
   },
   deviceListContainer: {
@@ -365,7 +371,7 @@ const MainPage = () => {
                       {syncing ? (
                         <CircularProgress size={16} sx={{ color: '#444444' }} />
                       ) : (
-                        <SyncIcon fontSize="small" sx={{ color: '#444444' }} />
+                        <RefreshIcon fontSize="small" sx={{ color: '#444444' }} />
                       )}
                     </IconButton>
                     <IconButton 

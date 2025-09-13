@@ -126,17 +126,10 @@ const DeviceRow = ({ data, index, style }) => {
         {/* Status Icons */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
 
-          {/* Speed */}
           <Typography sx={{ fontSize: '11px' }}>
             {position ? `${position.speed.toFixed(1) || 0} kph` : '0 kph'}
           </Typography>
 
-          {/* <Tooltip title={position?.outdated === false && position?.valid === true ? 'Terkoneksi ke server, sinyal satelit normal' : 'Tidak ada koneksi ke server, tidak ada sinyal satelit'}>
-            <WifiIcon sx={{ 
-              fontSize: 16, 
-              color: position?.outdated === false && position?.valid === true ? '#4CAF50' : '#9e9e9e',
-            }} />
-          </Tooltip> */}
           {position?.attributes?.ignition === false && (
             <Tooltip title='Mesin Mati'>
               <Box

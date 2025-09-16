@@ -13,17 +13,11 @@ import {
   IconButton,
   Alert,
   Snackbar,
-  Autocomplete,
-  TextField,
-  Checkbox,
-  Chip,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
@@ -118,6 +112,19 @@ const useStyles = makeStyles()((theme) => ({
       borderColor: "#4a90e2",
     },
   },
+  multipleSelect: {
+    width: "100%",
+    padding: "6px 8px",
+    border: "1px solid #ccc",
+    borderRadius: "3px",
+    fontSize: "12px",
+    backgroundColor: "white",
+    minHeight: "80px",
+    "&:focus": {
+      outline: "none",
+      borderColor: "#4a90e2",
+    },
+  },
   width100: {
     width: "100%",
   },
@@ -171,8 +178,11 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
     }));
   };
 
-  const handleDeviceChange = (event, newValue) => {
-    setSelectedDevices(newValue);
+  const handleDeviceChange = (event) => {
+    const selectedValues = Array.from(event.target.selectedOptions, option => 
+      Object.values(devices).find(device => device.id === parseInt(option.value))
+    );
+    setSelectedDevices(selectedValues);
   };
 
   const handleSave = async () => {
@@ -360,81 +370,21 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
             <div className={classes.row2}>
               <div className={classes.width40}>Objects</div>
               <div className={classes.width60}>
-                <Autocomplete
+                <select
+                  className={`${classes.multipleSelect} ${classes.width100}`}
                   multiple
-                  options={Object.values(devices)}
-                  getOptionLabel={(option) => option.name}
-                  value={selectedDevices}
+                  value={selectedDevices.map(device => device.id)}
                   onChange={handleDeviceChange}
-                  disableCloseOnSelect
-                  ListboxProps={{
-                    style: {
-                      maxHeight: '200px',
-                      zIndex: 9999,
-                    }
-                  }}
-                  PopperComponent={(props) => (
-                    <div {...props} style={{ ...props.style, zIndex: 9999 }} />
-                  )}
-                  renderOption={(props, option, { selected }) => (
-                    <li {...props}>
-                      <Checkbox
-                        icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
-                        checkedIcon={<CheckBoxIcon fontSize="small" />}
-                        style={{ marginRight: 8 }}
-                        checked={selected}
-                      />
-                      {option.name}
-                    </li>
-                  )}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        variant="outlined"
-                        label={option.name}
-                        size="small"
-                        {...getTagProps({ index })}
-                        key={option.id}
-                      />
-                    ))
-                  }
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={selectedDevices.length === 0 ? "Nothing selected" : ""}
-                      size="small"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          fontSize: '11px',
-                          minHeight: '24px',
-                          backgroundColor: '#f5f5f5',
-                          '& fieldset': {
-                            borderColor: '#ccc',
-                          },
-                          '&:hover fieldset': {
-                            borderColor: '#4a90e2',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#4a90e2',
-                          },
-                        },
-                        '& .MuiInputBase-input': {
-                          fontSize: '11px',
-                          color: '#444444',
-                        },
-                      }}
-                    />
-                  )}
-                  sx={{
-                    '& .MuiAutocomplete-tag': {
-                      fontSize: '10px',
-                      height: '20px',
-                    },
-                    '& .MuiAutocomplete-popper': {
-                      zIndex: 9999,
-                    },
-                  }}
-                />
+                >
+                  {Object.values(devices).map((device) => (
+                    <option key={device.id} value={device.id} style={{ fontSize: '11px',padding: '4px' }}>
+                      {device.name}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
+                  Hold Ctrl (Cmd on Mac) to select multiple objects
+                </div>
               </div>
             </div>
           </div>

@@ -330,13 +330,12 @@ const GroupsTab = () => {
                   </TableCell>
                   <TableCell>
                     <div className={classes.sortableHeader}>
-                      Name
+                      Nama
                       <ArrowUpwardIcon className={classes.sortIcon} />
                     </div>
                   </TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell>Objects</TableCell>
-                  {/* <TableCell>Created</TableCell> */}
+                  <TableCell>Objek</TableCell>
+                  <TableCell>Deskripsi</TableCell>
                   <TableCell align="center"></TableCell>
                 </TableRow>
               </TableHead>
@@ -351,8 +350,8 @@ const GroupsTab = () => {
                       />
                     </TableCell>
                     <TableCell>{group.name}</TableCell>
-                    <TableCell>{group.attributes?.description || "-"}</TableCell>
                     <TableCell>{group.deviceCount}</TableCell>
+                    <TableCell>{group.attributes?.description || "-"}</TableCell>
                     <TableCell align="center">
                       <div className={classes.actionButtons}>
                         <IconButton

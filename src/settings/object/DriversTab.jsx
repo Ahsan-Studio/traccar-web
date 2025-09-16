@@ -313,10 +313,10 @@ const DriversTab = () => {
                       <ArrowUpwardIcon className={classes.sortIcon} />
                     </div>
                   </TableCell>
-                  <TableCell>License Number</TableCell>
-                  <TableCell>Phone</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Created</TableCell>
+                  <TableCell>No Identitas</TableCell>
+                  <TableCell>Deskripsi</TableCell>
+                  {/* <TableCell>Email</TableCell>
+                  <TableCell>Created</TableCell> */}
                   <TableCell align="center"></TableCell>
                 </TableRow>
               </TableHead>
@@ -331,12 +331,8 @@ const DriversTab = () => {
                       />
                     </TableCell>
                     <TableCell>{driver.name}</TableCell>
-                    <TableCell>{driver.licenseNumber || "-"}</TableCell>
-                    <TableCell>{driver.phone || "-"}</TableCell>
-                    <TableCell>{driver.email || "-"}</TableCell>
-                    <TableCell>
-                      {driver.creationTime ? new Date(driver.creationTime).toLocaleDateString() : "-"}
-                    </TableCell>
+                    <TableCell>{driver.attributes?.identityNumber || "-"}</TableCell>
+                    <TableCell>{driver.attributes?.description || "-"}</TableCell>
                     <TableCell align="center">
                       <div className={classes.actionButtons}>
                         <IconButton

@@ -22,7 +22,6 @@ const useStyles = makeStyles()((theme) => ({
     "& .MuiDialog-paper": {
       width: "800px",
       maxWidth: "90vw",
-      height: "600px",
       maxHeight: "90vh",
     },
   },
@@ -187,11 +186,9 @@ const SettingsDialog = ({ open, onClose }) => {
             variant="scrollable"
             scrollButtons="auto"
           >
-            <Tab label="Objects" />
-            <Tab label="Groups" />
-            <Tab label="Drivers" />
-            <Tab label="Passengers" />
-            <Tab label="Trailers" />
+            <Tab label="Objek" />
+            <Tab label="Grup" />
+            <Tab label="Pengemudi" />
           </Tabs>
 
           <NestedTabPanel value={objectsTabValue} index={0} className={classes.tabPanel}>

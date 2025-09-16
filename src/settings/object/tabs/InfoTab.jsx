@@ -1,165 +1,130 @@
-import { Box, Typography, TextField, Grid, Chip } from "@mui/material";
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from "@mui/material";
 import { makeStyles } from "tss-react/mui";
+import { useSelector } from "react-redux";
 
 const useStyles = makeStyles()((theme) => ({
-  sectionTitle: {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "#4a90e2",
-    marginBottom: theme.spacing(2),
+  tableContainer: {
+    width: "100%",
     marginTop: theme.spacing(2),
   },
-  formField: {
-    "& .MuiOutlinedInput-root": {
-      fontSize: "12px",
-    },
-    "& .MuiInputLabel-root": {
-      fontSize: "12px",
-    },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
   },
-  infoCard: {
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: "4px",
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-    backgroundColor: "#f9f9f9",
+  tableHeader: {
+    backgroundColor: "#f5f5f5",
+    height: "24px",
   },
-  infoRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: theme.spacing(1),
-    "&:last-child": {
-      marginBottom: 0,
-    },
-  },
-  infoLabel: {
+  headerCell: {
     fontSize: "12px",
-    fontWeight: 500,
-    color: "#666",
+    color: "#444444",
+    fontWeight: "normal",
+    padding: "0px 8px",
+    height: "24px",
+    border: "none",
   },
-  infoValue: {
-    fontSize: "12px",
+  dataHeaderCell: {
+    width: "170px",
+  },
+  infoHeaderCell: {
+    width: "100%",
+  },
+  tableRow: {
+    height: "19px",
+    borderBottom: "1px solid #f5f5f5",
+  },
+  dataCell: {
+    fontSize: "11px",
     color: "#333",
+    padding: "0px 8px",
+    height: "19px",
+    width: "100%",
+    border: "none",
+    verticalAlign: "middle",
   },
-  statusChip: {
-    height: "20px",
-    fontSize: "10px",
-    "&.online": {
-      backgroundColor: "#4caf50",
-      color: "white",
-    },
-    "&.offline": {
-      backgroundColor: "#f44336",
-      color: "white",
+  valueCell: {
+    fontSize: "11px",
+    color: "#333",
+    padding: "0px 8px",
+    height: "19px",
+    width: "100%",
+    border: "none",
+    verticalAlign: "middle",
+  },
+  refreshIcon: {
+    position: "absolute",
+    bottom: "20px",
+    left: "20px",
+    cursor: "pointer",
+    color: "#666",
+    "&:hover": {
+      color: "#333",
     },
   },
 }));
 
-const InfoTab = ({ formData, onFormDataChange, device }) => {
+const InfoTab = ({ device }) => {
   const { classes } = useStyles();
+  
+  // Get position data from Redux store like DeviceInfoPanel does
+  const position = useSelector((state) => state.session.positions[device?.id]);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleString();
-  };
 
-  const getStatusChip = (status) => {
-    return (
-      <Chip
-        label={status === "online" ? "Online" : "Offline"}
-        className={`${classes.statusChip} ${status}`}
-        size="small"
-      />
-    );
-  };
+  const infoData = [
+    { label: "Kecepatan", value: position ? `${position.speed.toFixed(0)} kph` : "N/A" },
+    { label: "Ketinggian", value: position ? `${position.altitude.toFixed(0)} m` : "N/A" },
+    { label: "Latitude", value: position ? `${position.latitude.toFixed(6)}°` : "N/A" },
+    { label: "Longitude", value: position ? `${position.longitude.toFixed(6)}°` : "N/A" },
+    { label: "Parameters", value: position?.attributes ? JSON.stringify(position.attributes) : "" },
+    { label: "Protocol", value: position?.protocol || "N/A" },
+    { label: "Sudut", value: position ? `${position.course.toFixed(0)}°` : "N/A" },
+    { label: "Waktu (posisi)", value: position ? new Date(position.deviceTime).toLocaleString("id-ID") : "N/A" },
+    { label: "Waktu (server)", value: position ? new Date(position.serverTime).toLocaleString("id-ID") : "N/A" },
+  ];
 
   return (
-    <Box>
-      <Typography className={classes.sectionTitle}>Informasi Device</Typography>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {/* Device Information */}
-        <Box className={classes.infoCard}>
-          <Typography variant="subtitle2" sx={{ fontSize: "12px", fontWeight: 600, marginBottom: 1 }}>
-            Informasi Device
-          </Typography>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>ID:</span>
-            <span className={classes.infoValue}>{device?.id || "N/A"}</span>
-          </div>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Status:</span>
-            {getStatusChip(device?.status)}
-          </div>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Kategori:</span>
-            <span className={classes.infoValue}>{device?.category || "N/A"}</span>
-          </div>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Disabled:</span>
-            <span className={classes.infoValue}>{device?.disabled ? "Ya" : "Tidak"}</span>
-          </div>
-        </Box>
-
-        {/* Position Information */}
-        <Box className={classes.infoCard}>
-          <Typography variant="subtitle2" sx={{ fontSize: "12px", fontWeight: 600, marginBottom: 1 }}>
-            Informasi Posisi
-          </Typography>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Position ID:</span>
-            <span className={classes.infoValue}>{device?.positionId || "N/A"}</span>
-          </div>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Last Update:</span>
-            <span className={classes.infoValue}>{formatDate(device?.lastUpdate)}</span>
-          </div>
-        </Box>
-
-        {/* Additional Information */}
-        <Box className={classes.infoCard}>
-          <Typography variant="subtitle2" sx={{ fontSize: "12px", fontWeight: 600, marginBottom: 1 }}>
-            Informasi Tambahan
-          </Typography>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Group ID:</span>
-            <span className={classes.infoValue}>{device?.groupId || "N/A"}</span>
-          </div>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Driver ID:</span>
-            <span className={classes.infoValue}>{device?.driverId || "N/A"}</span>
-          </div>
-          
-          <div className={classes.infoRow}>
-            <span className={classes.infoLabel}>Trailer ID:</span>
-            <span className={classes.infoValue}>{device?.trailerId || "N/A"}</span>
-          </div>
-        </Box>
-
-        {/* Attributes */}
-        {device?.attributes && Object.keys(device.attributes).length > 0 && (
-          <Box className={classes.infoCard}>
-            <Typography variant="subtitle2" sx={{ fontSize: "12px", fontWeight: 600, marginBottom: 1 }}>
-              Attributes
-            </Typography>
-            
-            {Object.entries(device.attributes).map(([key, value]) => (
-              <div key={key} className={classes.infoRow}>
-                <span className={classes.infoLabel}>{key}:</span>
-                <span className={classes.infoValue}>{value || "N/A"}</span>
-              </div>
+    <Box sx={{ position: "relative", height: "100%" }}>
+      <TableContainer component={Paper} className={classes.tableContainer}>
+        <Table className={classes.table}>
+          <TableHead className={classes.tableHeader}>
+            <TableRow>
+              <TableCell className={`${classes.headerCell} ${classes.dataHeaderCell}`} style={{ minWidth: "170px" }}>
+                Data
+              </TableCell>
+              <TableCell className={`${classes.headerCell} ${classes.infoHeaderCell}`}>
+                Nilai
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {infoData.map((row, index) => (
+              <TableRow key={index} className={classes.tableRow}>
+                <TableCell className={classes.dataCell} style={{ width: "170px" }}>
+                  {row.label}
+                </TableCell>
+                <TableCell className={classes.valueCell}>
+                  {row.value}
+                </TableCell>
+              </TableRow>
             ))}
-          </Box>
-        )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      
+      {/* Refresh Icon */}
+      <Box className={classes.refreshIcon}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+        </svg>
       </Box>
     </Box>
   );

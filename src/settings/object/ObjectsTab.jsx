@@ -12,7 +12,6 @@ import {
   InputAdornment,
   Paper,
   TablePagination,
-  Chip,
   IconButton,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
@@ -24,6 +23,8 @@ import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CancelIcon from "@mui/icons-material/Cancel";
 import { useSelector, useDispatch } from "react-redux";
 import EditDeviceDialog from "./EditDeviceDialog";
 import RemoveDialog from "../../common/components/RemoveDialog";
@@ -286,13 +287,13 @@ const ObjectsTab = () => {
                   </TableCell>
                   <TableCell>
                     <div className={classes.sortableHeader}>
-                      Name
+                      Nama
                       <ArrowUpwardIcon className={classes.sortIcon} />
                     </div>
                   </TableCell>
                   <TableCell>IMEI</TableCell>
-                  <TableCell>Active</TableCell>
-                  <TableCell>Expires on</TableCell>
+                  <TableCell>Aktif</TableCell>
+                  <TableCell>Kadaluarsa pada</TableCell>
                   <TableCell align="center"></TableCell>
                 </TableRow>
               </TableHead>
@@ -309,11 +310,9 @@ const ObjectsTab = () => {
                     <TableCell>{device.name}</TableCell>
                     <TableCell>{device.uniqueId}</TableCell>
                     <TableCell>
-                      <Chip
-                        label={device.status === "online" ? "✓" : "✗"}
-                        className={`${classes.statusChip} ${device.status}`}
-                        size="small"
-                      />
+                      {device.status === "online" ?
+                      <CheckCircleOutlineIcon size="small" /> :
+                      <CancelIcon size="small" />}
                     </TableCell>
                     <TableCell>
                       {device.expirationTime || "2026-05-30"}

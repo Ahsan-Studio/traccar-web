@@ -516,6 +516,7 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
           <CustomTab 
             formData={formData} 
             onFormDataChange={handleFormDataChange}
+            device={device}
           />
         </TabPanel>
 

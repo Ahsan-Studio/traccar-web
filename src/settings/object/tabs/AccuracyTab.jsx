@@ -256,16 +256,16 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
               <input
                 type="checkbox"
                 className={classes.checkbox}
-                checked={formData.attributes?.accuration?.enableMinSatellites || false}
-                onChange={handleAccurationCheckboxChange("enableMinSatellites")}
+                checked={formData.attributes?.accuration?.useGpslev || false}
+                onChange={handleAccurationCheckboxChange("useGpslev")}
               />
               <input
                 className={classes.inputWithCheckbox}
                 type="number"
-                value={formData.attributes?.accuration?.minSatellites || "5"}
-                onChange={handleAccurationInputChange("minSatellites")}
+                value={formData.attributes?.accuration?.minGpslev || "5"}
+                onChange={handleAccurationInputChange("minGpslev")}
                 min="0"
-                disabled={!formData.attributes?.accuration?.enableMinSatellites}
+                disabled={!formData.attributes?.accuration?.useGpslev}
               />
             </div>
           </div>
@@ -278,8 +278,8 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
               <input
                 type="checkbox"
                 className={classes.checkbox}
-                checked={formData.attributes?.accuration?.enableMaxHdop || false}
-                onChange={handleAccurationCheckboxChange("enableMaxHdop")}
+                checked={formData.attributes?.accuration?.useHdop || false}
+                onChange={handleAccurationCheckboxChange("useHdop")}
               />
               <input
                 className={classes.inputWithCheckbox}
@@ -287,7 +287,7 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
                 value={formData.attributes?.accuration?.maxHdop || "3"}
                 onChange={handleAccurationInputChange("maxHdop")}
                 min="0"
-                disabled={!formData.attributes?.accuration?.enableMaxHdop}
+                disabled={!formData.attributes?.accuration?.useHdop}
               />
             </div>
           </div>

@@ -16,7 +16,7 @@ import fetchOrThrow from '../common/util/fetchOrThrow';
 
 const useStyles = makeStyles()((theme) => ({
   dialogTitle: {
-    backgroundColor: '#1a73e8',
+    backgroundColor: '#2b82d4',
     color: 'white',
     padding: '3px 14px !important',
     fontSize: '14px !important',

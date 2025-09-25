@@ -481,6 +481,8 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
           <IconTab 
             formData={formData} 
             onFormDataChange={handleFormDataChange}
+            deviceId={device?.id}
+            deviceUniqueId={device?.uniqueId}
           />
         </TabPanel>
 
@@ -507,8 +509,7 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
 
         <TabPanel value={tabValue} index={5} className={classes.tabPanel}>
           <ServiceTab 
-            formData={formData} 
-            onFormDataChange={handleFormDataChange}
+            device={device}
           />
         </TabPanel>
 

@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Box } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
+import IconSelectorDialog from "./IconSelectorDialog";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
@@ -92,11 +94,23 @@ const useStyles = makeStyles()((theme) => ({
     justifyContent: "center",
     backgroundColor: "#f5f5f5",
     marginLeft: "5px",
+    cursor: "pointer",
+    borderRadius: "3px",
+    "&:hover": {
+      borderColor: "#4a90e2",
+      backgroundColor: "#e3f2fd",
+    },
+  },
+  iconImage: {
+    maxWidth: "25px",
+    maxHeight: "25px",
+    objectFit: "contain",
   },
 }));
 
-const IconTab = ({ formData, onFormDataChange }) => {
+const IconTab = ({ formData, onFormDataChange, deviceId, deviceUniqueId }) => {
   const { classes } = useStyles();
+  const [iconSelectorOpen, setIconSelectorOpen] = useState(false);
 
   const handleIconAttributeChange = (field) => (event) => {
     const value = event.target.value;
@@ -109,6 +123,40 @@ const IconTab = ({ formData, onFormDataChange }) => {
         }
       }
     });
+  };
+
+  const handleIconSelect = (iconUrl) => {
+    onFormDataChange({
+      attributes: {
+        ...formData.attributes,
+        icon: {
+          ...formData.attributes?.icon,
+          deviceImage: iconUrl
+        }
+      }
+    });
+  };
+
+  const getCurrentIconUrl = () => {
+    const deviceImage = formData.attributes?.icon?.deviceImage;
+    const rootDeviceImage = formData.attributes?.deviceImage;
+    
+    // Priority: icon.deviceImage > root deviceImage
+    const imageSource = deviceImage || rootDeviceImage;
+    
+    if (imageSource) {
+      // If it's a custom uploaded image, use the media API
+      if (imageSource.startsWith('/api/media/')) {
+        return imageSource;
+      }
+      // If it's already a full path, return as is
+      if (imageSource.startsWith('/img/markers/objects/')) {
+        return imageSource;
+      }
+      // If it's just a filename, add the markers path
+      return `/img/markers/objects/${imageSource}`;
+    }
+    return "/img/markers/objects/land-car.svg";
   };
 
   return (
@@ -222,6 +270,28 @@ const IconTab = ({ formData, onFormDataChange }) => {
             </select>
           </div>
         </div>
+
+        <div className={classes.row2}>
+          <div className={classes.width40}>Icon</div>
+          <div className={classes.width60}>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <div
+                className={classes.iconPreview}
+                onClick={() => setIconSelectorOpen(true)}
+                title="Click to change icon"
+              >
+                <img
+                  src={getCurrentIconUrl()}
+                  alt="Selected icon"
+                  className={classes.iconImage}
+                  onError={(e) => {
+                    e.target.src = "/img/markers/objects/land-car.svg";
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Ekor Section */}
@@ -261,6 +331,15 @@ const IconTab = ({ formData, onFormDataChange }) => {
           </div>
         </div>
       </div>
+
+      <IconSelectorDialog
+        open={iconSelectorOpen}
+        onClose={() => setIconSelectorOpen(false)}
+        onIconSelect={handleIconSelect}
+        currentIcon={getCurrentIconUrl()}
+        deviceId={deviceId}
+        deviceUniqueId={deviceUniqueId}
+      />
     </Box>
   );
 };

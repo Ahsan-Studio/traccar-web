@@ -21,6 +21,9 @@ const { reducer, actions } = createSlice({
     remove(state, action) {
       delete state.items[action.payload];
     },
+    add(state, action) {
+      state.items[action.payload.id] = action.payload;
+    },
   },
 });
 

@@ -27,8 +27,10 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { useSelector, useDispatch } from "react-redux";
 import EditDeviceDialog from "./EditDeviceDialog";
+import AddDeviceDialog from "./AddDeviceDialog";
 import RemoveDialog from "../../common/components/RemoveDialog";
 import { devicesActions } from "../../store";
+import fetchOrThrow from "../../common/util/fetchOrThrow";
 
 const useStyles = makeStyles()((theme) => ({
   searchContainer: {
@@ -183,8 +185,10 @@ const ObjectsTab = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
   const [removingId, setRemovingId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const devices = useSelector((state) => state.devices.items);
   const positions = useSelector((state) => state.session.positions);
@@ -239,6 +243,29 @@ const ObjectsTab = () => {
   const handleCloseEditDialog = () => {
     setEditDialogOpen(false);
     setEditingDevice(null);
+  };
+
+  const handleAddDevice = () => {
+    setAddDialogOpen(true);
+  };
+
+  const handleCloseAddDialog = () => {
+    setAddDialogOpen(false);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetchOrThrow("/api/devices");
+      const devicesData = await response.json();
+      
+      // Update Redux store with fresh data
+      dispatch(devicesActions.refresh(devicesData));
+    } catch (error) {
+      console.error("Error refreshing devices:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const paginatedDevices = filteredDevices.slice(
@@ -351,10 +378,19 @@ const ObjectsTab = () => {
 
       <Box className={classes.footer}>
         <Box className={classes.footerLeft}>
-          <IconButton className={classes.footerButton}>
+          <IconButton 
+            className={classes.footerButton}
+            onClick={handleAddDevice}
+            title="Tambah Device"
+          >
             <AddIcon />
           </IconButton>
-          <IconButton className={classes.footerButton}>
+          <IconButton 
+            className={classes.footerButton}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh"
+          >
             <RefreshIcon />
           </IconButton>
           <IconButton className={classes.footerButton}>
@@ -393,6 +429,11 @@ const ObjectsTab = () => {
           device={editingDevice}
         />
       )}
+
+      <AddDeviceDialog
+        open={addDialogOpen}
+        onClose={handleCloseAddDialog}
+      />
       <RemoveDialog
         open={!!removingId}
         endpoint="devices"

@@ -15,7 +15,10 @@ import ObjectsTab from "../settings/object/ObjectsTab";
 import GroupsTab from "../settings/object/GroupsTab";
 import DriversTab from "../settings/object/DriversTab";
 import PassengersTab from "../settings/object/PassengersTab";
+import EventsTab from "../settings/events/EventsTab";
 import TrailersTab from "../settings/object/TrailersTab";
+import TemplatesTab from "../settings/templates/TemplatesTab";
+import SMSTab from "../settings/sms/SMSTab";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
@@ -213,21 +216,15 @@ const SettingsDialog = ({ open, onClose }) => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={1} className={classes.tabPanel}>
-          <Typography variant="body2" color="textSecondary">
-            Kegiatan content will be implemented here
-          </Typography>
+          <EventsTab />
         </TabPanel>
 
         <TabPanel value={tabValue} index={2} className={classes.tabPanel}>
-          <Typography variant="body2" color="textSecondary">
-            Template content will be implemented here
-          </Typography>
+          <TemplatesTab />
         </TabPanel>
 
         <TabPanel value={tabValue} index={3} className={classes.tabPanel}>
-          <Typography variant="body2" color="textSecondary">
-            SMS content will be implemented here
-          </Typography>
+          <SMSTab />
         </TabPanel>
 
         <TabPanel value={tabValue} index={4} className={classes.tabPanel}>

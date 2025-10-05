@@ -194,6 +194,7 @@ const ServiceTab = ({ device }) => {
 
       // Map dialog form data to API schema
       const payload = {
+        id: editingService?.id, // Include the ID for updates
         deviceId: device?.id,
         name: form.name || "",
         dataList: !!form.dataList,

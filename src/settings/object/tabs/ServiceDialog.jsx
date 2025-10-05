@@ -175,13 +175,14 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           if (!iso) return "";
           const d = new Date(iso);
           return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
-        } catch (_) {
-          return "";
+        } catch (err) {
+          return err;
         }
       };
 
       setFormData((prev) => ({
         ...prev,
+        id: service.id, // Include the ID for updates
         name: service.name || "",
         dataList: !!service.dataList,
         popup: !!service.popup,
@@ -212,6 +213,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
     if (open && !service) {
       // Reset to blank on new item
       setFormData({
+        id: null, // Explicitly set to null for new items
         name: "",
         dataList: false,
         popup: false,

@@ -4,61 +4,73 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
-  TextField,
   Box,
-  Typography,
+  IconButton,
   Alert,
-  Snackbar,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
+import CloseIcon from "@mui/icons-material/Close";
+import SaveIcon from "@mui/icons-material/Save";
+import CancelIcon from "@mui/icons-material/Close";
 import { useDispatch } from "react-redux";
 import { devicesActions } from "../../store";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
+import { CustomInput, CustomButton } from "../../common/components/custom";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
     "& .MuiDialog-paper": {
-      width: "400px",
-      height: "300px",
+      width: "300px",
+      maxWidth: "90vw",
+    },
+  },
+  dialogTitle: {
+    backgroundColor: "#2b82d4",
+    color: "white",
+    padding: "8px 16px",
+    fontSize: "14px",
+    fontWeight: 500,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  closeButton: {
+    color: "white",
+    padding: "4px",
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
     },
   },
   dialogContent: {
-    padding: theme.spacing(2),
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(2),
+    padding: theme.spacing(1.5),
+    marginTop: theme.spacing(1.5),
   },
   formRow: {
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(2),
+    marginBottom: '5px',
   },
-  formLabel: {
-    width: "40%",
+  label: {
     fontSize: "11px",
-    fontWeight: 500,
-    color: "#333",
+    fontWeight: 400,
+    color: "#444444",
+    width: "80px",
+    flexShrink: 0,
   },
-  formField: {
-    width: "60%",
-    "& .MuiOutlinedInput-root": {
-      height: "24px",
-      fontSize: "11px",
-    },
-    "& .MuiInputLabel-root": {
-      fontSize: "11px",
-    },
+  inputWrapper: {
+    flex: 1,
   },
   dialogActions: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(1),
     justifyContent: "center",
     gap: theme.spacing(1),
+    borderTop: `1px solid ${theme.palette.divider}`,
   },
-  actionButton: {
+  button: {
     fontSize: "11px",
     textTransform: "none",
-    padding: "6px 16px",
+    padding: "6px 20px",
+    minWidth: "80px",
   },
 }));
 
@@ -133,86 +145,85 @@ const AddDeviceDialog = ({ open, onClose }) => {
   };
 
   return (
-    <>
-      <Dialog
-        open={open}
-        onClose={handleCancel}
-        className={classes.dialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ fontSize: "14px", fontWeight: 600 }}>
-          Tambah Device Baru
-        </DialogTitle>
-        
-        <DialogContent className={classes.dialogContent}>
-        <Box mt={2} sx={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center' }}>
-            <div className={classes.label}>Nama</div>
-            <TextField
-              className={classes.textField}
+    <Dialog
+      open={open}
+      onClose={handleCancel}
+      className={classes.dialog}
+      maxWidth={false}
+    >
+      <DialogTitle className={classes.dialogTitle}>
+        Add object
+        <IconButton
+          onClick={handleCancel}
+          className={classes.closeButton}
+          size="small"
+        >
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      </DialogTitle>
+      
+      <DialogContent className={classes.dialogContent}>
+        <Box className={classes.formRow}>
+          <div className={classes.label}>Name</div>
+          <div className={classes.inputWrapper}>
+            <CustomInput
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
-              placeholder="Masukkan nama device"
-              variant="outlined"
-              size="small"
+              placeholder=""
               disabled={loading}
+              fullWidth
             />
-          </Box>
+          </div>
+        </Box>
 
-          <Box className={classes.formRow}>
-            <Typography className={classes.formLabel}>
-              IMEI *
-            </Typography>
-            <TextField
-              className={classes.formField}
+        <Box className={classes.formRow}>
+          <div className={classes.label}>IMEI</div>
+          <div className={classes.inputWrapper}>
+            <CustomInput
               value={formData.uniqueId}
               onChange={(e) => handleInputChange("uniqueId", e.target.value)}
-              placeholder="Masukkan IMEI device"
-              variant="outlined"
-              size="small"
+              placeholder=""
               disabled={loading}
+              fullWidth
             />
-          </Box>
+          </div>
+        </Box>
 
-          {error && (
-            <Alert severity="error" sx={{ fontSize: "11px" }}>
-              {error}
-            </Alert>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ fontSize: "11px", mt: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-          {success && (
-            <Alert severity="success" sx={{ fontSize: "11px" }}>
-              {success}
-            </Alert>
-          )}
-        </DialogContent>
+        {success && (
+          <Alert severity="success" sx={{ fontSize: "11px", mt: 2 }}>
+            {success}
+          </Alert>
+        )}
+      </DialogContent>
 
-        <DialogActions className={classes.dialogActions}>
-          <Button
-            onClick={handleCancel}
-            className={classes.actionButton}
-            disabled={loading}
-          >
-            Batal
-          </Button>
-          <Button
-            onClick={handleSave}
-            variant="contained"
-            className={classes.actionButton}
-            disabled={loading}
-          >
-            {loading ? "Menyimpan..." : "Simpan"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={!!success}
-        autoHideDuration={3000}
-        onClose={() => setSuccess("")}
-        message={success}
-      />
-    </>
+      <DialogActions className={classes.dialogActions}>
+        <CustomButton
+          onClick={handleSave}
+          size="small"
+          disabled={loading}
+          className={classes.button}
+        >
+          <SaveIcon sx={{ fontSize: 14, marginRight: '4px' }} />
+          Save
+        </CustomButton>
+        <CustomButton
+          onClick={handleCancel}
+          size="small"
+          disabled={loading}
+          variant="outlined"
+          className={classes.button}
+        >
+          <CancelIcon sx={{ fontSize: 14, marginRight: '4px' }} />
+          Cancel
+        </CustomButton>
+      </DialogActions>
+    </Dialog>
   );
 };
 

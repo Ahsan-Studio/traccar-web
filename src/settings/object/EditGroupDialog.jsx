@@ -8,41 +8,31 @@ import {
   DialogContent,
   DialogActions,
   Box,
-  Button,
-  Typography,
   IconButton,
   Alert,
-  Snackbar,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
-import CancelIcon from "@mui/icons-material/Cancel";
+import CancelIcon from "@mui/icons-material/Close";
+import { CustomInput, CustomButton, CustomMultiSelect } from "../../common/components/custom";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
     "& .MuiDialog-paper": {
-      width: "500px",
+      width: "400px",
       maxWidth: "90vw",
-      height: "400px",
-      maxHeight: "90vh",
-      overflow: "visible",
-    },
-    "& .MuiDialog-container": {
-      overflow: "visible",
     },
   },
   dialogTitle: {
-    backgroundColor: "#4a90e2",
+    backgroundColor: "#2b82d4",
     color: "white",
-    padding: theme.spacing(1, 2),
+    padding: "8px 16px",
+    fontSize: "14px",
+    fontWeight: 500,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    "& .MuiTypography-root": {
-      fontSize: "14px",
-      fontWeight: 500,
-    },
   },
   closeButton: {
     color: "white",
@@ -52,90 +42,54 @@ const useStyles = makeStyles()((theme) => ({
     },
   },
   dialogContent: {
-    padding: theme.spacing(2),
-    overflow: "visible",
+    padding: theme.spacing(1.5),
+    marginTop: theme.spacing(1),
   },
-  container: {
-    padding: theme.spacing(1),
-  },
-  row: {
-    marginBottom: theme.spacing(0),
-  },
-  titleBlock: {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "#4a90e2",
-    marginBottom: theme.spacing(2),
-    marginTop: theme.spacing(0),
-  },
-  row2: {
+  formRow: {
     display: "flex",
     alignItems: "center",
-    marginBottom: '3px',
+    marginBottom: theme.spacing(1),
   },
-  width40: {
-    width: "40%",
+  label: {
     fontSize: "11px",
     fontWeight: 400,
-    color: "#686868",
-    paddingRight: theme.spacing(2),
+    color: "#444",
+    width: "100px",
+    flexShrink: 0,
   },
-  width60: {
-    width: "60%",
+  inputWrapper: {
+    flex: 1,
   },
-  inputbox: {
+  textareaWrapper: {
+    flex: 1,
+  },
+  textarea: {
     width: "100%",
-    padding: "0px 5px",
-    height: "24px",
-    border: "1px solid #ccc",
+    padding: "6px 12px",
     fontSize: "11px",
-    color: "#444444",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
     backgroundColor: "#f5f5f5",
+    fontFamily: "inherit",
+    resize: "vertical",
+    minHeight: "60px",
     "&:focus": {
       outline: "none",
-      borderColor: "#4a90e2",
+      borderColor: "#2196f3",
+      backgroundColor: "white",
     },
-    "&:disabled": {
-      backgroundColor: "#f5f5f5",
-      color: "#666",
-    },
-  },
-  select: {
-    width: "100%",
-    padding: "6px 8px",
-    border: "1px solid #ccc",
-    borderRadius: "3px",
-    fontSize: "12px",
-    backgroundColor: "white",
-    "&:focus": {
-      outline: "none",
-      borderColor: "#4a90e2",
-    },
-  },
-  multipleSelect: {
-    width: "100%",
-    padding: "6px 8px",
-    border: "1px solid #ccc",
-    borderRadius: "3px",
-    fontSize: "12px",
-    backgroundColor: "white",
-    minHeight: "80px",
-    "&:focus": {
-      outline: "none",
-      borderColor: "#4a90e2",
-    },
-  },
-  width100: {
-    width: "100%",
   },
   dialogActions: {
-    padding: theme.spacing(1, 2),
+    padding: theme.spacing(2),
+    justifyContent: "center",
+    gap: theme.spacing(1),
     borderTop: `1px solid ${theme.palette.divider}`,
-    backgroundColor: "#f5f5f5",
   },
-  actionButton: {
-    fontSize: "12px",
-    padding: "6px 16px",
+  button: {
+    fontSize: "11px",
+    textTransform: "none",
+    padding: "6px 20px",
+    minWidth: "80px",
   },
 }));
 
@@ -146,7 +100,7 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [selectedDevices, setSelectedDevices] = useState([]);
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
   const [formData, setFormData] = useState({
     id: group?.id || 0,
     name: group?.name || "",
@@ -154,13 +108,15 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
     attributes: group?.attributes || {},
   });
 
-  // Get devices that belong to this group
+  // Get device IDs that belong to this group
   useEffect(() => {
     if (group && devices) {
-      const groupDevices = Object.values(devices).filter(device => device.groupId === group.id);
-      setSelectedDevices(groupDevices);
+      const groupDeviceIds = Object.values(devices)
+        .filter(device => device.groupId === group.id)
+        .map(device => device.id);
+      setSelectedDeviceIds(groupDeviceIds);
     } else {
-      setSelectedDevices([]);
+      setSelectedDeviceIds([]);
     }
   }, [group, devices]);
 
@@ -178,11 +134,8 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
     }));
   };
 
-  const handleDeviceChange = (event) => {
-    const selectedValues = Array.from(event.target.selectedOptions, option => 
-      Object.values(devices).find(device => device.id === parseInt(option.value))
-    );
-    setSelectedDevices(selectedValues);
+  const handleDeviceChange = (selectedIds) => {
+    setSelectedDeviceIds(selectedIds);
   };
 
   const handleSave = async () => {
@@ -220,8 +173,11 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
       console.log('Group saved successfully:', savedGroup);
       
       // Handle device assignment to group
-      if (selectedDevices.length > 0) {
+      if (selectedDeviceIds.length > 0) {
         try {
+          const selectedDevices = Object.values(devices).filter(device => 
+            selectedDeviceIds.includes(device.id)
+          );
           console.log('Assigning devices to group:', selectedDevices);
           
           // Update each selected device to belong to this group
@@ -245,7 +201,6 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
           // Also remove devices that were previously in this group but are no longer selected
           if (group) {
             const previousDevices = Object.values(devices).filter(device => device.groupId === group.id);
-            const selectedDeviceIds = selectedDevices.map(device => device.id);
             const devicesToRemove = previousDevices.filter(device => !selectedDeviceIds.includes(device.id));
             
             for (const device of devicesToRemove) {
@@ -300,18 +255,16 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
       groupId: group?.groupId || 0,
       attributes: group?.attributes || {},
     });
-    setSelectedDevices([]);
+    setSelectedDeviceIds([]);
     setError(null);
     onClose();
   };
 
-  const handleCloseError = () => {
-    setError(null);
-  };
-
-  const handleCloseSuccess = () => {
-    setSuccess(false);
-  };
+  // Prepare device options for CustomMultiSelect
+  const deviceOptions = Object.values(devices).map(device => ({
+    value: device.id,
+    label: device.name
+  }));
 
   return (
     <Dialog
@@ -321,7 +274,7 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
       maxWidth={false}
     >
       <DialogTitle className={classes.dialogTitle}>
-        <Typography>Object group properties</Typography>
+        Object group properties
         <IconButton
           onClick={onClose}
           className={classes.closeButton}
@@ -332,120 +285,84 @@ const EditGroupDialog = ({ open, onClose, group, onGroupSaved }) => {
       </DialogTitle>
 
       <DialogContent className={classes.dialogContent}>
-        <Box className={classes.container}>
-          <div className={classes.row}>
-            <div className={classes.row2}>
-              <div className={classes.width40}>Name</div>
-              <div className={classes.width60}>
-                <input
-                  className={classes.inputbox}
-                  type="text"
-                  value={formData.name}
-                  onChange={handleInputChange("name")}
-                  maxLength="25"
-                  placeholder="Enter group name"
-                />
-              </div>
-            </div>
-            
-            <div className={classes.row2}>
-              <div className={classes.width40}>Description</div>
-              <div className={classes.width60}>
-                <textarea
-                  className={classes.inputbox}
-                  value={formData.attributes?.description || ""}
-                  onChange={handleAttributesChange("description")}
-                  rows={3}
-                  placeholder="Enter group description (optional)"
-                  style={{ 
-                    height: "auto", 
-                    minHeight: "60px", 
-                    resize: "vertical",
-                    fontFamily: "inherit"
-                  }}
-                />
-              </div>
-            </div>
-            
-            <div className={classes.row2}>
-              <div className={classes.width40}>Objects</div>
-              <div className={classes.width60}>
-                <select
-                  className={`${classes.multipleSelect} ${classes.width100}`}
-                  multiple
-                  value={selectedDevices.map(device => device.id)}
-                  onChange={handleDeviceChange}
-                >
-                  {Object.values(devices).map((device) => (
-                    <option key={device.id} value={device.id} style={{ fontSize: '11px',padding: '4px' }}>
-                      {device.name}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
-                  Hold Ctrl (Cmd on Mac) to select multiple objects
-                </div>
-              </div>
-            </div>
+        <Box className={classes.formRow}>
+          <div className={classes.label}>Name</div>
+          <div className={classes.inputWrapper}>
+            <CustomInput
+              value={formData.name}
+              onChange={handleInputChange("name")}
+              placeholder="Enter group name"
+            />
+          </div>
+        </Box>
+
+        <Box className={classes.formRow}>
+          <div className={classes.label}>Description</div>
+          <div className={classes.textareaWrapper}>
+            <textarea
+              className={classes.textarea}
+              value={formData.attributes?.description || ""}
+              onChange={handleAttributesChange("description")}
+              placeholder="Enter group description (optional)"
+            />
+          </div>
+        </Box>
+
+        <Box className={classes.formRow}>
+          <div className={classes.label}>Objects</div>
+          <div className={classes.inputWrapper}>
+            <CustomMultiSelect
+              options={deviceOptions}
+              value={selectedDeviceIds}
+              onChange={handleDeviceChange}
+              placeholder="Select objects"
+              searchable={true}
+              displayValue={(selected) => {
+                if (!selected || selected.length === 0) {
+                  return "Nothing selected";
+                }
+                if (selected.length === 1) {
+                  const device = devices[selected[0]];
+                  return device ? device.name : "1 selected";
+                }
+                return `${selected.length} objects selected`;
+              }}
+            />
           </div>
         </Box>
       </DialogContent>
 
       <DialogActions className={classes.dialogActions}>
-        <Button
+        <CustomButton
           onClick={handleSave}
-          variant="contained"
-          startIcon={<SaveIcon />}
-          className={classes.actionButton}
+          variant="primary"
           disabled={saving}
-          sx={{
-            backgroundColor: "#4a90e2",
-            "&:hover": { backgroundColor: "#357abd" },
-          }}
+          icon={<SaveIcon style={{ fontSize: 14 }} />}
         >
           {saving ? "Saving..." : "Save"}
-        </Button>
-        <Button
+        </CustomButton>
+        <CustomButton
           onClick={handleCancel}
-          variant="outlined"
-          startIcon={<CancelIcon />}
-          className={classes.actionButton}
+          variant="secondary"
+          icon={<CancelIcon style={{ fontSize: 14 }} />}
         >
           Cancel
-        </Button>
+        </CustomButton>
       </DialogActions>
 
-      {/* Error Snackbar */}
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={handleCloseError}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseError}
-          severity="error"
-          sx={{ width: "100%" }}
-        >
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mt: 2 }}>
           {error}
         </Alert>
-      </Snackbar>
+      )}
 
-      {/* Success Snackbar */}
-      <Snackbar
-        open={success}
-        autoHideDuration={3000}
-        onClose={handleCloseSuccess}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseSuccess}
-          severity="success"
-          sx={{ width: "100%" }}
-        >
+      {/* Success Alert */}
+      {success && (
+        <Alert severity="success" onClose={() => setSuccess(false)} sx={{ mt: 2 }}>
           Group {group ? "updated" : "created"} successfully!
         </Alert>
-      </Snackbar>
+      )}
     </Dialog>
   );
 };

@@ -8,9 +8,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Checkbox,
   IconButton,
-  TextField,
   CircularProgress,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
@@ -20,10 +18,16 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import { CustomCheckbox, CustomInput } from "./index";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
     padding: "15px",
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
   },
   header: {
     display: "flex",
@@ -33,50 +37,65 @@ const useStyles = makeStyles()((theme) => ({
     border: `0px solid ${theme.palette.divider}`,
     borderBottom: 0,
     backgroundColor: "transparent",
+    flexShrink: 0,
   },
   search: {
     width: "100%",
     marginBottom: '10px',
-    "& .MuiOutlinedInput-root": {
-      height: 28,
-      fontSize: 11,
-      borderRadius: 0,
-      border: `0px solid ${theme.palette.divider}`,
-    },
-    "& .MuiInputLabel-root": {
-      fontSize: 11,
-    },
+  },
+  searchIcon: {
+    color: '#999',
+    fontSize: 16,
+  },
+  tableContainer: {
+    flex: 1,
+    overflow: "auto",
+    minHeight: 0,
   },
   tableHeader: {
     backgroundColor: "#f5f5f5",
-    "& .MuiTableCell-root": {
-      fontSize: 12,
-      fontWeight: 600,
-      padding: "8px 12px",
-      borderBottom: `1px solid ${theme.palette.divider}`,
-      color: "#444444",
-    },
-  },
-  tableRow: {
-    "&:nth-of-type(even)": {
-      backgroundColor: "#fafafa",
-    },
-    "&:hover": {
-      backgroundColor: "#f0f0f0",
+    "& .MuiTableRow-root": {
+      height: '24px',
     },
     "& .MuiTableCell-root": {
       fontSize: 11,
-      padding: "6px 12px",
-      borderBottom: `1px solid ${theme.palette.divider}`,
+      fontWeight: 500,
+      height: '24px',
+      padding: '0px 12px',
+      borderBottom: `1px solid #ddd`,
+      borderLeft: 0,
+      borderRight: 0,
+      color: "#333",
+    },
+  },
+  tableRow: {
+    backgroundColor: "#fff",
+    maxHeight: '22px',
+    height: '22px',
+    "&:hover": {
+      backgroundColor: "#fafafa",
+    },
+    "& .MuiTableCell-root": {
+      fontSize: 11,
+      padding: "0px 12px",
+      height: '22px',
+      maxHeight: '22px',
+      borderBottom: `1px solid #ddd`,
+      borderLeft: 0,
+      borderRight: 0,
+      color: "#333",
+      lineHeight: '22px',
     },
   },
   checkboxCell: {
     width: 40,
-    padding: "6px 8px !important",
+    padding: "4px 8px 0px 8px !important",
+    verticalAlign: "middle !important",
+    textAlign: "center",
   },
   actionCell: {
     width: 80,
-    padding: "6px 8px !important",
+    padding: "0px 8px !important",
     textAlign: "right",
   },
   actionButton: {
@@ -87,12 +106,13 @@ const useStyles = makeStyles()((theme) => ({
     },
   },
   footer: {
+    flexShrink: 0,
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     padding: theme.spacing(1, 1),
-    border: `1px solid ${theme.palette.divider}`,
-    borderTop: 0,
+    backgroundColor: '#fff',
+    borderTop: `1px solid ${theme.palette.divider}`,
   },
   footerLeft: {
     display: "flex",
@@ -118,10 +138,35 @@ export const BoolIcon = ({ value }) => (value ? (
 ));
 
 /**
- * Reusable settings-styled table
- * columns: [{ key, label, align, width, render?: (row)=>node }]
+ * Reusable custom table component for settings and data management
+ * 
+ * @param {Array} rows - Array of data objects to display
+ * @param {Array} columns - Column definitions: [{ key, label, align, width, render?: (row)=>node }]
+ * @param {Boolean} loading - Show loading spinner
+ * @param {Array} selected - Array of selected row IDs
+ * @param {Function} onToggleRow - Callback when row checkbox is toggled
+ * @param {Function} onToggleAll - Callback when header checkbox is toggled
+ * @param {Function} onEdit - Callback when edit button is clicked
+ * @param {Function} onDelete - Callback when delete button is clicked
+ * @param {String} search - Search input value
+ * @param {Function} onSearchChange - Callback when search input changes
+ * @param {Function} onAdd - Callback when add button is clicked
+ * @param {Function} onRefresh - Callback when refresh button is clicked
+ * @param {Function} onOpenSettings - Callback when settings button is clicked
+ * @param {Function} customActions - Function that returns custom action buttons for each row: (row) => ReactNode
+ * @param {Boolean} showSearch - Show/hide search input (default: true). Set to false to disable search
+ * 
+ * @example
+ * // With search (default)
+ * <CustomTable rows={data} columns={cols} search={search} onSearchChange={setSearch} />
+ * 
+ * // Without search
+ * <CustomTable rows={data} columns={cols} showSearch={false} />
+ * 
+ * // With custom actions
+ * <CustomTable rows={data} columns={cols} customActions={(row) => <IconButton>...</IconButton>} />
  */
-const SettingsTable = ({
+const CustomTable = ({
   rows = [],
   columns = [],
   loading = false,
@@ -133,7 +178,10 @@ const SettingsTable = ({
   search = "",
   onSearchChange = () => {},
   onAdd = () => {},
+  onRefresh = () => {},
   onOpenSettings = () => {},
+  customActions,
+  showSearch = true,
 }) => {
   const { classes } = useStyles();
 
@@ -143,7 +191,11 @@ const SettingsTable = ({
   const headerCells = useMemo(() => (
     <TableRow>
       <TableCell padding="checkbox" className={classes.checkboxCell}>
-        <Checkbox size="small" checked={allChecked} indeterminate={indeterminate} onChange={onToggleAll} />
+        <CustomCheckbox 
+          checked={allChecked} 
+          indeterminate={indeterminate} 
+          onChange={onToggleAll} 
+        />
       </TableCell>
       {columns.map((col) => (
         <TableCell key={col.key} align={col.align} style={{ width: col.width }}>{col.label}</TableCell>
@@ -154,17 +206,27 @@ const SettingsTable = ({
 
   return (
     <Box className={classes.container}>
-      <Box className={classes.header}>
-        <TextField
-          placeholder="Search"
-          size="small"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className={classes.search}
-        />
-      </Box>
+      {showSearch && (
+        <Box className={classes.header}>
+          <CustomInput
+            placeholder="Search"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            size="large"
+            fullWidth
+            startAdornment={
+              <SearchIcon className={classes.searchIcon} />
+            }
+            className={classes.search}
+          />
+        </Box>
+      )}
 
-      <TableContainer component={Paper} sx={{ border: "1px solid #ddd", borderTop: 0 }}>
+      <TableContainer 
+        component={Paper} 
+        className={classes.tableContainer}
+        sx={{ border: 0, boxShadow: 'none' }}
+      >
         <Table size="small">
           <TableHead className={classes.tableHeader}>{headerCells}</TableHead>
           <TableBody>
@@ -184,7 +246,10 @@ const SettingsTable = ({
               rows.map((row) => (
                 <TableRow key={row.id} className={classes.tableRow}>
                   <TableCell padding="checkbox" className={classes.checkboxCell}>
-                    <Checkbox size="small" checked={selected.includes(row.id)} onChange={() => onToggleRow(row.id)} />
+                    <CustomCheckbox 
+                      checked={selected.includes(row.id)} 
+                      onChange={() => onToggleRow(row.id)} 
+                    />
                   </TableCell>
                   {columns.map((col) => (
                     <TableCell key={col.key} align={col.align} style={{ width: col.width }}>
@@ -193,6 +258,7 @@ const SettingsTable = ({
                   ))}
                   <TableCell className={classes.actionCell}>
                     <IconButton size="small" className={classes.actionButton} onClick={() => onEdit(row)}><EditIcon /></IconButton>
+                    {customActions && customActions(row)}
                     <IconButton size="small" className={classes.actionButton} onClick={() => onDelete(row)}><DeleteIcon /></IconButton>
                   </TableCell>
                 </TableRow>
@@ -205,12 +271,17 @@ const SettingsTable = ({
       <Box className={classes.footer}>
         <Box className={classes.footerLeft}>
           <IconButton className={classes.footerButton} title="Add" onClick={onAdd}><AddIcon /></IconButton>
+          <IconButton className={classes.footerButton} title="Refresh" onClick={onRefresh}><RefreshIcon /></IconButton>
           <IconButton className={classes.footerButton} title="Settings" onClick={onOpenSettings}><SettingsIcon /></IconButton>
         </Box>
-        <Box className={classes.pagination}>Page 1 of 1 {'>>'} 50</Box>
+        <Box className={classes.pagination}>
+          <span>Page 1 of 1</span>
+          <span style={{ margin: '0 8px' }}>{'<<'}</span>
+          <span>50</span>
+        </Box>
       </Box>
     </Box>
   );
 };
 
-export default SettingsTable;
+export default CustomTable;

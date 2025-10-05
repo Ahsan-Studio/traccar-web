@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { BoolIcon } from "../components/SettingsTable";
-import SettingsTable from "../components/SettingsTable";
+import { CustomTable, BoolIcon } from "../../common/components/custom";
 
 const EventsTab = () => {
   const [items, setItems] = useState([]);
@@ -41,7 +40,7 @@ const EventsTab = () => {
   };
 
   return (
-    <SettingsTable
+    <CustomTable
       rows={rows}
       columns={columns}
       loading={loading}

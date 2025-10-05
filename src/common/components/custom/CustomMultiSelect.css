@@ -1,0 +1,149 @@
+/* Custom Multi-Select Styles */
+.custom-multiselect {
+  position: relative;
+  width: 100%;
+}
+
+.custom-multiselect.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Trigger/Display */
+.custom-multiselect-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  font-size: 11px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  min-height: 32px;
+  transition: all 0.2s ease;
+}
+
+.custom-multiselect-trigger:hover {
+  border-color: #999;
+  background-color: #efefef;
+}
+
+.custom-multiselect-value {
+  flex: 1;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-multiselect-arrow {
+  font-size: 18px !important;
+  color: #666;
+  transition: transform 0.2s ease;
+  margin-left: 8px;
+}
+
+.custom-multiselect-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* Dropdown */
+.custom-multiselect-dropdown {
+  position: fixed;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+/* Search */
+.custom-multiselect-search {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: white;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.custom-multiselect-search-icon {
+  font-size: 16px !important;
+  color: #999;
+  margin-right: 8px;
+}
+
+.custom-multiselect-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 11px;
+  padding: 4px;
+  background-color: transparent;
+  color: #333;
+}
+
+.custom-multiselect-search-input::placeholder {
+  color: #999;
+}
+
+/* Options List */
+.custom-multiselect-options {
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+.custom-multiselect-option {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  gap: 8px;
+}
+
+.custom-multiselect-option:hover {
+  background-color: #f5f5f5;
+}
+
+.custom-multiselect-option-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.custom-multiselect-no-options {
+  padding: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: #999;
+}
+
+/* Scrollbar */
+.custom-multiselect-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-multiselect-options::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.custom-multiselect-options::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.custom-multiselect-options::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

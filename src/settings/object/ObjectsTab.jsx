@@ -1,243 +1,95 @@
 import { useState, useMemo } from "react";
-import {
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Checkbox,
-  TextField,
-  InputAdornment,
-  Paper,
-  TablePagination,
-  IconButton,
-} from "@mui/material";
-import { makeStyles } from "tss-react/mui";
-import SearchIcon from "@mui/icons-material/Search";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import AddIcon from "@mui/icons-material/Add";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import SettingsIcon from "@mui/icons-material/Settings";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import CancelIcon from "@mui/icons-material/Cancel";
 import { useSelector, useDispatch } from "react-redux";
+import { CustomTable, BoolIcon } from "../../common/components/custom";
 import EditDeviceDialog from "./EditDeviceDialog";
 import AddDeviceDialog from "./AddDeviceDialog";
 import RemoveDialog from "../../common/components/RemoveDialog";
 import { devicesActions } from "../../store";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 
-const useStyles = makeStyles()((theme) => ({
-  searchContainer: {
-    marginBottom: 0,
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1),
-    padding: theme.spacing(2),
-    width: "100%",
-    "& .MuiInputBase-input": {
-      width: "100%",
-    },
-  },
-  searchField: {
-    width: "100%",
-    "& .MuiFormControl-root": {
-      width: "100%",
-    },
-    "& .MuiOutlinedInput-root": {
-      height: "32px",
-      fontSize: "12px",
-      width: "100%",
-      "& fieldset": {
-        borderColor: "#ddd",
-      },
-    },
-  },
-  tableContainer: {
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: "4px",
-    margin: theme.spacing(0, 2),
-    flex: 1,
-    overflow: "auto",
-    maxHeight: "100%",
-  },
-  table: {
-    "& .MuiTableBody-root": {
-      maxHeight: "300px",
-      overflow: "auto",
-    },
-  },
-  tableHeader: {
-    backgroundColor: "#f5f5f5",
-    "& .MuiTableCell-root": {
-      fontSize: "12px",
-      fontWeight: 600,
-      padding: "8px 12px",
-      borderBottom: `1px solid ${theme.palette.divider}`,
-    },
-  },
-  tableRow: {
-    "&:nth-of-type(even)": {
-      backgroundColor: "#fafafa",
-    },
-    "&:hover": {
-      backgroundColor: "#f0f0f0",
-    },
-    "& .MuiTableCell-root": {
-      fontSize: "11px",
-      padding: "6px 12px",
-      borderBottom: `1px solid ${theme.palette.divider}`,
-    },
-  },
-  stcusChip: {
-    height: "20px",
-    fontSize: "10px",
-    "&.online": {
-      backgroundColor: "#4caf50",
-      color: "white",
-    },
-    "&.offline": {
-      backgroundColor: "#f44336",
-      color: "white",
-    },
-  },
-  actionButtons: {
-    display: "flex",
-    gap: "4px",
-  },
-  actionButton: {
-    padding: "2px",
-    "& .MuiSvgIcon-root": {
-      fontSize: "14px",
-    },
-  },
-  pagination: {
-    padding: theme.spacing(1, 2),
-    "& .MuiTablePagination-toolbar": {
-      fontSize: "11px",
-    },
-    "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
-      fontSize: "11px",
-    },
-  },
-  container: {
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-  },
-  content: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-  },
-  tableWrapper: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-  },
-  footer: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: theme.spacing(1, 2),
-    borderTop: `1px solid ${theme.palette.divider}`,
-    backgroundColor: "#f5f5f5",
-    flexShrink: 0,
-  },
-  footerLeft: {
-    display: "flex",
-    gap: theme.spacing(1),
-  },
-  footerButton: {
-    padding: "4px",
-    "& .MuiSvgIcon-root": {
-      fontSize: "16px",
-      color: "#4a90e2",
-    },
-  },
-  sortableHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(0.5),
-    cursor: "pointer",
-    "&:hover": {
-      backgroundColor: "rgba(0, 0, 0, 0.04)",
-    },
-  },
-  sortIcon: {
-    fontSize: "14px",
-    color: "#666",
-  },
-}));
-
 const ObjectsTab = () => {
-  const { classes } = useStyles();
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
   const [removingId, setRemovingId] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const devices = useSelector((state) => state.devices.items);
-  const positions = useSelector((state) => state.session.positions);
-  const [currentTime] = useState(Date.now());
 
-  // Convert devices object to array and add status information
+  // Convert devices object to array
   const deviceList = useMemo(() => {
-    return Object.values(devices).map((device) => {
-      return {
-        ...device,
-        status: device.status === "online" ? "online" : "offline",
-      };
-    });
-  }, [devices, positions, currentTime]);
+    return Object.values(devices).map((device) => ({
+      ...device,
+      status: device.status === "online" ? true : false,
+    }));
+  }, [devices]);
 
-  const filteredDevices = deviceList.filter(
-    (device) =>
-      device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.uniqueId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter devices based on search term
+  const filteredDevices = useMemo(() => {
+    if (!searchTerm) return deviceList;
+    
+    const query = searchTerm.toLowerCase();
+    return deviceList.filter((device) => 
+      device.name?.toLowerCase().includes(query) ||
+      device.uniqueId?.toLowerCase().includes(query) ||
+      device.expirationTime?.toLowerCase().includes(query)
+    );
+  }, [deviceList, searchTerm]);
 
-  const handleSelectAll = (event) => {
-    if (event.target.checked) {
-      setSelectedDevices(filteredDevices.map((device) => device.id));
-    } else {
+  // Define columns for CustomTable
+  const columns = [
+    { key: "name", label: "Name" },
+    { key: "uniqueId", label: "IMEI" },
+    { 
+      key: "status", 
+      label: "Status",
+      align: "center",
+      render: (row) => <BoolIcon value={row.status} />,
+    },
+    { key: "expirationTime", label: "Expires on" },
+  ];
+
+  const handleToggleAll = () => {
+    if (selectedDevices.length === filteredDevices.length) {
       setSelectedDevices([]);
+    } else {
+      setSelectedDevices(filteredDevices.map((d) => d.id));
     }
   };
 
-  const handleSelectDevice = (deviceId) => {
+  const handleToggleRow = (id) => {
     setSelectedDevices((prev) =>
-      prev.includes(deviceId)
-        ? prev.filter((id) => id !== deviceId)
-        : [...prev, deviceId]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const handleEditDevice = (device) => {
+  const handleEdit = (device) => {
     setEditingDevice(device);
     setEditDialogOpen(true);
+  };
+
+  const handleDelete = (device) => {
+    setRemovingId(device.id);
+  };
+
+  const handleAdd = () => {
+    setAddDialogOpen(true);
+  };
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      const response = await fetchOrThrow("/api/devices");
+      const devicesData = await response.json();
+      dispatch(devicesActions.refresh(devicesData));
+    } catch (error) {
+      console.error("Error refreshing devices:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCloseEditDialog = () => {
@@ -245,182 +97,27 @@ const ObjectsTab = () => {
     setEditingDevice(null);
   };
 
-  const handleAddDevice = () => {
-    setAddDialogOpen(true);
-  };
-
   const handleCloseAddDialog = () => {
     setAddDialogOpen(false);
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const response = await fetchOrThrow("/api/devices");
-      const devicesData = await response.json();
-      
-      // Update Redux store with fresh data
-      dispatch(devicesActions.refresh(devicesData));
-    } catch (error) {
-      console.error("Error refreshing devices:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const paginatedDevices = filteredDevices.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
-
   return (
-    <Box className={classes.container}>
-      <Box className={classes.content}>
-        <Box className={classes.searchContainer}>
-          <TextField
-            placeholder="Search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={classes.searchField}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Box>
-
-        <Box className={classes.tableWrapper}>
-          <TableContainer component={Paper} className={classes.tableContainer}>
-            <Table size="small" className={classes.table}>
-              <TableHead className={classes.tableHeader}>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      indeterminate={
-                        selectedDevices.length > 0 &&
-                        selectedDevices.length < filteredDevices.length
-                      }
-                      checked={
-                        filteredDevices.length > 0 &&
-                        selectedDevices.length === filteredDevices.length
-                      }
-                      onChange={handleSelectAll}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className={classes.sortableHeader}>
-                      Nama
-                      <ArrowUpwardIcon className={classes.sortIcon} />
-                    </div>
-                  </TableCell>
-                  <TableCell>IMEI</TableCell>
-                  <TableCell>Aktif</TableCell>
-                  <TableCell>Kadaluarsa pada</TableCell>
-                  <TableCell align="center"></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedDevices.map((device) => (
-                  <TableRow key={device.id} className={classes.tableRow}>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={selectedDevices.includes(device.id)}
-                        onChange={() => handleSelectDevice(device.id)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{device.name}</TableCell>
-                    <TableCell>{device.uniqueId}</TableCell>
-                    <TableCell>
-                      {device.status === "online" ?
-                      <CheckCircleOutlineIcon size="small" /> :
-                      <CancelIcon size="small" />}
-                    </TableCell>
-                    <TableCell>
-                      {device.expirationTime || "2026-05-30"}
-                    </TableCell>
-                    <TableCell align="center">
-                      <div className={classes.actionButtons}>
-                        <IconButton
-                          size="small"
-                          className={classes.actionButton}
-                          onClick={() => handleEditDevice(device)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          className={classes.actionButton}
-                        >
-                          <ContentCopyIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          className={classes.actionButton}
-                          onClick={() => setRemovingId(device.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      </Box>
-
-      <Box className={classes.footer}>
-        <Box className={classes.footerLeft}>
-          <IconButton 
-            className={classes.footerButton}
-            onClick={handleAddDevice}
-            title="Tambah Device"
-          >
-            <AddIcon />
-          </IconButton>
-          <IconButton 
-            className={classes.footerButton}
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="Refresh"
-          >
-            <RefreshIcon />
-          </IconButton>
-          <IconButton className={classes.footerButton}>
-            <SettingsIcon />
-          </IconButton>
-        </Box>
-        <TablePagination
-          component="div"
-          count={filteredDevices.length}
-          page={page}
-          onPageChange={handleChangePage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          labelRowsPerPage=""
-          labelDisplayedRows={({ from, to, count }) =>
-            `View ${from}-${to} of ${count}`
-          }
-          className={classes.pagination}
-          sx={{
-            "& .MuiTablePagination-toolbar": {
-              fontSize: "11px",
-              padding: 0,
-            },
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
-              fontSize: "11px",
-            },
-          }}
-        />
-      </Box>
+    <>
+      <CustomTable
+        rows={filteredDevices}
+        columns={columns}
+        selected={selectedDevices}
+        onToggleAll={handleToggleAll}
+        onToggleRow={handleToggleRow}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onAdd={handleAdd}
+        onRefresh={handleRefresh}
+        loading={loading}
+        showSearch={true}
+        search={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
 
       {editDialogOpen && (
         <EditDeviceDialog
@@ -434,6 +131,7 @@ const ObjectsTab = () => {
         open={addDialogOpen}
         onClose={handleCloseAddDialog}
       />
+
       <RemoveDialog
         open={!!removingId}
         endpoint="devices"
@@ -447,7 +145,7 @@ const ObjectsTab = () => {
           }
         }}
       />
-    </Box>
+    </>
   );
 };
 

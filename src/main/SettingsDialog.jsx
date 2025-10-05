@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
 import CloseIcon from "@mui/icons-material/Close";
+import SaveIcon from "@mui/icons-material/Save";
 import ObjectsTab from "../settings/object/ObjectsTab";
 import GroupsTab from "../settings/object/GroupsTab";
 import DriversTab from "../settings/object/DriversTab";
@@ -19,19 +20,22 @@ import EventsTab from "../settings/events/EventsTab";
 import TrailersTab from "../settings/object/TrailersTab";
 import TemplatesTab from "../settings/templates/TemplatesTab";
 import SMSTab from "../settings/sms/SMSTab";
+import UserInterfaceTab from "../settings/userinterface/UserInterfaceTab";
+import MyAccountTab from "../settings/myaccount/MyAccountTab";
+import SubAccountsTab from "../settings/subaccounts/SubAccountsTab";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
     "& .MuiDialog-paper": {
       width: "800px",
+      height: "550px",
       maxWidth: "90vw",
-      maxHeight: "90vh",
     },
   },
   dialogTitle: {
-    backgroundColor: "#4a90e2",
+    backgroundColor: "#2a81d4",
     color: "white",
-    padding: theme.spacing(1, 2),
+    padding: '3px 14px',
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -69,6 +73,32 @@ const useStyles = makeStyles()((theme) => ({
       display: "none",
     },
   },
+  tabsContainer: {
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    position: "relative",
+  },
+  saveButton: {
+    position: "absolute",
+    right: theme.spacing(2),
+    top: "50%",
+    transform: "translateY(-50%)",
+    padding: "4px 12px",
+    fontSize: "12px",
+    color: "#666",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    cursor: "pointer",
+    "&:hover": {
+      color: "#4a90e2",
+    },
+  },
+  saveIcon: {
+    fontSize: "16px",
+  },
   tabPanel: {
     padding: 0,
     height: "calc(100% - 31px)",
@@ -103,6 +133,10 @@ const useStyles = makeStyles()((theme) => ({
     fontSize: "11px",
     borderBottom: `1px solid ${theme.palette.divider}`,
   },
+  nestedTabPanel: {
+    maxHeight: "400px",
+    overflow: "auto",
+  },
 }));
 
 const TabPanel = ({ children, value, index, ...other }) => (
@@ -123,6 +157,7 @@ const NestedTabPanel = ({ children, value, index, ...other }) => (
     hidden={value !== index}
     id={`objects-tabpanel-${index}`}
     aria-labelledby={`objects-tab-${index}`}
+    style={{ maxHeight: "400px", overflow: "auto" }}
     {...other}
   >
     {value === index && <Box sx={{ height: "100%" }}>{children}</Box>}
@@ -141,6 +176,34 @@ const SettingsDialog = ({ open, onClose }) => {
   const handleObjectsTabChange = (event, newValue) => {
     setObjectsTabValue(newValue);
   };
+
+  const handleSave = () => {
+    console.log('Settings Dialog handleSave called, tabValue:', tabValue);
+    
+    // Call save function based on active tab
+    if (tabValue === 3) {
+      // SMS tab
+      console.log('Calling smsTabSave, exists:', !!window.smsTabSave);
+      if (window.smsTabSave) {
+        window.smsTabSave();
+      }
+    } else if (tabValue === 4) {
+      // User Interface tab
+      console.log('Calling userInterfaceTabSave, exists:', !!window.userInterfaceTabSave);
+      if (window.userInterfaceTabSave) {
+        window.userInterfaceTabSave();
+      }
+    } else if (tabValue === 5) {
+      // My Account tab
+      console.log('Calling myAccountTabSave, exists:', !!window.myAccountTabSave);
+      if (window.myAccountTabSave) {
+        window.myAccountTabSave();
+      }
+    }
+  };
+
+  // Check if current tab should show save button (SMS, User Interface, My Account)
+  const showSaveButton = [3, 4, 5].includes(tabValue);
 
   return (
     <Dialog
@@ -161,21 +224,29 @@ const SettingsDialog = ({ open, onClose }) => {
       </DialogTitle>
 
       <DialogContent sx={{ padding: 0, height: "100%" }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          className={classes.tabs}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          <Tab label="Objek" />
-          <Tab label="Kegiatan" />
-          <Tab label="Template" />
-          <Tab label="SMS" />
-          <Tab label="Antarmuka pengg." />
-          <Tab label="Akun saya" />
-          <Tab label="Sub akun" />
-        </Tabs>
+        <Box className={classes.tabsContainer}>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            className={classes.tabs}
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab label="Object" />
+            <Tab label="Events" />
+            <Tab label="Template" />
+            <Tab label="SMS" />
+            <Tab label="User interface" />
+            <Tab label="My account" />
+            <Tab label="Sub akun" />
+          </Tabs>
+          {showSaveButton && (
+            <Box className={classes.saveButton} onClick={handleSave}>
+              <SaveIcon className={classes.saveIcon} />
+              <Typography sx={{ fontSize: "12px" }}>Save</Typography>
+            </Box>
+          )}
+        </Box>
 
         <TabPanel value={tabValue} index={0} className={classes.tabPanel}>
           <Box className={classes.infoMessage}>
@@ -189,9 +260,9 @@ const SettingsDialog = ({ open, onClose }) => {
             variant="scrollable"
             scrollButtons="auto"
           >
-            <Tab label="Objek" />
-            <Tab label="Grup" />
-            <Tab label="Pengemudi" />
+            <Tab label="Object" />
+            <Tab label="Group" />
+            <Tab label="Driver" />
           </Tabs>
 
           <NestedTabPanel value={objectsTabValue} index={0} className={classes.tabPanel}>
@@ -228,21 +299,15 @@ const SettingsDialog = ({ open, onClose }) => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={4} className={classes.tabPanel}>
-          <Typography variant="body2" color="textSecondary">
-            Antarmuka pengg. content will be implemented here
-          </Typography>
+          <UserInterfaceTab />
         </TabPanel>
 
         <TabPanel value={tabValue} index={5} className={classes.tabPanel}>
-          <Typography variant="body2" color="textSecondary">
-            Akun saya content will be implemented here
-          </Typography>
+          <MyAccountTab />
         </TabPanel>
 
         <TabPanel value={tabValue} index={6} className={classes.tabPanel}>
-          <Typography variant="body2" color="textSecondary">
-            Sub akun content will be implemented here
-          </Typography>
+          <SubAccountsTab />
         </TabPanel>
       </DialogContent>
 

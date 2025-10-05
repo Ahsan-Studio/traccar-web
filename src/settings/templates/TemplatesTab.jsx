@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import SettingsTable from "../components/SettingsTable";
+import { CustomTable } from "../../common/components/custom";
 import TemplateDialog from "./TemplateDialog";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 import RemoveDialog from "../../common/components/RemoveDialog";
@@ -121,7 +121,7 @@ const TemplatesTab = () => {
 
   return (
     <>
-      <SettingsTable
+      <CustomTable
         rows={rows}
         columns={columns}
         loading={loading}

@@ -182,6 +182,32 @@ const useStyles = makeStyles()((theme) => ({
     fontSize: "14px",
     marginTop: theme.spacing(2),
   },
+  previewContainer: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
+    border: "1px solid #e0e0e0",
+    borderRadius: "8px",
+    backgroundColor: "#f9f9f9",
+  },
+  previewImage: {
+    maxWidth: "200px",
+    maxHeight: "200px",
+    objectFit: "contain",
+    display: "block",
+    margin: "0 auto",
+    marginBottom: theme.spacing(2),
+  },
+  buttonContainer: {
+    display: "flex",
+    gap: theme.spacing(1),
+    justifyContent: "center",
+    marginTop: theme.spacing(2),
+  },
+  uploadActionButton: {
+    fontSize: "12px",
+    textTransform: "none",
+    minWidth: "100px",
+  },
 }));
 
 const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId, deviceUniqueId }) => {
@@ -193,6 +219,8 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [previewImage, setPreviewImage] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // Load default icons from public/img/markers/objects
   useEffect(() => {
@@ -292,9 +320,24 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
     onClose();
   };
 
-  const handleFileUpload = async (event) => {
+  const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file || !file.type.startsWith('image/')) return;
+    
+    // Store the file for later upload
+    setSelectedFile(file);
+    setError("");
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadClick = async () => {
+    if (!selectedFile) return;
     
     if (!deviceId) {
       setError("Device ID tidak tersedia untuk upload");
@@ -315,7 +358,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
         headers: {
           'Content-Type': 'image/jpeg', // Force image/jpeg content type
         },
-        body: file,
+        body: selectedFile,
       });
       
       // If direct upload fails, try FormData
@@ -323,7 +366,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
         console.log("Direct upload failed, trying FormData...");
         
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', selectedFile);
         
         response = await fetchOrThrow(`/api/devices/${deviceId}/image`, {
           method: 'POST',
@@ -337,7 +380,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
         console.log("FormData failed, trying with different field name...");
         
         const formData = new FormData();
-        formData.append('file', file); // Try 'file' instead of 'image'
+        formData.append('file', selectedFile); // Try 'file' instead of 'image'
         
         response = await fetchOrThrow(`/api/devices/${deviceId}/image`, {
           method: 'POST',
@@ -357,6 +400,12 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
         
         // Auto-select the uploaded image
         onIconSelect(newIcon.url);
+        
+        // Clear preview
+        setPreviewImage(null);
+        setSelectedFile(null);
+        
+        // Close dialog
         onClose();
       } else {
         const errorText = await response.text();
@@ -368,6 +417,12 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleClearPreview = () => {
+    setPreviewImage(null);
+    setSelectedFile(null);
+    setError("");
   };
 
   const handleDragOver = (e) => {
@@ -394,7 +449,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
           files: [imageFile]
         }
       };
-      await handleFileUpload(fakeEvent);
+      handleFileSelect(fakeEvent);
     }
   };
 
@@ -508,74 +563,102 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
 
           {activeTab === 1 && (
             <Box>
-              <Box
-                className={`${classes.uploadArea} ${dragOver ? "dragOver" : ""}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => document.getElementById('icon-upload').click()}
-              >
-                <CloudUploadIcon sx={{ fontSize: "48px", color: "#ccc" }} />
-                <Typography className={classes.uploadText}>
-                  Drag & drop files here or click to upload
-                </Typography>
-                <input
-                  id="icon-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  style={{ display: "none" }}
-                />
-                <Button
-                  variant="outlined"
-                  className={classes.uploadButton}
-                  startIcon={uploading ? <CircularProgress size={16} /> : <CloudUploadIcon />}
-                  disabled={uploading}
-                >
-                  {uploading ? "Mengupload..." : "Unggah"}
-                </Button>
-              </Box>
-
-              {customIcons.length > 0 && (
+              {!previewImage ? (
                 <>
-                  <Box className={classes.customIconGrid}>
-                    {customIcons.map((icon) => (
-                      <Box
-                        key={icon.id}
-                        className={`${classes.customIconItem} ${
-                          selectedIcon === icon.url ? "selected" : ""
-                        }`}
-                        onClick={() => handleIconClick(icon)}
-                      >
-                        <img
-                          src={icon.url}
-                          alt={icon.name}
-                          className={classes.iconImage}
-                        />
-                        <IconButton
-                          className={classes.deleteButton}
-                          onClick={(e) => handleDeleteCustomIcon(icon.id, e)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    ))}
-                  </Box>
-                  <Button
-                    variant="text"
-                    className={classes.deleteAllButton}
-                    startIcon={<DeleteIcon />}
-                    onClick={handleDeleteAllCustomIcons}
+                  <Box
+                    className={`${classes.uploadArea} ${dragOver ? "dragOver" : ""}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('icon-upload').click()}
                   >
-                    Hapus semua
-                  </Button>
-                </>
-              )}
+                    <CloudUploadIcon sx={{ fontSize: "48px", color: "#ccc" }} />
+                    <Typography className={classes.uploadText}>
+                      Drag & drop files here or click to upload
+                    </Typography>
+                    <input
+                      id="icon-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      style={{ display: "none" }}
+                    />
+                  </Box>
 
-              {customIcons.length === 0 && (
-                <Typography className={classes.emptyState}>
-                  No custom icons uploaded yet
-                </Typography>
+                  {customIcons.length > 0 && (
+                    <>
+                      <Box className={classes.customIconGrid}>
+                        {customIcons.map((icon) => (
+                          <Box
+                            key={icon.id}
+                            className={`${classes.customIconItem} ${
+                              selectedIcon === icon.url ? "selected" : ""
+                            }`}
+                            onClick={() => handleIconClick(icon)}
+                          >
+                            <img
+                              src={icon.url}
+                              alt={icon.name}
+                              className={classes.iconImage}
+                            />
+                            <IconButton
+                              className={classes.deleteButton}
+                              onClick={(e) => handleDeleteCustomIcon(icon.id, e)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Box>
+                      <Button
+                        variant="text"
+                        className={classes.deleteAllButton}
+                        startIcon={<DeleteIcon />}
+                        onClick={handleDeleteAllCustomIcons}
+                      >
+                        Hapus semua
+                      </Button>
+                    </>
+                  )}
+
+                  {customIcons.length === 0 && !previewImage && (
+                    <Typography className={classes.emptyState}>
+                      No custom icons uploaded yet
+                    </Typography>
+                  )}
+                </>
+              ) : (
+                <Box className={classes.previewContainer}>
+                  <Typography variant="subtitle2" sx={{ fontSize: "13px", marginBottom: 2, textAlign: "center", fontWeight: 600 }}>
+                    Preview
+                  </Typography>
+                  <img
+                    src={previewImage}
+                    alt="Preview"
+                    className={classes.previewImage}
+                  />
+                  <Box className={classes.buttonContainer}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      className={classes.uploadActionButton}
+                      startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <CloudUploadIcon />}
+                      onClick={handleUploadClick}
+                      disabled={uploading}
+                    >
+                      {uploading ? "Mengupload..." : "Upload"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      className={classes.uploadActionButton}
+                      onClick={handleClearPreview}
+                      disabled={uploading}
+                    >
+                      Clear
+                    </Button>
+                  </Box>
+                </Box>
               )}
             </Box>
           )}

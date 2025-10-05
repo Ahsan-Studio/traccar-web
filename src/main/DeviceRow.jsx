@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 import {
   IconButton, Tooltip, ListItemText, ListItemButton,
-  Typography, Box, Menu, MenuItem, ListItemIcon,
+  Typography, Box, Menu, MenuItem, ListItemIcon, Checkbox,
 } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
 import NearMeIcon from '@mui/icons-material/NearMe';
@@ -74,6 +74,23 @@ const DeviceRow = ({ data, index, style }) => {
   };
   const devicePrimary = useAttributePreference('devicePrimary', 'name');
 
+  // Get device icon from API and add proper path
+  const getDeviceIcon = () => {
+    const apiIcon = item.attributes?.icon?.deviceImage;
+    if (apiIcon) {
+      // If API sends just filename (e.g., "land-school-bus.svg"), add path prefix
+      if (!apiIcon.startsWith('/')) {
+        return `/img/markers/objects/${apiIcon}`;
+      }
+      return apiIcon;
+    }
+    return '/img/markers/objects/land-car.svg';
+  };
+
+  const deviceIcon = getDeviceIcon();
+  
+  console.log('Device:', item.name, 'Icon path:', deviceIcon, 'API value:', item.attributes?.icon?.deviceImage);
+
   return (
     <div style={style} >
       <ListItemButton
@@ -101,10 +118,34 @@ const DeviceRow = ({ data, index, style }) => {
           }
         }}
       >
+        <Checkbox
+          size="small"
+          checked={selectedDeviceId === item.id}
+          onClick={(e) => {
+            e.stopPropagation();
+            dispatch(devicesActions.selectId(item.id));
+          }}
+          sx={{
+            padding: '2px',
+            marginRight: '4px',
+            '& svg': { fontSize: 16 }
+          }}
+        />
+        
         <Box
           component="img"
-          src={`/img/markers/objects/land-car.svg`}
-          sx={{ width: 18, height: 18, marginTop: '2px' }}
+          src={deviceIcon}
+          alt={item.name}
+          onError={(e) => {
+            console.error('Failed to load icon:', deviceIcon);
+            e.target.src = '/img/markers/objects/land-car.svg';
+          }}
+          sx={{ 
+            width: 18, 
+            height: 18, 
+            marginTop: '2px',
+            objectFit: 'contain'
+          }}
         />
 
         {/* Device Info */}

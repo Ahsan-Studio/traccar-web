@@ -1,0 +1,218 @@
+/* Custom Input Base Styles */
+.custom-input {
+  font-size: 11px;
+  font-family: inherit;
+  color: #444444;
+  background-color: #f5f5f5;
+  border: 1px solid #f5f5f5;
+  border-radius: 0px;
+  padding-left: 5px;
+  height: 24px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Hover State */
+.custom-input:hover:not(:disabled):not(:read-only) {
+  border-color: #999;
+}
+
+/* Focus State */
+.custom-input:focus,
+.custom-input.focused {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* Disabled State */
+.custom-input:disabled,
+.custom-input.disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #e0e0e0;
+}
+
+/* Read Only State */
+.custom-input:read-only,
+.custom-input.readonly {
+  background-color: #fafafa;
+  color: #666;
+  cursor: default;
+  border-color: #ddd;
+}
+
+/* Placeholder Styling */
+.custom-input::placeholder {
+  color: #999;
+  opacity: 1;
+}
+
+.custom-input:disabled::placeholder {
+  color: #bbb;
+}
+
+/* Number Input - Remove Arrows */
+.custom-input[type="number"]::-webkit-inner-spin-button,
+.custom-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.custom-input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* Date/Time Input Styling */
+.custom-input[type="date"],
+.custom-input[type="time"],
+.custom-input[type="datetime-local"],
+.custom-input[type="month"],
+.custom-input[type="week"] {
+  cursor: pointer;
+}
+
+.custom-input[type="date"]::-webkit-calendar-picker-indicator,
+.custom-input[type="time"]::-webkit-calendar-picker-indicator,
+.custom-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: opacity(0.5);
+  transition: filter 0.2s ease;
+}
+
+.custom-input[type="date"]:hover::-webkit-calendar-picker-indicator,
+.custom-input[type="time"]:hover::-webkit-calendar-picker-indicator,
+.custom-input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator {
+  filter: opacity(1);
+}
+
+/* Color Input Styling */
+.custom-input[type="color"] {
+  padding: 2px;
+  cursor: pointer;
+  width: 50px;
+}
+
+.custom-input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.custom-input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
+/* Search Input Styling */
+.custom-input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>');
+  background-size: 14px 14px;
+  cursor: pointer;
+}
+
+/* Error State (Optional - add class manually) */
+.custom-input.error {
+  border-color: #f44336;
+}
+
+.custom-input.error:focus {
+  border-color: #f44336;
+  box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.1);
+}
+
+/* Success State (Optional - add class manually) */
+.custom-input.success {
+  border-color: #4caf50;
+}
+
+.custom-input.success:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Small Size Variant */
+.custom-input.small {
+  height: 28px;
+  font-size: 11px;
+}
+
+/* Large Size Variant */
+.custom-input.large {
+  height: 40px;
+  font-size: 11px;
+}
+
+/* Full Width Variant */
+.custom-input.full-width {
+  width: 100%;
+}
+
+/* Input Wrapper with Adornments */
+.custom-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #f5f5f5;
+  border: 1px solid #f5f5f5;
+  border-radius: 0px;
+  height: 24px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.custom-input-wrapper:hover:not(.disabled) {
+  border-color: #999;
+}
+
+.custom-input-wrapper.focused {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.custom-input-wrapper.disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  border-color: #e0e0e0;
+}
+
+.custom-input-field {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 11px;
+  font-family: inherit;
+  color: #444444;
+  padding: 0 5px;
+  height: 28px;
+  box-sizing: border-box;
+}
+
+.custom-input-field::placeholder {
+  color: #999;
+  opacity: 1;
+}
+
+.custom-input-adornment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
+.custom-input-adornment.start {
+  padding-left: 8px;
+  padding-right: 4px;
+}
+
+.custom-input-adornment.end {
+  padding-right: 8px;
+  padding-left: 4px;
+}

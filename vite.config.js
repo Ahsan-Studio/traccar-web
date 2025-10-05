@@ -69,6 +69,14 @@ export default defineConfig(({ mode }) => {
             src: "node_modules/@mapbox/mapbox-gl-rtl-text/dist/mapbox-gl-rtl-text.js",
             dest: "",
           },
+          {
+            src: "src/resources/sounds/*.mp3",
+            dest: "resources/sounds",
+          },
+          {
+            src: "src/resources/alarm.mp3",
+            dest: "resources",
+          },
         ],
       }),
     ],

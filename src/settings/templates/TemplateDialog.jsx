@@ -9,7 +9,6 @@ import {
   Box,
   Typography,
   IconButton,
-  Divider,
   List,
   ListItem,
   ListItemText,

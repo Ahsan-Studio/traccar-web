@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
+import { useEffectAsync } from "../../reactHelper";
 import { CustomTable } from "../../common/components/custom";
 import EditSubAccountDialog from "./EditSubAccountDialog";
+import fetchOrThrow from "../../common/util/fetchOrThrow";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
@@ -31,20 +33,55 @@ const useStyles = makeStyles()((theme) => ({
 
 const SubAccountsTab = () => {
   const { classes } = useStyles();
+  
+  const [subAccounts, setSubAccounts] = useState([]);
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSubAccount, setEditingSubAccount] = useState(null);
 
-  // Empty data - no sub accounts yet
-  const subAccounts = [];
+  // Fetch sub accounts from API
+  useEffectAsync(async () => {
+    try {
+      const response = await fetchOrThrow('/api/subaccounts');
+      const data = await response.json();
+      setSubAccounts(data);
+    } catch (error) {
+      console.error('Failed to fetch sub accounts:', error);
+    }
+  }, []);
 
   const columns = [
-    { key: "username", label: "Username", minWidth: 150 },
-    { key: "email", label: "E-mail", minWidth: 200 },
-    { key: "active", label: "Active", minWidth: 80, align: "center" },
-    { key: "objects", label: "Objects", minWidth: 80, align: "center" },
-    { key: "places", label: "Places", minWidth: 80, align: "center" },
+    {
+      key: "name",
+      label: "Username",
+      minWidth: 150,
+    },
+    {
+      key: "email",
+      label: "E-mail",
+      minWidth: 200,
+    },
+    {
+      key: "disabled",
+      label: "Active",
+      minWidth: 80,
+      align: "center",
+      format: (value) => (!value ? "Yes" : "No"),
+    },
+    {
+      key: "deviceLimit",
+      label: "Device Limit",
+      minWidth: 100,
+      align: "center",
+      format: (value) => value || "Unlimited",
+    },
+    {
+      key: "expirationTime",
+      label: "Expiration",
+      minWidth: 150,
+      format: (value) => (value ? new Date(value).toLocaleDateString() : "Never"),
+    },
   ];
 
   const handleSelectAllClick = (event) => {
@@ -80,9 +117,22 @@ const SubAccountsTab = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = (row) => {
-    console.log("Delete sub account:", row);
-    // TODO: Implement delete sub account confirmation
+  const handleDelete = async (row) => {
+    if (window.confirm(`Are you sure you want to delete sub account "${row.name}"?`)) {
+      try {
+        await fetchOrThrow(`/api/subaccounts/${row.id}`, {
+          method: 'DELETE',
+        });
+        // Refresh sub accounts list
+        const response = await fetchOrThrow('/api/subaccounts');
+        const data = await response.json();
+        setSubAccounts(data);
+        setSelected(selected.filter((id) => id !== row.id));
+      } catch (error) {
+        console.error('Failed to delete sub account:', error);
+        alert('Failed to delete sub account. Please try again.');
+      }
+    }
   };
 
   const handleAdd = () => {
@@ -90,9 +140,20 @@ const SubAccountsTab = () => {
     setDialogOpen(true);
   };
 
-  const handleDialogClose = () => {
+  const handleDialogClose = async (saved) => {
     setDialogOpen(false);
     setEditingSubAccount(null);
+    
+    // Refresh sub accounts list if saved
+    if (saved) {
+      try {
+        const response = await fetchOrThrow('/api/subaccounts');
+        const data = await response.json();
+        setSubAccounts(data);
+      } catch (error) {
+        console.error('Failed to refresh sub accounts:', error);
+      }
+    }
   };
 
   const handleSearchChange = (value) => {

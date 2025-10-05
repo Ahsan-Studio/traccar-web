@@ -18,11 +18,12 @@ import {
   CustomCheckbox,
   CustomMultiSelect,
 } from "../../common/components/custom";
+import fetchOrThrow from "../../common/util/fetchOrThrow";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
     "& .MuiDialog-paper": {
-      width: "600px",
+      width: "750px",
       maxWidth: "90vw",
       maxHeight: "80vh",
     },
@@ -79,6 +80,15 @@ const useStyles = makeStyles()((theme) => ({
     gridTemplateColumns: "1fr 1fr",
     gap: theme.spacing(2),
   },
+  twoColumnsContainer: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: theme.spacing(3),
+  },
+  columnBox: {
+    display: "flex",
+    flexDirection: "column",
+  },
   sectionTitle: {
     fontSize: "12px",
     fontWeight: 600,
@@ -97,16 +107,20 @@ const useStyles = makeStyles()((theme) => ({
 const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
   const { classes } = useStyles();
   const [formData, setFormData] = useState({
-    active: true,
-    username: "",
+    disabled: false,
+    name: "",
     email: "",
     password: "",
-    sendCredentials: true,
-    expireOn: "",
-    objects: [],
-    markers: [],
-    routes: [],
-    zones: [],
+    phone: "",
+    readonly: false,
+    administrator: false,
+    deviceLimit: 0,
+    userLimit: 0,
+    deviceReadonly: false,
+    limitCommands: false,
+    fixedEmail: false,
+    expirationTime: null,
+    attributes: {},
   });
 
   const [permissions, setPermissions] = useState({
@@ -133,30 +147,38 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     if (subAccount) {
       // Edit mode - populate with existing data
       setFormData({
-        active: subAccount.active ?? true,
-        username: subAccount.username || "",
+        disabled: subAccount.disabled || false,
+        name: subAccount.name || "",
         email: subAccount.email || "",
         password: "",
-        sendCredentials: false,
-        expireOn: subAccount.expireOn || "",
-        objects: subAccount.objects || [],
-        markers: subAccount.markers || [],
-        routes: subAccount.routes || [],
-        zones: subAccount.zones || [],
+        phone: subAccount.phone || "",
+        readonly: subAccount.readonly || false,
+        administrator: subAccount.administrator || false,
+        deviceLimit: subAccount.deviceLimit || 0,
+        userLimit: subAccount.userLimit || 0,
+        deviceReadonly: subAccount.deviceReadonly || false,
+        limitCommands: subAccount.limitCommands || false,
+        fixedEmail: subAccount.fixedEmail || false,
+        expirationTime: subAccount.expirationTime || null,
+        attributes: subAccount.attributes || {},
       });
     } else {
       // Create mode - reset form
       setFormData({
-        active: true,
-        username: "",
+        disabled: false,
+        name: "",
         email: "",
         password: "",
-        sendCredentials: true,
-        expireOn: "",
-        objects: [],
-        markers: [],
-        routes: [],
-        zones: [],
+        phone: "",
+        readonly: false,
+        administrator: false,
+        deviceLimit: 0,
+        userLimit: 0,
+        deviceReadonly: false,
+        limitCommands: false,
+        fixedEmail: false,
+        expirationTime: null,
+        attributes: {},
       });
     }
   }, [subAccount, open]);
@@ -177,14 +199,38 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     setAccessViaUrl((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    console.log("Save sub account:", formData, permissions, accessViaUrl);
-    // TODO: Implement save logic
-    onClose();
+  const handleSave = async () => {
+    try {
+      const method = subAccount ? 'PUT' : 'POST';
+      const url = subAccount 
+        ? `/api/subaccounts/${subAccount.id}` 
+        : '/api/subaccounts';
+      
+      const payload = {
+        ...formData,
+        id: subAccount?.id,
+      };
+
+      // Remove password if empty (for edit mode)
+      if (!payload.password) {
+        delete payload.password;
+      }
+
+      await fetchOrThrow(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      onClose(true); // Pass true to indicate save was successful
+    } catch (error) {
+      console.error('Failed to save sub account:', error);
+      alert('Failed to save sub account. Please try again.');
+    }
   };
 
   const handleCancel = () => {
-    onClose();
+    onClose(false);
   };
 
   // Mock data for dropdowns
@@ -204,129 +250,132 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
       </DialogTitle>
 
       <DialogContent className={classes.dialogContent}>
-        {/* Sub Account Section */}
+        {/* Sub Account Section - Two Columns */}
         <Typography className={classes.sectionTitle}>Sub account</Typography>
         
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Active</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomCheckbox
-              checked={formData.active}
-              onChange={handleCheckboxChange("active")}
-            />
-          </Box>
-        </Box>
+        <Box className={classes.twoColumnsContainer}>
+          {/* Left Column */}
+          <Box className={classes.columnBox}>
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Active</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomCheckbox
+                  checked={!formData.disabled}
+                  onChange={(checked) => handleCheckboxChange("disabled")(!checked)}
+                />
+              </Box>
+            </Box>
 
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Username</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomInput
-                value={formData.username}
-                onChange={handleInputChange("username")}
-                placeholder="Enter username"
-              />
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Username</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomInput
+                  value={formData.name}
+                  onChange={handleInputChange("name")}
+                  placeholder="Enter username"
+                />
+              </Box>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>E-mail</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomInput
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange("email")}
+                  placeholder="Enter email"
+                />
+              </Box>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Password</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomInput
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange("password")}
+                  placeholder="Enter password"
+                />
+              </Box>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Send credentials</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomCheckbox
+                  checked={formData.sendCredentials}
+                  onChange={handleCheckboxChange("sendCredentials")}
+                />
+              </Box>
+            </Box>
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Expire on</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomInput
+                  type="datetime-local"
+                  value={formData.expirationTime ? new Date(formData.expirationTime).toISOString().slice(0, 16) : ""}
+                  onChange={(value) => handleInputChange("expirationTime")(value ? new Date(value).toISOString() : null)}
+                />
+              </Box>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Objects</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomMultiSelect
+                  options={objectOptions}
+                  value={formData.objects}
+                  onChange={handleInputChange("objects")}
+                  placeholder="Nothing selected"
+                  searchable={true}
+                />
+              </Box>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Markers</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomMultiSelect
+                  options={[]}
+                  value={formData.markers}
+                  onChange={handleInputChange("markers")}
+                  placeholder="Nothing selected"
+                  searchable={true}
+                />
+              </Box>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Routes</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomMultiSelect
+                  options={[]}
+                  value={formData.routes}
+                  onChange={handleInputChange("routes")}
+                  placeholder="Nothing selected"
+                  searchable={true}
+                />
+              </Box>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Zones</Typography>
+              <Box className={classes.inputWrapper}>
+                <CustomMultiSelect
+                  options={[]}
+                  value={formData.zones}
+                  onChange={handleInputChange("zones")}
+                  placeholder="Nothing selected"
+                  searchable={true}
+                />
+              </Box>
             </Box>
           </Box>
 
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>E-mail</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomInput
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange("email")}
-                placeholder="Enter email"
-              />
-            </Box>
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Password</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomInput
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange("password")}
-                placeholder="Enter password"
-              />
-            </Box>
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Send credentials</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomCheckbox
-                checked={formData.sendCredentials}
-                onChange={handleCheckboxChange("sendCredentials")}
-              />
-            </Box>
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Expire on</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomInput
-                type="date"
-                value={formData.expireOn}
-                onChange={handleInputChange("expireOn")}
-              />
-            </Box>
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Objects</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomMultiSelect
-                options={objectOptions}
-                value={formData.objects}
-                onChange={handleInputChange("objects")}
-                placeholder="Nothing selected"
-                searchable={true}
-              />
-            </Box>
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Markers</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomMultiSelect
-                options={[]}
-                value={formData.markers}
-                onChange={handleInputChange("markers")}
-                placeholder="Nothing selected"
-                searchable={true}
-              />
-            </Box>
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Routes</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomMultiSelect
-                options={[]}
-                value={formData.routes}
-                onChange={handleInputChange("routes")}
-                placeholder="Nothing selected"
-                searchable={true}
-              />
-            </Box>
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Zones</Typography>
-            <Box className={classes.inputWrapper}>
-              <CustomMultiSelect
-                options={[]}
-                value={formData.zones}
-                onChange={handleInputChange("zones")}
-                placeholder="Nothing selected"
-                searchable={true}
-              />
-            </Box>
-          </Box>
-
-          {/* Permissions - Two Columns */}
-          <Box className={classes.twoColumns} sx={{ mt: 2 }}>
+          {/* Right Column */}
+          <Box className={classes.columnBox}>
             <Box>
               <Box className={classes.checkboxRow}>
                 <CustomCheckbox
@@ -410,10 +459,9 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               </Box>
             </Box>
           </Box>
-
+        </Box>
         {/* Access via URL Section */}
         <Typography className={classes.sectionTitle}>Access via URL</Typography>
-        
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Active</Typography>
           <Box className={classes.inputWrapper}>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CustomTable, BoolIcon } from "../../common/components/custom";
 
 const EventsTab = () => {
-  const [items, setItems] = useState([]);
+  const [items] = useState([]);
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
   const [loading] = useState(false);
@@ -31,11 +31,11 @@ const EventsTab = () => {
     // TODO: open create dialog
   };
 
-  const onEdit = (row) => {
+  const onEdit = () => {
     // TODO: open edit dialog
   };
 
-  const onDelete = (row) => {
+  const onDelete = () => {
     // TODO: delete row
   };
 

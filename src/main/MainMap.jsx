@@ -76,7 +76,7 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
         setMarkerError(null);
         
         if (data.length > 0) {
-          map.flyTo({
+          MapView.flyTo({
             center: [data[0].longitude, data[0].latitude],
             zoom: 14,
             essential: true
@@ -101,8 +101,8 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
     const layerId = 'map-markers-layer';
     
     // Add or update source
-    if (map.getSource(sourceId)) {
-      map.getSource(sourceId).setData({
+    if (MapView.getSource(sourceId)) {
+      MapView.getSource(sourceId).setData({
         type: 'FeatureCollection',
         features: markers.map(marker => ({
           type: 'Feature',
@@ -118,7 +118,7 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
         })),
       });
     } else {
-      map.addSource(sourceId, {
+      MapView.addSource(sourceId, {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
@@ -137,7 +137,7 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
         },
       });
       
-      map.addLayer({
+      MapView.addLayer({
         id: layerId,
         type: 'symbol',
         source: sourceId,
@@ -151,7 +151,7 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
           'text-allow-overlap': true,
           'text-anchor': 'top',
           'text-offset': [0, 0.5],
-          'text-font': findFonts(map),
+          'text-font': findFonts(MapView),
           'text-size': 12,
         },
         paint: {
@@ -165,8 +165,8 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
     
     // Cleanup
     return () => {
-      if (map.getLayer(layerId)) map.removeLayer(layerId);
-      if (map.getSource(sourceId)) map.removeSource(sourceId);
+      if (MapView.getLayer(layerId)) MapView.removeLayer(layerId);
+      if (MapView.getSource(sourceId)) MapView.removeSource(sourceId);
     };
   }, [markers, mapMarkers]);
 

@@ -3,23 +3,22 @@ import { map } from '../core/MapView';
 import { useAttributePreference } from '../../common/util/preferences';
 import { findFonts } from '../core/mapUtil';
 import { useSelector } from 'react-redux';
-import { sessionService } from 'redux-react-session';
-import axios from 'axios';
 
 // Fungsi untuk fetch markers dari API
-const fetchMarkers = async () => {
+const fetchMarkers = async (session) => {
   try {
-    const session = await sessionService.loadSession();
-    const response = await axios.get('/api/geofences', {
-      params: {
-        type: 'marker',
-        userId: session.user.id
-      },
+    const params = new URLSearchParams({
+      type: 'marker',
+      userId: session.user.id
+    });
+    const response = await fetch(`/api/geofences?${params}`, {
       headers: {
-        'Authorization': `Bearer ${session.accessToken}`
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json'
       }
     });
-    return response.data.map(geofence => ({
+    const data = await response.json();
+    return data.map(geofence => ({
       id: geofence.id,
       latitude: geofence.latitude || 0,
       longitude: geofence.longitude || 0,
@@ -41,17 +40,17 @@ const MapMarkersLayer = () => {
   const [error, setError] = useState(null);
   const mapMarkers = useAttributePreference('mapMarkers', true);
   
-  // Ambil data session
+  // Ambil data session dari Redux store
   const session = useSelector(state => state.session);
   
   // Fetch markers saat komponen mount atau session berubah
   useEffect(() => {
-    if (!mapMarkers || !session.authenticated) return;
+    if (!mapMarkers || !session?.authenticated) return;
     
     const loadMarkers = async () => {
       setLoading(true);
       try {
-        const data = await fetchMarkers();
+        const data = await fetchMarkers(session);
         setMarkers(data);
         setError(null);
         

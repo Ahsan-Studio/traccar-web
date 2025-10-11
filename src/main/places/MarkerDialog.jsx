@@ -18,7 +18,6 @@ import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import {
-  CustomInput,
   CustomButton,
   CustomCheckbox,
 } from "../../common/components/custom";

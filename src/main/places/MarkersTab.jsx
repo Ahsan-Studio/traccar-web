@@ -14,7 +14,7 @@ const MarkersTab = () => {
   const [removing, setRemoving] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [mapCenter, setMapCenter] = useState({ lat: -6.2088, lng: 106.8456 }); // Default Jakarta
+  const [mapCenter] = useState({ lat: -6.2088, lng: 106.8456 }); // Default Jakarta
 
   // Fetch markers from API
   useEffect(() => {

@@ -10,6 +10,7 @@ import { SwitcherControl } from '../switcher/switcher';
 import { useAttributePreference, usePreference } from '../../common/util/preferences';
 import usePersistedState, { savePersistedState } from '../../common/util/usePersistedState';
 import { mapImages } from './preloadImages';
+import { preloadMarkerIcons } from './preloadMarkerIcons';
 import useMapStyles from './useMapStyles';
 import { useEffectAsync } from '../../reactHelper';
 
@@ -50,6 +51,8 @@ const initMap = async () => {
         pixelRatio: window.devicePixelRatio,
       });
     });
+    // Preload marker icons
+    await preloadMarkerIcons();
   }
 };
 

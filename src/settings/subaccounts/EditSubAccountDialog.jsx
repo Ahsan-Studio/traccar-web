@@ -112,6 +112,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     email: "",
     password: "",
     phone: "",
+    sendCredentials: true,
     readonly: false,
     administrator: false,
     deviceLimit: 0,
@@ -120,8 +121,18 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     limitCommands: false,
     fixedEmail: false,
     expirationTime: null,
+    objects: [],
+    markers: [],
+    routes: [],
+    zones: [],
     attributes: {},
   });
+
+  // State for dropdown options
+  const [markerOptions, setMarkerOptions] = useState([]);
+  const [routeOptions, setRouteOptions] = useState([]);
+  const [zoneOptions, setZoneOptions] = useState([]);
+  const [objectOptions, setObjectOptions] = useState([]);
 
   const [permissions, setPermissions] = useState({
     dashboard: false,
@@ -143,15 +154,83 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     mobile: "",
   });
 
+  // Fetch markers, routes, zones, and objects on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch markers (CIRCLE geofences)
+        const markersResponse = await fetch('/api/markers');
+        if (markersResponse.ok) {
+          const markersData = await markersResponse.json();
+          setMarkerOptions(
+            markersData.map((marker) => ({
+              value: marker.id,
+              label: marker.name,
+            }))
+          );
+        }
+
+        // Fetch routes (LINESTRING geofences)
+        const routesResponse = await fetch('/api/routes');
+        if (routesResponse.ok) {
+          const routesData = await routesResponse.json();
+          setRouteOptions(
+            routesData.map((route) => ({
+              value: route.id,
+              label: route.name,
+            }))
+          );
+        }
+
+        // Fetch zones (POLYGON geofences)
+        const zonesResponse = await fetch('/api/zones');
+        if (zonesResponse.ok) {
+          const zonesData = await zonesResponse.json();
+          setZoneOptions(
+            zonesData.map((zone) => ({
+              value: zone.id,
+              label: zone.name,
+            }))
+          );
+        }
+
+        // Fetch devices/objects
+        const devicesResponse = await fetch('/api/devices');
+        if (devicesResponse.ok) {
+          const devicesData = await devicesResponse.json();
+          setObjectOptions(
+            devicesData.map((device) => ({
+              value: device.id,
+              label: device.name,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      }
+    };
+
+    if (open) {
+      fetchData();
+    }
+  }, [open]);
+
   useEffect(() => {
     if (subAccount) {
       // Edit mode - populate with existing data
+      // Parse markerAccess, zoneAccess, routeAccess from comma-separated strings
+      const parseAccess = (accessString) => {
+        if (!accessString) return [];
+        return accessString.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+      };
+
       setFormData({
         disabled: subAccount.disabled || false,
         name: subAccount.name || "",
         email: subAccount.email || "",
         password: "",
         phone: subAccount.phone || "",
+        sendCredentials: false,
         readonly: subAccount.readonly || false,
         administrator: subAccount.administrator || false,
         deviceLimit: subAccount.deviceLimit || 0,
@@ -160,6 +239,10 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
         limitCommands: subAccount.limitCommands || false,
         fixedEmail: subAccount.fixedEmail || false,
         expirationTime: subAccount.expirationTime || null,
+        objects: [],
+        markers: parseAccess(subAccount.markerAccess),
+        routes: parseAccess(subAccount.routeAccess),
+        zones: parseAccess(subAccount.zoneAccess),
         attributes: subAccount.attributes || {},
       });
     } else {
@@ -170,6 +253,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
         email: "",
         password: "",
         phone: "",
+        sendCredentials: true,
         readonly: false,
         administrator: false,
         deviceLimit: 0,
@@ -178,6 +262,10 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
         limitCommands: false,
         fixedEmail: false,
         expirationTime: null,
+        objects: [],
+        markers: [],
+        routes: [],
+        zones: [],
         attributes: {},
       });
     }
@@ -201,28 +289,88 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
 
   const handleSave = async () => {
     try {
-      const method = subAccount ? 'PUT' : 'POST';
-      const url = subAccount 
-        ? `/api/subaccounts/${subAccount.id}` 
-        : '/api/subaccounts';
+      // Use legacy endpoint with form data format
+      const formDataToSend = new URLSearchParams();
       
-      const payload = {
-        ...formData,
-        id: subAccount?.id,
-      };
-
-      // Remove password if empty (for edit mode)
-      if (!payload.password) {
-        delete payload.password;
+      // Required fields
+      formDataToSend.append('cmd', subAccount ? 'update' : 'create');
+      if (subAccount?.id) {
+        formDataToSend.append('subaccount_id', subAccount.id);
+      }
+      formDataToSend.append('active', !formData.disabled ? '1' : '0');
+      formDataToSend.append('username', formData.name || '');
+      formDataToSend.append('email', formData.email || '');
+      
+      // Optional password (only if provided)
+      if (formData.password) {
+        formDataToSend.append('password', formData.password);
+      }
+      
+      // Send credentials
+      formDataToSend.append('send', formData.sendCredentials ? '1' : '0');
+      
+      // Expiration
+      if (formData.expirationTime) {
+        formDataToSend.append('account_expire', '1');
+        formDataToSend.append('account_expire_dt', formData.expirationTime);
+      } else {
+        formDataToSend.append('account_expire', '0');
+      }
+      
+      // Permissions
+      formDataToSend.append('dashboard', permissions.dashboard ? '1' : '0');
+      formDataToSend.append('history', permissions.history ? '1' : '0');
+      formDataToSend.append('reports', permissions.reports ? '1' : '0');
+      formDataToSend.append('tasks', permissions.tasks ? '1' : '0');
+      formDataToSend.append('rilogbook', permissions.rfidIButton ? '1' : '0');
+      formDataToSend.append('dtc', permissions.dtc ? '1' : '0');
+      formDataToSend.append('maintenance', permissions.maintenance ? '1' : '0');
+      formDataToSend.append('expenses', permissions.expenses ? '1' : '0');
+      formDataToSend.append('object_control', permissions.objectControl ? '1' : '0');
+      formDataToSend.append('image_gallery', permissions.imageGallery ? '1' : '0');
+      formDataToSend.append('chat', permissions.chat ? '1' : '0');
+      
+      // Objects/Devices (IMEIs) - comma separated
+      if (formData.objects && formData.objects.length > 0) {
+        formDataToSend.append('imei', formData.objects.join(','));
+      }
+      
+      // Markers - comma separated
+      if (formData.markers && formData.markers.length > 0) {
+        formDataToSend.append('marker', formData.markers.join(','));
+      }
+      
+      // Routes - comma separated
+      if (formData.routes && formData.routes.length > 0) {
+        formDataToSend.append('route', formData.routes.join(','));
+      }
+      
+      // Zones - comma separated
+      if (formData.zones && formData.zones.length > 0) {
+        formDataToSend.append('zone', formData.zones.join(','));
+      }
+      
+      // Access via URL
+      formDataToSend.append('au_active', accessViaUrl.active ? '1' : '0');
+      if (accessViaUrl.desktop) {
+        formDataToSend.append('au', accessViaUrl.desktop);
       }
 
-      await fetchOrThrow(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const response = await fetchOrThrow('/api/subaccounts/legacy', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
+        },
+        body: formDataToSend.toString(),
       });
 
-      onClose(true); // Pass true to indicate save was successful
+      if (response.ok) {
+        onClose(true); // Pass true to indicate save was successful
+      } else {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to save sub account');
+      }
     } catch (error) {
       console.error('Failed to save sub account:', error);
       alert('Failed to save sub account. Please try again.');
@@ -233,12 +381,6 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     onClose(false);
   };
 
-  // Mock data for dropdowns
-  const objectOptions = [
-    { value: 1, label: "Gun" },
-    { value: 2, label: "HIACE DEV" },
-    { value: 3, label: "1052 DEV" },
-  ];
 
   return (
     <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false}>
@@ -338,7 +480,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               <Typography className={classes.label}>Markers</Typography>
               <Box className={classes.inputWrapper}>
                 <CustomMultiSelect
-                  options={[]}
+                  options={markerOptions}
                   value={formData.markers}
                   onChange={handleInputChange("markers")}
                   placeholder="Nothing selected"
@@ -351,7 +493,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               <Typography className={classes.label}>Routes</Typography>
               <Box className={classes.inputWrapper}>
                 <CustomMultiSelect
-                  options={[]}
+                  options={routeOptions}
                   value={formData.routes}
                   onChange={handleInputChange("routes")}
                   placeholder="Nothing selected"
@@ -364,7 +506,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               <Typography className={classes.label}>Zones</Typography>
               <Box className={classes.inputWrapper}>
                 <CustomMultiSelect
-                  options={[]}
+                  options={zoneOptions}
                   value={formData.zones}
                   onChange={handleInputChange("zones")}
                   placeholder="Nothing selected"

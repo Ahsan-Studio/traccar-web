@@ -32,6 +32,9 @@ import DeviceInfoPanel from './DeviceInfoPanel';
 import EventsList from './EventsList';
 import SettingsDialog from './SettingsDialog';
 import { useAttributePreference } from '../common/util/preferences';
+import MarkersTab from './places/MarkersTab';
+import RoutesTab from './places/RoutesTab';
+import ZonesTab from './places/ZonesTab';
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -215,6 +218,7 @@ const MainPage = () => {
   const [devicesOpen, setDevicesOpen] = useState(desktop);
   const [eventsOpen, setEventsOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+  const [placesTab, setPlacesTab] = useState(0);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -223,6 +227,10 @@ const MainPage = () => {
   
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
+  };
+
+  const handlePlacesTabChange = (event, newValue) => {
+    setPlacesTab(newValue);
   };
 
   const handleLogout = async () => {
@@ -395,9 +403,25 @@ const MainPage = () => {
             </div>
           )}
           {currentTab === 2 && (
-            <Box p={2}>
-              <Typography variant="body2" color="textSecondary">Places content will go here</Typography>
-            </Box>
+            <>
+              <Tabs
+                value={placesTab}
+                onChange={handlePlacesTabChange}
+                variant="scrollable"
+                scrollButtons={false}
+                className={classes.tabs}
+              >
+                <Tab label="Markers" />
+                <Tab label="Routes" />
+                <Tab label="Zones" />
+              </Tabs>
+              
+              <div className={classes.deviceListContainer}>
+                {placesTab === 0 && <MarkersTab />}
+                {placesTab === 1 && <RoutesTab />}
+                {placesTab === 2 && <ZonesTab />}
+              </div>
+            </>
           )}
           {currentTab === 3 && (
             <Box p={2}>

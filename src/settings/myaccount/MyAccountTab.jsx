@@ -245,21 +245,23 @@ const MyAccountTab = ({ onSave }) => {
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 30);
       
-      // Format as query parameter instead of body
-      const params = new URLSearchParams({
-        expiration: expirationDate.toISOString(),
-      });
+      // Format as application/x-www-form-urlencoded
+      const formData = new URLSearchParams();
+      formData.append('expiration', expirationDate.toISOString());
       
-      const response = await fetch(`/api/session/token?${params.toString()}`, {
+      const response = await fetch('/api/session/token', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
           'Accept': 'application/json',
         },
+        body: formData.toString(),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setApiToken(data.token || '');
+        const token = await response.text();
+        console.log('Generated API token:', token);
+        setApiToken(token || '');
         setSuccessMessage('API token generated successfully (valid for 30 days)');
       } else {
         const errorText = await response.text();
@@ -428,6 +430,7 @@ const MyAccountTab = ({ onSave }) => {
                 onChange={(value) => setNewPassword(value)}
                 size="small"
                 fullWidth
+                autoComplete="new-password"
               />
             </Box>
           </Box>
@@ -441,6 +444,7 @@ const MyAccountTab = ({ onSave }) => {
                 onChange={(value) => setRepeatPassword(value)}
                 size="small"
                 fullWidth
+                autoComplete="new-password"
               />
             </Box>
           </Box>

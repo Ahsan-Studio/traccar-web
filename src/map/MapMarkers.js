@@ -12,7 +12,16 @@ const MapMarkers = ({ markers, showTitles }) => {
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
   const iconScale = useAttributePreference('iconScale', desktop ? 0.75 : 1);
 
+  console.log('[MapMarkers] Component mounted/updated', {
+    id,
+    markersCount: markers?.length || 0,
+    showTitles,
+    iconScale,
+  });
+
   useEffect(() => {
+    console.log('[MapMarkers] Adding source and layer', { id });
+    
     map.addSource(id, {
       type: 'geojson',
       data: {
@@ -22,6 +31,7 @@ const MapMarkers = ({ markers, showTitles }) => {
     });
 
     if (showTitles) {
+      console.log('[MapMarkers] Adding layer with titles');
       map.addLayer({
         id,
         type: 'symbol',
@@ -44,6 +54,7 @@ const MapMarkers = ({ markers, showTitles }) => {
         },
       });
     } else {
+      console.log('[MapMarkers] Adding layer without titles');
       map.addLayer({
         id,
         type: 'symbol',
@@ -56,7 +67,10 @@ const MapMarkers = ({ markers, showTitles }) => {
       });
     }
 
+    console.log('[MapMarkers] Layer added successfully');
+
     return () => {
+      console.log('[MapMarkers] Cleaning up source and layer', { id });
       if (map.getLayer(id)) {
         map.removeLayer(id);
       }
@@ -64,24 +78,49 @@ const MapMarkers = ({ markers, showTitles }) => {
         map.removeSource(id);
       }
     };
-  }, [showTitles]);
+  }, [showTitles, id, iconScale]);
 
   useEffect(() => {
-    map.getSource(id)?.setData({
-      type: 'FeatureCollection',
-      features: markers.map(({ latitude, longitude, image, title }) => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [longitude, latitude],
-        },
-        properties: {
-          image: image || 'default-neutral',
-          title: title || '',
-        },
-      })),
+    console.log('[MapMarkers] Updating markers data', {
+      id,
+      markersCount: markers?.length || 0,
+      markers: markers,
     });
-  }, [showTitles, markers]);
+    
+    const source = map.getSource(id);
+    if (!source) {
+      console.warn('[MapMarkers] Source not found, skipping data update', { id });
+      return;
+    }
+    
+    try {
+      const features = (markers || []).map(({ latitude, longitude, image, title }) => {
+        console.log('[MapMarkers] Creating feature', { latitude, longitude, image, title });
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
+          },
+          properties: {
+            image: image || 'default-neutral',
+            title: title || '',
+          },
+        };
+      });
+      
+      console.log('[MapMarkers] Setting data with features', { featuresCount: features.length });
+      
+      source.setData({
+        type: 'FeatureCollection',
+        features: features,
+      });
+      
+      console.log('[MapMarkers] Data updated successfully');
+    } catch (error) {
+      console.error('[MapMarkers] Error setting data:', error);
+    }
+  }, [showTitles, markers, id]);
 
   return null;
 };

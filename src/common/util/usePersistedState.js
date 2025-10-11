@@ -7,7 +7,14 @@ export const savePersistedState = (key, value) => {
 export default (key, defaultValue) => {
   const [value, setValue] = useState(() => {
     const stickyValue = window.localStorage.getItem(key);
-    return stickyValue ? JSON.parse(stickyValue) : defaultValue;
+    if (!stickyValue) return defaultValue;
+    try {
+      return JSON.parse(stickyValue);
+    } catch (e) {
+      console.error('Invalid JSON in localStorage for key:', key, e);
+      window.localStorage.removeItem(key);
+      return defaultValue;
+    }
   });
 
   useEffect(() => {

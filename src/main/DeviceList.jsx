@@ -6,9 +6,7 @@ import { makeStyles } from 'tss-react/mui';
 import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useTheme } from '@mui/material/styles';
-import { Typography, IconButton, Checkbox } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { IconButton, Checkbox } from '@mui/material';
 import { devicesActions } from '../store';
 import { useEffectAsync } from '../reactHelper';
 import DeviceRow from './DeviceRow';
@@ -131,51 +129,68 @@ const DeviceList = ({ devices }) => {
     return result;
   }, [devices, groups, expandedGroups]);
 
+  // Row heights: header 23px, device 33px
+
   const renderRow = ({ index, style }) => {
+  // ...existing code...
+  // Row heights: header 23px, device 33px
     const item = groupedDevices[index];
     if (item.type === 'header') {
+      // Extract group name and count
+      const match = item.content.match(/^(.*)\((\d+)\)$/);
+      const groupName = match ? match[1].trim() : item.content;
+      const groupCount = match ? match[2] : '';
       return (
-        <div style={style}>
+        <div style={{ ...style, marginBottom: 0 }}>
           <div
-            onClick={() => toggleGroup(item.groupId)}
             style={{
-              display: 'flex',
+              display: 'grid',
+              gridTemplateColumns: '24px 24px 1fr 30px',
               alignItems: 'center',
-              fontSize: '13px',
+              fontSize: '11px',
               fontWeight: 500,
-              padding: '0 8px',
+              padding: 0,
               backgroundColor: '#f5f5f5',
               borderTop: '1px solid #e0e0e0',
-              borderBottom: '1px solid #e0e0e0',
+              borderBottom: 'none',
               height: '33px',
-              cursor: 'pointer',
               userSelect: 'none'
             }}
           >
-            <IconButton
-              size="small"
-              sx={{
-                padding: '2px',
-                marginRight: '4px',
-                '& svg': { fontSize: 18 }
-              }}
-            >
-              {item.isExpanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
-            </IconButton>
-            
-            <Checkbox
-              size="small"
-              indeterminate
-              sx={{
-                padding: '2px',
-                marginRight: '8px',
-                '& svg': { fontSize: 16 }
-              }}
-            />
-            
-            <Typography sx={{ fontSize: '13px', fontWeight: 500 }}>
-              {item.content}
-            </Typography>
+            {/* Checkbox 1 */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33 }}>
+              <Checkbox
+                size="small"
+                sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
+              />
+            </div>
+            {/* Checkbox 2 */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33 }}>
+              <Checkbox
+                size="small"
+                sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
+              />
+            </div>
+            {/* Group name and count, left aligned under Object column */}
+            <div style={{ display: 'flex', alignItems: 'center', height: 33, paddingLeft: 0 }}>
+              <span style={{ color: '#222', fontWeight: 500 }}>
+                {groupName} {groupCount && <span style={{ color: '#888' }}>({groupCount})</span>}
+              </span>
+            </div>
+            {/* Expand/collapse icon as + / -, right aligned */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33 }}>
+              <IconButton
+                size="small"
+                onClick={() => toggleGroup(item.groupId)}
+                sx={{ padding: '2px' }}
+              >
+                {item.isExpanded ? (
+                  <span style={{ fontSize: 18, fontWeight: 'bold' }}>-</span>
+                ) : (
+                  <span style={{ fontSize: 18, fontWeight: 'bold' }}>+</span>
+                )}
+              </IconButton>
+            </div>
           </div>
         </div>
       );
@@ -184,20 +199,51 @@ const DeviceList = ({ devices }) => {
   };
 
   return (
-    <AutoSizer className={classes.list}>
-      {({ height, width }) => (
-        <FixedSizeList
-          width={width}
-          height={height}
-          itemCount={groupedDevices.length}
-          itemSize={33}
-          overscanCount={10}
-          outerElementType={OuterElement}
-        > 
-          {renderRow}
-        </FixedSizeList>
-      )}
-    </AutoSizer>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: 10 }}>
+      {/* Header row with icons and Object label */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '24px 24px 1fr 30px',
+        alignItems: 'center',
+        background: '#f8f8f8',
+        borderBottom: '1px solid #e0e0e0',
+        minHeight: 24,
+        fontWeight: 500,
+        fontSize: '12px',
+        padding: 0,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 24, borderRight: '1px solid #e0e0e0', background: '#f5f5f5' }}>
+          <img src="/img/eye.svg" alt="eye" style={{ width: 14, height: 14 }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 24, borderRight: '1px solid #e0e0e0', background: '#f5f5f5' }}>
+          <img src="/img/follow.svg" alt="follow" style={{ width: 14, height: 14 }} />
+        </div>
+        <div style={{
+          color: '#444', background: '#f5f5f5', height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #e0e0e0'
+        }}>
+          Object
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 24, background: '#f5f5f5' }}>
+        </div>
+      </div>
+      {/* Device/group list */}
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <AutoSizer className={classes.list}>
+          {({ height, width }) => (
+            <FixedSizeList
+              width={width}
+              height={height}
+              itemCount={groupedDevices.length}
+              itemSize={33}
+              overscanCount={10}
+              outerElementType={OuterElement}
+            >
+              {renderRow}
+            </FixedSizeList>
+          )}
+        </AutoSizer>
+      </div>
+    </div>
   );
 };
 

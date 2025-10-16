@@ -1,5 +1,5 @@
 import {
-  forwardRef, useEffect, useState, useMemo 
+  forwardRef, useEffect, useState, useMemo, useCallback 
 } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
@@ -7,10 +7,12 @@ import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useTheme } from '@mui/material/styles';
 import { IconButton, Checkbox } from '@mui/material';
+import maplibregl from 'maplibre-gl';
 import { devicesActions } from '../store';
 import { useEffectAsync } from '../reactHelper';
 import DeviceRow from './DeviceRow';
 import fetchOrThrow from '../common/util/fetchOrThrow';
+import { map } from '../map/core/MapView';
 
 const useStyles = makeStyles()((theme) => ({
   list: {
@@ -42,6 +44,9 @@ const DeviceList = ({ devices }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
   const groups = useSelector((state) => state.groups.items);
+  const positions = useSelector((state) => state.session.positions);
+  const visibility = useSelector((state) => state.devices.visibility);
+  const focused = useSelector((state) => state.devices.focused);
 
   const [, setTime] = useState(Date.now());
   const [expandedGroups, setExpandedGroups] = useState({});
@@ -64,6 +69,104 @@ const DeviceList = ({ devices }) => {
       [groupId]: !prev[groupId]
     }));
   };
+
+  const handleGroupVisibilityToggle = (deviceIds, event) => {
+    event.stopPropagation();
+    // Check if all devices are visible
+    const allVisible = deviceIds.every(id => visibility[id] !== false);
+    // Toggle: if all visible, hide all; otherwise show all
+    dispatch(devicesActions.setGroupVisibility({
+      deviceIds,
+      visible: !allVisible
+    }));
+  };
+
+  const triggerZoomToDevices = useCallback((deviceIds) => {
+    // Check if map is ready
+    if (!map || !map.loaded()) {
+      console.error('[DeviceList] Map is not ready yet!');
+      return;
+    }
+    // Get positions for specified devices
+    const devicePositions = deviceIds
+      .map(id => {
+        const pos = positions[id];
+        return pos;
+      })
+      .filter(pos => pos && pos.latitude && pos.longitude);
+    if (devicePositions.length === 0) {
+      return;
+    }
+
+    if (devicePositions.length === 1) {
+      // Single device: zoom to it
+      const pos = devicePositions[0];
+      try {
+        map.flyTo({
+          center: [pos.longitude, pos.latitude],
+          zoom: 15,
+          duration: 1000,
+        });
+      } catch (error) {
+        console.error('[DeviceList] Error in flyTo:', error);
+      }
+    } else {
+      // Multiple devices: fit bounds to show all
+      const coordinates = devicePositions.map(pos => [pos.longitude, pos.latitude]);
+      try {
+        // Create bounds by extending from first coordinate
+        let bounds = new maplibregl.LngLatBounds(coordinates[0], coordinates[0]);
+        // Extend bounds for each additional coordinate
+        coordinates.slice(1).forEach(coord => {
+          bounds = bounds.extend(coord);
+        });
+        map.fitBounds(bounds, {
+          padding: { top: 50, bottom: 50, left: 50, right: 50 },
+          duration: 1000,
+          maxZoom: 15,
+        });
+      } catch (error) {
+        console.error('[DeviceList] Error in fitBounds:', error);
+      }
+    }
+  }, [positions]);
+
+  const handleGroupFocusToggle = (deviceIds, event) => {
+    event.stopPropagation();
+    // Check if all devices are focused
+    const allFocused = deviceIds.every(id => focused[id] === true);
+    // Toggle: if all focused, unfocus all; otherwise focus all
+    const newFocusState = !allFocused;
+    dispatch(devicesActions.setGroupFocused({
+      deviceIds,
+      focused: newFocusState
+    }));
+
+    // Immediately trigger zoom if focusing
+    if (newFocusState) {
+      // Increase delay to ensure state is updated
+      setTimeout(() => {
+        triggerZoomToDevices(deviceIds);
+      }, 200);
+    }
+  };
+
+  // Effect to handle focus changes - zoom to all focused devices
+  useEffect(() => {
+    const focusedDevices = Object.keys(focused).filter(id => focused[id] === true);
+    if (focusedDevices.length === 0) {
+      return;
+    }
+    // Get positions for all focused devices
+    const focusedPositions = focusedDevices
+      .map(id => positions[id])
+      .filter(pos => pos && pos.latitude && pos.longitude);
+    if (focusedPositions.length === 0) {
+      return;
+    }
+    // Use the shared zoom function
+    triggerZoomToDevices(focusedDevices);
+  }, [focused, positions, triggerZoomToDevices]);
 
   // Group devices
   const groupedDevices = useMemo(() => {
@@ -97,7 +200,8 @@ const DeviceList = ({ devices }) => {
         type: 'header', 
         groupId,
         content: `Tidak digrup (${ungrouped.length})`,
-        isExpanded
+        isExpanded,
+        deviceIds: ungrouped.map(d => d.id), // Store device IDs for group actions
       });
       
       if (isExpanded) {
@@ -116,7 +220,8 @@ const DeviceList = ({ devices }) => {
         groupId,
         content: `${group.name} (${group.devices.length})`,
         isExpanded,
-        count: group.devices.length
+        count: group.devices.length,
+        deviceIds: group.devices.map(d => d.id), // Store device IDs for group actions
       });
       
       if (isExpanded) {
@@ -140,6 +245,12 @@ const DeviceList = ({ devices }) => {
       const match = item.content.match(/^(.*)\((\d+)\)$/);
       const groupName = match ? match[1].trim() : item.content;
       const groupCount = match ? match[2] : '';
+      
+      // Check if all devices in group are visible
+      const deviceIds = item.deviceIds || [];
+      const allVisible = deviceIds.length > 0 && deviceIds.every(id => visibility[id] !== false);
+      const allFocused = deviceIds.length > 0 && deviceIds.every(id => focused[id] === true);
+      
       return (
         <div style={{ ...style, marginBottom: 0 }}>
           <div
@@ -157,17 +268,24 @@ const DeviceList = ({ devices }) => {
               userSelect: 'none'
             }}
           >
-            {/* Checkbox 1 */}
+            {/* Checkbox 1: Group Visibility Toggle */}
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33 }}>
               <Checkbox
                 size="small"
+                checked={allVisible}
+                indeterminate={!allVisible && deviceIds.some(id => visibility[id] !== false)}
+                onClick={(e) => handleGroupVisibilityToggle(deviceIds, e)}
                 sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
               />
             </div>
-            {/* Checkbox 2 */}
+            {/* Checkbox 2: Group Focus */}
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33 }}>
               <Checkbox
                 size="small"
+                checked={allFocused}
+                indeterminate={!allFocused && deviceIds.some(id => focused[id] === true)}
+                onClick={(e) => handleGroupFocusToggle(deviceIds, e)}
+                disabled={deviceIds.length === 0}
                 sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
               />
             </div>

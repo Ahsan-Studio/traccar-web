@@ -13,6 +13,9 @@ import SendIcon from '@mui/icons-material/Send';
 import EditIcon from '@mui/icons-material/Edit';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import WifiIcon from '@mui/icons-material/Wifi';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { devicesActions } from '../store';
@@ -55,9 +58,13 @@ const DeviceRow = ({ data, index, style }) => {
 
   const admin = useAdministrator();
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
+  const visibility = useSelector((state) => state.devices.visibility);
+  const focused = useSelector((state) => state.devices.focused);
 
   const item = data[index];
   const position = useSelector((state) => state.session.positions[item.id]);
+  const isVisible = visibility[item.id] !== false; // default true
+  const isFocused = focused[item.id] === true; // default false
 
   // Context menu state
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
@@ -71,6 +78,16 @@ const DeviceRow = ({ data, index, style }) => {
   const handleMenuClose = (event) => {
     if (event) event.stopPropagation();
     setMenuAnchorEl(null);
+  };
+
+  const handleVisibilityToggle = (event) => {
+    event.stopPropagation();
+    dispatch(devicesActions.toggleVisibility(item.id));
+  };
+
+  const handleFocusToggle = (event) => {
+    event.stopPropagation();
+    dispatch(devicesActions.toggleFocused(item.id));
   };
   const devicePrimary = useAttributePreference('devicePrimary', 'name');
 
@@ -102,8 +119,8 @@ const DeviceRow = ({ data, index, style }) => {
         sx={{ 
           display: 'flex',
           alignItems: 'center',
-          gap: 1,
-          px: 2,
+          gap: 0.5,
+          px: 1,
           height: '33px',
           borderBottom: '1px solid #e0e0e0',
           backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
@@ -118,19 +135,38 @@ const DeviceRow = ({ data, index, style }) => {
           }
         }}
       >
-        <Checkbox
-          size="small"
-          checked={selectedDeviceId === item.id}
-          onClick={(e) => {
-            e.stopPropagation();
-            dispatch(devicesActions.selectId(item.id));
-          }}
-          sx={{
-            padding: '2px',
-            marginRight: '4px',
-            '& svg': { fontSize: 16 }
-          }}
-        />
+        {/* Checkbox 1: Visibility Toggle */}
+        <Tooltip title={isVisible ? "Sembunyikan marker" : "Tampilkan marker"}>
+          <Checkbox
+            size="small"
+            checked={isVisible}
+            onClick={handleVisibilityToggle}
+            icon={<VisibilityOffIcon sx={{ fontSize: 16 }} />}
+            checkedIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              padding: '2px',
+              marginRight: '2px',
+              '& svg': { fontSize: 16 }
+            }}
+          />
+        </Tooltip>
+
+        {/* Checkbox 2: Focus to Device */}
+        <Tooltip title="Fokus ke lokasi device">
+          <Checkbox
+            size="small"
+            checked={isFocused}
+            onClick={handleFocusToggle}
+            disabled={!position}
+            icon={<MyLocationIcon sx={{ fontSize: 16, color: '#ccc' }} />}
+            checkedIcon={<MyLocationIcon sx={{ fontSize: 16, color: '#1976d2' }} />}
+            sx={{
+              padding: '2px',
+              marginRight: '2px',
+              '& svg': { fontSize: 16 }
+            }}
+          />
+        </Tooltip>
         
         <Box
           component="img"

@@ -20,6 +20,7 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
 
   const devices = useSelector((state) => state.devices.items);
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
+  const visibility = useSelector((state) => state.devices.visibility);
 
   const mapCluster = useAttributePreference('mapCluster', true);
   const directionType = useAttributePreference('mapDirection', 'selected');
@@ -194,6 +195,7 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
       map.getSource(source)?.setData({
         type: 'FeatureCollection',
         features: positions.filter((it) => devices.hasOwnProperty(it.deviceId))
+          .filter((it) => visibility[it.deviceId] !== false) // Filter by visibility
           .filter((it) => (source === id ? it.deviceId !== selectedDeviceId : it.deviceId === selectedDeviceId))
           .map((position) => ({
             type: 'Feature',
@@ -205,7 +207,7 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
           })),
       });
     });
-  }, [mapCluster, clusters, onMarkerClick, onClusterClick, devices, positions, selectedPosition]);
+  }, [mapCluster, clusters, onMarkerClick, onClusterClick, devices, positions, selectedPosition, visibility]);
 
   return null;
 };

@@ -13,6 +13,7 @@ import {
   CustomCheckbox,
   CustomButton,
   CustomInput,
+  CustomMultiSelect,
 } from "../../common/components/custom";
 
 const useStyles = makeStyles()((theme) => ({
@@ -200,8 +201,12 @@ const UserInterfaceTab = ({ onSave }) => {
   const [engineIdleColorEnabled, setEngineIdleColorEnabled] = useState(true);
 
   // Data list
-  const [dataListPosition, setDataListPosition] = useState("Bottom panel with icons");
-  const [dataListItems, setDataListItems] = useState("All selected");
+  const [dataListPosition, setDataListPosition] = useState("bottomPanel");
+  const [dataListItems, setDataListItems] = useState([
+    "odometer",
+    "engine_hours",
+    "status",
+  ]);
 
   // Other
   const [language, setLanguage] = useState("en");
@@ -288,8 +293,8 @@ const UserInterfaceTab = ({ onSave }) => {
         setEngineIdleColor(attrs.objectList?.engineIdleColor || "FFF0AA");
         
         // Data list
-        setDataListPosition(attrs.datalistPosition || "Bottom panel with icons");
-        setDataListItems(attrs.datalistItems || "All selected");
+        setDataListPosition(attrs.datalistPosition || "bottomPanel");
+        setDataListItems(attrs.datalistItems || ["odometer", "engine_hours", "status"]);
         
         // Other
         setLanguage(attrs.language || "en");
@@ -754,22 +759,41 @@ const UserInterfaceTab = ({ onSave }) => {
               value={dataListPosition} 
               onChange={(value) => setDataListPosition(value)}
               options={[
-                "Bottom panel with icons",
-                "Right panel",
-                "Left panel"
+                { value: "leftPanel", label: "Left Panel" },
+                { value: "bottomPanel", label: "Bottom Panel with Icons" }
               ]}
             />
           </Box>
 
           <Box className={classes.formRow}>
             <Typography className={classes.label}>Items</Typography>
-            <CustomSelect
+            <CustomMultiSelect
               value={dataListItems} 
-              onChange={(value) => setDataListItems(value)}
+              onChange={(values) => setDataListItems(values)}
               options={[
-                "All selected",
-                "Custom"
+                // General group
+                { group: "General", value: "odometer", label: "Odometer" },
+                { group: "General", value: "engine_hours", label: "Engine Hours" },
+                { group: "General", value: "status", label: "Status" },
+                { group: "General", value: "model", label: "Model" },
+                { group: "General", value: "vin", label: "VIN" },
+                { group: "General", value: "plate_number", label: "Plate Number" },
+                { group: "General", value: "sim_number", label: "SIM Card Number" },
+                { group: "General", value: "driver", label: "Driver" },
+                { group: "General", value: "trailer", label: "Trailer" },
+                { group: "General", value: "engine_status", label: "EngineStatus" },
+                // Location group
+                { group: "Location", value: "time_position", label: "Time (Position)" },
+                { group: "Location", value: "time_server", label: "Time (Server)" },
+                { group: "Location", value: "address", label: "Address" },
+                { group: "Location", value: "position", label: "Position" },
+                { group: "Location", value: "speed", label: "Speed" },
+                { group: "Location", value: "altitude", label: "Altitude" },
+                { group: "Location", value: "angle", label: "Angle" },
+                { group: "Location", value: "nearest_zone", label: "Nearest Zone" },
+                { group: "Location", value: "nearest_marker", label: "Nearest Marker" },
               ]}
+              placeholder="Select data items to display"
             />
           </Box>
         </Box>

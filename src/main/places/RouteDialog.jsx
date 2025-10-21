@@ -20,12 +20,23 @@ import {
   CustomCheckbox,
 } from "../../common/components/custom";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
+import MapRouteDrawer from "./MapRouteDrawer";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
+    // Allow map interaction - same as MarkerDialog
+    pointerEvents: "none",
+    "& .MuiDialog-container": {
+      pointerEvents: "none",
+    },
     "& .MuiDialog-paper": {
-      width: "550px",
+      pointerEvents: "auto", // Dialog can receive clicks
+      width: "360px",
       maxWidth: "90vw",
+      position: "fixed",
+      left: "20px",
+      top: "80px",
+      margin: 0,
     },
   },
   dialogTitle: {
@@ -46,22 +57,21 @@ const useStyles = makeStyles()((theme) => ({
     },
   },
   dialogContent: {
-    padding: theme.spacing(3),
-    backgroundColor: "#f5f5f5",
+    padding: theme.spacing(2),
+    backgroundColor: "white",
+    maxHeight: "calc(100vh - 200px)",
+    overflowY: "auto",
   },
   formRow: {
     display: "flex",
     alignItems: "center",
-    marginBottom: theme.spacing(2),
-    backgroundColor: "white",
-    padding: theme.spacing(1.5),
-    borderRadius: "4px",
+    marginBottom: theme.spacing(1.5),
   },
   label: {
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: 400,
     color: "#333",
-    width: "140px",
+    width: "110px",
     flexShrink: 0,
   },
   inputWrapper: {
@@ -105,19 +115,27 @@ const RouteDialog = ({ open, onClose, route }) => {
     color: "#2196F3",
     visible: true,
     nameVisible: true,
+    area: null, // Store drawn route area
   });
-  const [groups, setGroups] = useState([]);
+  const [groups, setGroups] = useState([{ id: 0, name: 'Ungrouped' }]);
+  const [drawingEnabled, setDrawingEnabled] = useState(false);
 
-  // Fetch geofence groups
+  // Fetch groups from Traccar API
   useEffect(() => {
     const fetchGroups = async () => {
       try {
         const response = await fetchOrThrow('/api/geofence-groups');
         const data = await response.json();
-        setGroups(Array.isArray(data) ? data : []);
+        // Add "Ungrouped" as first option
+        const allGroups = [
+          { id: 0, name: 'Ungrouped' },
+          ...(Array.isArray(data) ? data : [])
+        ];
+        setGroups(allGroups);
       } catch (error) {
-        console.error("Error fetching geofence groups:", error);
-        setGroups([]);
+        console.error("Error fetching groups:", error);
+        // Fallback to Ungrouped only
+        setGroups([{ id: 0, name: 'Ungrouped' }]);
       }
     };
 
@@ -136,9 +154,10 @@ const RouteDialog = ({ open, onClose, route }) => {
         color: route.attributes?.color || "#2196F3",
         visible: route.attributes?.visible !== false,
         nameVisible: route.attributes?.nameVisible !== false,
+        area: route.area || null,
       });
     } else {
-      // Create mode - reset form
+      // Create mode - reset form and enable drawing
       setFormData({
         name: "",
         groupId: 0,
@@ -146,9 +165,16 @@ const RouteDialog = ({ open, onClose, route }) => {
         color: "#2196F3",
         visible: true,
         nameVisible: true,
+        area: null,
       });
+      setDrawingEnabled(true); // Enable drawing for new routes
     }
   }, [route, open]);
+
+  // Handle route drawn on map
+  const handleRouteDrawn = (area) => {
+    setFormData((prev) => ({ ...prev, area }));
+  };
 
   const handleInputChange = (field) => (e) => {
     const value = e.target ? e.target.value : e;
@@ -167,18 +193,16 @@ const RouteDialog = ({ open, onClose, route }) => {
         return;
       }
 
-      // For now, we'll require existing area for route
-      // In real implementation, this would be drawn on map
-      let area = route?.area;
-      if (!area) {
-        alert("Please draw the route on the map first");
+      // Check if route has been drawn
+      if (!formData.area) {
+        alert("Please draw the route on the map first (click points to create path, right-click to undo)");
         return;
       }
 
       const payload = {
         name: formData.name,
         groupId: formData.groupId || 0,
-        area: area,
+        area: formData.area,
         attributes: {
           type: "route",
           color: formData.color,
@@ -218,20 +242,37 @@ const RouteDialog = ({ open, onClose, route }) => {
   };
 
   const handleCancel = () => {
+    setDrawingEnabled(false);
     onClose(false);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false}>
-      <DialogTitle className={classes.dialogTitle}>
-        Route properties
-        <IconButton onClick={onClose} className={classes.closeButton} size="small">
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+    <>
+      <MapRouteDrawer 
+        enabled={drawingEnabled && open}
+        onRouteChange={handleRouteDrawn}
+      />
+      <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false} hideBackdrop={true} disableEnforceFocus={true}>
+        <DialogTitle className={classes.dialogTitle}>
+          Route properties
+          <IconButton onClick={onClose} className={classes.closeButton} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
 
-      <DialogContent className={classes.dialogContent}>
-        <Box className={classes.formRow}>
+        <DialogContent className={classes.dialogContent}>
+          {!route && (
+            <Box sx={{ mb: 1.5, p: 1, backgroundColor: '#e3f2fd', borderRadius: '4px', fontSize: '11px' }}>
+              <Typography variant="caption" sx={{ color: '#1565c0', display: 'block', fontWeight: 500 }}>
+                🖱️ Draw Route: Click points on map
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#1565c0', display: 'block', fontSize: '10px' }}>
+                • Double-click last point to finish<br/>
+                • Press Enter to finish
+              </Typography>
+            </Box>
+          )}
+          <Box className={classes.formRow}>
           <Typography className={classes.label}>Name</Typography>
           <Box className={classes.inputWrapper}>
             <CustomInput
@@ -252,10 +293,9 @@ const RouteDialog = ({ open, onClose, route }) => {
               size="small"
               displayEmpty
             >
-              <MenuItem value={0}>Ungrouped</MenuItem>
-              {groups.map((group) => (
-                <MenuItem key={group.id} value={group.id}>
-                  {group.name}
+              {(groups || []).map((group) => (
+                <MenuItem key={`group-${group.id}`} value={group.id}>
+                  {group.name || 'Unknown'}
                 </MenuItem>
               ))}
             </Select>
@@ -323,7 +363,8 @@ const RouteDialog = ({ open, onClose, route }) => {
           Cancel
         </CustomButton>
       </DialogActions>
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
 

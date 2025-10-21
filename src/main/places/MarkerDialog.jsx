@@ -9,8 +9,6 @@ import {
   Typography,
   MenuItem,
   Select,
-  Tabs,
-  Tab,
   TextField,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
@@ -22,12 +20,23 @@ import {
   CustomCheckbox,
 } from "../../common/components/custom";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
+import IconSelector from "./IconSelector";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
+    // Container tidak block pointer events - CRITICAL!
+    pointerEvents: "none",
+    "& .MuiDialog-container": {
+      pointerEvents: "none",
+    },
     "& .MuiDialog-paper": {
+      pointerEvents: "auto", // Paper menerima pointer events
       width: "360px",
       maxWidth: "90vw",
+      position: "fixed",
+      left: "20px",
+      top: "80px",
+      margin: 0,
     },
   },
   dialogTitle: {
@@ -134,98 +143,35 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-// Default marker icons (green pin variations)
-const DEFAULT_ICONS = [
-  "default-green.svg",
-  "default-green-add.svg",
-  "default-green-check.svg",
-  "default-green-cross.svg",
-  "default-green-dot.svg",
-  "default-green-exclamation.svg",
-  "default-green-minus.svg",
-  "default-green-question.svg",
-  "default-green-star.svg",
-  "default-green-plus.svg",
-  "default-green-arrow.svg",
-  "default-green-h.svg",
-  "default-green-a.svg",
-  "default-green-0.svg",
-  "default-green-1.svg",
-  "default-green-2.svg",
-  "default-green-3.svg",
-  "default-green-4.svg",
-  "default-green-5.svg",
-  "default-green-6.svg",
-  "default-green-7.svg",
-  "default-green-8.svg",
-  "default-green-9.svg",
-  "default-green-home.svg",
-  "default-green-office.svg",
-  "default-green-warehouse.svg",
-  "default-green-factory.svg",
-  "default-green-school.svg",
-  "default-green-hospital.svg",
-  "default-green-parking.svg",
-];
-
-// Custom marker icons (various colors and types)
-const CUSTOM_ICONS = [
-  "default-red.svg",
-  "default-blue.svg",
-  "default-yellow.svg",
-  "default-orange.svg",
-  "default-purple.svg",
-  "default-pink.svg",
-  "default-red-add.svg",
-  "default-blue-add.svg",
-  "default-yellow-add.svg",
-  "default-red-check.svg",
-  "default-blue-check.svg",
-  "default-yellow-check.svg",
-  "default-red-cross.svg",
-  "default-blue-cross.svg",
-  "default-yellow-cross.svg",
-  "default-red-dot.svg",
-  "default-blue-dot.svg",
-  "default-yellow-dot.svg",
-  "default-red-exclamation.svg",
-  "default-blue-exclamation.svg",
-  "default-yellow-exclamation.svg",
-  "default-red-minus.svg",
-  "default-blue-minus.svg",
-  "default-yellow-minus.svg",
-  "default-red-question.svg",
-  "default-blue-question.svg",
-  "default-yellow-question.svg",
-  "default-red-star.svg",
-  "default-blue-star.svg",
-  "default-yellow-star.svg",
-];
-
-const MarkerDialog = ({ open, onClose, marker, mapCenter }) => {
+const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIconSelect }) => {
   const { classes } = useStyles();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     groupId: 0,
-    icon: "default-green.svg",
+    icon: "pin-1.svg",
     visible: true,
     latitude: "",
     longitude: "",
   });
-  const [groups, setGroups] = useState([]);
-  const [iconTab, setIconTab] = useState(0);
+  const [groups, setGroups] = useState([{ id: 0, name: 'Ungrouped' }]);
 
-  // Fetch geofence groups
+  // Fetch groups from Traccar API
   useEffect(() => {
     const fetchGroups = async () => {
       try {
         const response = await fetchOrThrow('/api/geofence-groups');
         const data = await response.json();
-        setGroups(Array.isArray(data) ? data : []);
+        // Add "Ungrouped" as first option
+        const allGroups = [
+          { id: 0, name: 'Ungrouped' },
+          ...(Array.isArray(data) ? data : [])
+        ];
+        setGroups(allGroups);
       } catch (error) {
-        console.error("Error fetching geofence groups:", error);
-        setGroups([]);
+        console.error("Error fetching groups:", error);
+        // Fallback to Ungrouped only
+        setGroups([{ id: 0, name: 'Ungrouped' }]);
       }
     };
 
@@ -240,13 +186,13 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter }) => {
       const areaMatch = marker.area?.match(/CIRCLE\s*\(\s*([0-9.-]+)\s+([0-9.-]+)\s*,\s*([0-9.]+)\s*\)/);
       
       setFormData({
-        name: marker.name || "",
-        description: marker.description || "",
-        groupId: marker.groupId || 0,
-        icon: marker.attributes?.icon || "default-green.svg",
+        name: String(marker.name || ""),
+        description: String(marker.description || ""),
+        groupId: Number(marker.groupId) || 0,
+        icon: String(marker.attributes?.icon || "default-green.svg"),
         visible: marker.attributes?.visible !== false,
-        latitude: areaMatch ? areaMatch[1] : "",
-        longitude: areaMatch ? areaMatch[2] : "",
+        latitude: areaMatch ? String(areaMatch[1]) : "",
+        longitude: areaMatch ? String(areaMatch[2]) : "",
       });
     } else {
       // Create mode - use map center if available
@@ -256,23 +202,30 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter }) => {
         groupId: 0,
         icon: "default-green.svg",
         visible: true,
-        latitude: mapCenter?.lat || "",
-        longitude: mapCenter?.lng || "",
+        latitude: mapCenter?.lat ? String(mapCenter.lat) : "",
+        longitude: mapCenter?.lng ? String(mapCenter.lng) : "",
       });
     }
   }, [marker, mapCenter, open]);
 
-  const handleInputChange = (field) => (e) => {
-    const value = e.target ? e.target.value : e;
+  // Update lat/long when map is clicked
+  useEffect(() => {
+    if (pickedLocation) {
+      setFormData(prev => ({
+        ...prev,
+        latitude: String(pickedLocation.latitude.toFixed(6)),
+        longitude: String(pickedLocation.longitude.toFixed(6)),
+      }));
+    }
+  }, [pickedLocation]);
+
+  const handleInputChange = (field) => (event) => {
+    const value = event.target ? event.target.value : event;
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleCheckboxChange = (field) => (checked) => {
     setFormData((prev) => ({ ...prev, [field]: checked }));
-  };
-
-  const handleIconSelect = (icon) => {
-    setFormData((prev) => ({ ...prev, icon }));
   };
 
   const handleSave = async () => {
@@ -286,6 +239,21 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter }) => {
       if (!formData.latitude || !formData.longitude) {
         alert("Please provide latitude and longitude coordinates");
         return;
+      }
+
+      // Validate groupId exists (if not 0/Ungrouped)
+      if (formData.groupId && formData.groupId !== 0) {
+        try {
+          const groupResponse = await fetchOrThrow(`/api/geofence-groups/${formData.groupId}`);
+          if (!groupResponse.ok) {
+            alert("Selected group does not exist. Please select a valid group or use 'Ungrouped'.");
+            return;
+          }
+        } catch (err) {
+          console.error("Group validation error:", err);
+          alert("Selected group does not exist. Using 'Ungrouped' instead.");
+          formData.groupId = 0; // Fallback to Ungrouped
+        }
       }
 
       // Construct CIRCLE geometry with default radius 500m
@@ -336,18 +304,47 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter }) => {
     onClose(false);
   };
 
-  const iconList = iconTab === 0 ? DEFAULT_ICONS : CUSTOM_ICONS;
-
   return (
-    <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false}>
+    <Dialog 
+      open={open} 
+      onClose={(event, reason) => {
+        // Only allow close via button, not backdrop or escape
+        if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+          return;
+        }
+        onClose(false);
+      }}
+      className={classes.dialog}
+      style={{ pointerEvents: 'none' }}
+      maxWidth={false}
+      hideBackdrop={true}
+      disableEnforceFocus={true}
+      disableAutoFocus={true}
+      disableEscapeKeyDown={true}
+      disablePortal={false}
+      container={() => document.getElementById('root')}
+    >
       <DialogTitle className={classes.dialogTitle}>
         Marker properties
-        <IconButton onClick={onClose} className={classes.closeButton} size="small">
+        <IconButton onClick={handleCancel} className={classes.closeButton} size="small">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
       <DialogContent className={classes.dialogContent}>
+        {/* Map click hint */}
+        <Box sx={{ 
+          mb: 2, 
+          p: 1, 
+          backgroundColor: '#e3f2fd', 
+          borderRadius: 1,
+          border: '1px solid #90caf9',
+        }}>
+          <Typography variant="body2" sx={{ fontSize: '11px', color: '#1976d2' }}>
+            💡 Click on map to pick location
+          </Typography>
+        </Box>
+
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Name</Typography>
           <Box className={classes.inputWrapper}>
@@ -388,10 +385,9 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter }) => {
               size="small"
               displayEmpty
             >
-              <MenuItem value={0}>Ungrouped</MenuItem>
-              {groups.map((group) => (
-                <MenuItem key={group.id} value={group.id}>
-                  {group.name}
+              {(groups || []).map((group) => (
+                <MenuItem key={`group-${group.id}`} value={group.id}>
+                  {group.name || 'Unknown'}
                 </MenuItem>
               ))}
             </Select>
@@ -408,35 +404,20 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter }) => {
           </Box>
         </Box>
 
-        <Box sx={{ mt: 2 }}>
-          <Tabs
-            value={iconTab}
-            onChange={(e, newValue) => setIconTab(newValue)}
-            className={classes.tabs}
-          >
-            <Tab label="Default" />
-            <Tab label="Custom" />
-          </Tabs>
-
-          <Box className={classes.iconGrid}>
-            {iconList.map((icon) => (
-              <Box
-                key={icon}
-                className={`${classes.iconButton} ${formData.icon === icon ? 'selected' : ''}`}
-                onClick={() => handleIconSelect(icon)}
-              >
-                <img
-                  src={`/img/markers/${icon}`}
-                  alt={icon}
-                  className={classes.iconImage}
-                  onError={(e) => {
-                    e.target.src = '/img/markers/default-green.svg';
-                  }}
-                />
-              </Box>
-            ))}
-          </Box>
-        </Box>
+        {/* Icon Selector Component */}
+        <IconSelector
+          value={formData.icon}
+          onChange={(newIcon) => {
+            setFormData(prev => ({
+              ...prev,
+              icon: newIcon
+            }));
+            // Notify parent for map preview
+            if (onIconSelect) {
+              onIconSelect(newIcon);
+            }
+          }}
+        />
       </DialogContent>
 
       <DialogActions className={classes.dialogActions}>

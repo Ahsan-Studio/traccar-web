@@ -2,76 +2,72 @@ import { useEffect, useId, useState } from 'react';
 import { map } from '../core/MapView';
 import { useAttributePreference } from '../../common/util/preferences';
 import { findFonts } from '../core/mapUtil';
-import { useSelector } from 'react-redux';
 
 // Fungsi untuk fetch markers dari API
-const fetchMarkers = async (session) => {
-  try {
-    const params = new URLSearchParams({
-      type: 'marker',
-      userId: session.user.id
-    });
-    const response = await fetch(`/api/geofences?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${session.accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    const data = await response.json();
-    return data.map(geofence => ({
-      id: geofence.id,
-      latitude: geofence.latitude || 0,
-      longitude: geofence.longitude || 0,
-      title: geofence.name || `Marker ${geofence.id}`,
-      image: 'marker-15',
-      color: geofence.attributes?.color || '#3bb2d0',
-      ...geofence.attributes
-    }));
-  } catch (error) {
-    console.error('Error fetching markers:', error);
-    return [];
-  }
-};
+// DEPRECATED: Markers now loaded via CachingController.js from /api/markers
+// const fetchMarkers = async (session) => {
+//   try {
+//     const params = new URLSearchParams({
+//       type: 'marker',
+//       userId: session.user.id
+//     });
+//     const response = await fetch(`/api/geofences?${params}`, {
+//       headers: {
+//         'Authorization': `Bearer ${session.accessToken}`,
+//         'Content-Type': 'application/json'
+//       }
+//     });
+//     const data = await response.json();
+//     return data.map(geofence => ({
+//       id: geofence.id,
+//       latitude: geofence.latitude || 0,
+//       longitude: geofence.longitude || 0,
+//       title: geofence.name || `Marker ${geofence.id}`,
+//       image: 'marker-15',
+//       color: geofence.attributes?.color || '#3bb2d0',
+//       ...geofence.attributes
+//     }));
+//   } catch (error) {
+//     console.error('Error fetching markers:', error);
+//     return [];
+//   }
+// };
 
 const MapMarkersLayer = () => {
   const id = useId();
-  const [markers, setMarkers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [markers] = useState([]);
   const mapMarkers = useAttributePreference('mapMarkers', true);
   
-  // Ambil data session dari Redux store
-  const session = useSelector(state => state.session);
-  
   // Fetch markers saat komponen mount atau session berubah
-  useEffect(() => {
-    if (!mapMarkers || !session?.authenticated) return;
-    
-    const loadMarkers = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchMarkers(session);
-        setMarkers(data);
-        setError(null);
-        
-        // Pindah ke marker pertama jika ada
-        if (data.length > 0) {
-          map.flyTo({
-            center: [data[0].longitude, data[0].latitude],
-            zoom: 14,
-            essential: true
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load markers:', err);
-        setError('Gagal memuat marker. Silakan refresh halaman.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadMarkers();
-  }, [mapMarkers, session.authenticated]);
+  // DEPRECATED: Markers now loaded via CachingController.js
+  // useEffect(() => {
+  //   if (!mapMarkers || !session?.authenticated) return;
+  //   
+  //   const loadMarkers = async () => {
+  //     setLoading(true);
+  //     try {
+  //       const data = await fetchMarkers(session);
+  //       setMarkers(data);
+  //       setError(null);
+  //       
+  //       // Pindah ke marker pertama jika ada
+  //       if (data.length > 0) {
+  //         map.flyTo({
+  //           center: [data[0].longitude, data[0].latitude],
+  //           zoom: 14,
+  //           essential: true
+  //         });
+  //       }
+  //     } catch (err) {
+  //       console.error('Failed to load markers:', err);
+  //       setError('Gagal memuat marker. Silakan refresh halaman.');
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   
+  //   loadMarkers();
+  // }, [mapMarkers, session.authenticated]);
 
   useEffect(() => {
     if (!mapMarkers) {
@@ -172,15 +168,6 @@ const MapMarkersLayer = () => {
     };
   }, [id, mapMarkers]);
 
-  // Tampilkan loading/error state jika diperlukan
-  if (loading) {
-    return <div className="map-loading">Memuat marker...</div>;
-  }
-  
-  if (error) {
-    return <div className="map-error">{error}</div>;
-  }
-  
   // Debug info
   console.log('[MapMarkersLayer] Map Center:', map?.getCenter?.());
   console.log('[MapMarkersLayer] Current Zoom:', map?.getZoom?.());

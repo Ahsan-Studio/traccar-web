@@ -20,6 +20,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import FolderIcon from "@mui/icons-material/Folder";
 import { CustomCheckbox, CustomInput } from "./index";
 
 const useStyles = makeStyles()((theme) => ({
@@ -72,6 +73,7 @@ const useStyles = makeStyles()((theme) => ({
     backgroundColor: "#fff",
     maxHeight: '22px',
     height: '22px',
+    cursor: 'pointer', // Add pointer cursor for clickable rows
     "&:hover": {
       backgroundColor: "#fafafa",
     },
@@ -155,6 +157,10 @@ export const BoolIcon = ({ value }) => (value ? (
  * @param {Function} onOpenSettings - Callback when settings button is clicked
  * @param {Function} customActions - Function that returns custom action buttons for each row: (row) => ReactNode
  * @param {Boolean} showSearch - Show/hide search input (default: true). Set to false to disable search
+ * @param {Boolean} hideTable - Hide table body (for grouped view header only)
+ * @param {Boolean} hideHeader - Hide table header row
+ * @param {Boolean} hideActions - Hide footer action buttons
+ * @param {Function} onRowClick - Callback when a table row is clicked: (row) => void
  * 
  * @example
  * // With search (default)
@@ -165,6 +171,9 @@ export const BoolIcon = ({ value }) => (value ? (
  * 
  * // With custom actions
  * <CustomTable rows={data} columns={cols} customActions={(row) => <IconButton>...</IconButton>} />
+ * 
+ * // With row click handler
+ * <CustomTable rows={data} columns={cols} onRowClick={(row) => console.log('Clicked:', row)} />
  */
 const CustomTable = ({
   rows = [],
@@ -179,10 +188,15 @@ const CustomTable = ({
   onSearchChange = () => {},
   onAdd = () => {},
   onRefresh = () => {},
+  onOpenGroups,
   onOpenSettings = () => {},
   customActions,
   showSearch = true,
-}) => {
+  hideTable = false,
+  hideHeader = false,
+  hideActions = false,
+  onRowClick,
+})  => {
   const { classes } = useStyles();
 
   const allChecked = rows.length > 0 && selected.length === rows.length;
@@ -222,40 +236,65 @@ const CustomTable = ({
         </Box>
       )}
 
-      <TableContainer 
-        component={Paper} 
-        className={classes.tableContainer}
-        sx={{ border: 0, boxShadow: 'none' }}
-      >
-        <Table size="small">
-          <TableHead className={classes.tableHeader}>{headerCells}</TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length + 2} align="center" sx={{ py: 4 }}>
-                  <CircularProgress size={24} />
-                </TableCell>
-              </TableRow>
-            ) : rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length + 2} align="center" sx={{ py: 4, color: "#666" }}>
-                  No data
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} className={classes.tableRow}>
-                  <TableCell padding="checkbox" className={classes.checkboxCell}>
-                    <CustomCheckbox 
-                      checked={selected.includes(row.id)} 
-                      onChange={() => onToggleRow(row.id)} 
-                    />
+      {!hideTable && (
+        <TableContainer 
+          component={Paper} 
+          className={classes.tableContainer}
+          sx={{ border: 0, boxShadow: 'none' }}
+        >
+          <Table size="small">
+            {!hideHeader && <TableHead className={classes.tableHeader}>{headerCells}</TableHead>}
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length + 2} align="center" sx={{ py: 4 }}>
+                    <CircularProgress size={24} />
                   </TableCell>
-                  {columns.map((col) => (
-                    <TableCell key={col.key} align={col.align} style={{ width: col.width }}>
-                      {col.render ? col.render(row) : row[col.key]}
-                    </TableCell>
-                  ))}
+                </TableRow>
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length + 2} align="center" sx={{ py: 4, color: "#666" }}>
+                    No data
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row) => (
+                  <TableRow 
+                    key={row.id} 
+                    className={classes.tableRow}
+                    onClick={(e) => {
+                      // Only trigger row click if not clicking on checkbox or action buttons
+                      if (
+                        onRowClick &&
+                        !e.target.closest('.MuiCheckbox-root') &&
+                        !e.target.closest('.MuiIconButton-root')
+                      ) {
+                        onRowClick(row);
+                      }
+                    }}
+                  >
+                    <TableCell padding="checkbox" className={classes.checkboxCell}>
+                      <CustomCheckbox 
+                        checked={selected.includes(row.id)} 
+                        onChange={() => onToggleRow(row.id)} 
+                      />
+                  </TableCell>
+                  {columns.map((col) => {
+                    let cellContent;
+                    if (col.render) {
+                      cellContent = col.render(row);
+                    } else if (col.format) {
+                      cellContent = col.format(row[col.key], row);
+                    } else {
+                      cellContent = row[col.key];
+                    }
+                    
+                    return (
+                      <TableCell key={col.key} align={col.align} style={{ width: col.width }}>
+                        {cellContent}
+                      </TableCell>
+                    );
+                  })}
                   <TableCell className={classes.actionCell}>
                     <IconButton size="small" className={classes.actionButton} onClick={() => onEdit(row)}><EditIcon /></IconButton>
                     {customActions && customActions(row)}
@@ -267,19 +306,27 @@ const CustomTable = ({
           </TableBody>
         </Table>
       </TableContainer>
+      )}
 
-      <Box className={classes.footer}>
-        <Box className={classes.footerLeft}>
-          <IconButton className={classes.footerButton} title="Add" onClick={onAdd}><AddIcon /></IconButton>
-          <IconButton className={classes.footerButton} title="Refresh" onClick={onRefresh}><RefreshIcon /></IconButton>
-          <IconButton className={classes.footerButton} title="Settings" onClick={onOpenSettings}><SettingsIcon /></IconButton>
+      {!hideActions && (
+        <Box className={classes.footer}>
+          <Box className={classes.footerLeft}>
+            <IconButton className={classes.footerButton} title="Add" onClick={onAdd}><AddIcon /></IconButton>
+            {onOpenGroups && (
+              <IconButton className={classes.footerButton} title="Groups" onClick={onOpenGroups}>
+                <FolderIcon />
+              </IconButton>
+            )}
+            <IconButton className={classes.footerButton} title="Refresh" onClick={onRefresh}><RefreshIcon /></IconButton>
+            <IconButton className={classes.footerButton} title="Settings" onClick={onOpenSettings}><SettingsIcon /></IconButton>
+          </Box>
+          <Box className={classes.pagination}>
+            <span>Page 1 of 1</span>
+            <span style={{ margin: '0 8px' }}>{'<<'}</span>
+            <span>50</span>
+          </Box>
         </Box>
-        <Box className={classes.pagination}>
-          <span>Page 1 of 1</span>
-          <span style={{ margin: '0 8px' }}>{'<<'}</span>
-          <span>50</span>
-        </Box>
-      </Box>
+      )}
     </Box>
   );
 };

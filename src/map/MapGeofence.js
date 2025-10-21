@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import { map } from './core/MapView';
 import { findFonts, geofenceToFeature } from './core/mapUtil';
 import { useAttributePreference } from '../common/util/preferences';
+import { loadMarkerIcon } from './core/preloadMarkerIcons';
 
 const MapGeofence = () => {
   const id = useId();
@@ -47,6 +48,30 @@ const MapGeofence = () => {
           'line-opacity': ['get', 'opacity'],
         },
       });
+      
+      // Layer for marker icons (only for Point geometries with icon property)
+      map.addLayer({
+        source: id,
+        id: 'geofences-icons',
+        type: 'symbol',
+        filter: [
+          'all',
+          ['==', '$type', 'Point'],
+          ['has', 'icon'],
+        ],
+        layout: {
+          'icon-image': [
+            'case',
+            ['has', 'icon'],
+            ['get', 'icon'],
+            'default-green' // Fallback icon
+          ],
+          'icon-size': 0.5, // Reduced from 1 to 0.5 for smaller size
+          'icon-allow-overlap': true,
+          'icon-anchor': 'bottom',
+        },
+      });
+      
       map.addLayer({
         source: id,
         id: 'geofences-title',
@@ -55,6 +80,8 @@ const MapGeofence = () => {
           'text-field': '{name}',
           'text-font': findFonts(map),
           'text-size': 12,
+          'text-anchor': 'top',
+          'text-offset': [0, 1],
         },
         paint: {
           'text-halo-color': 'white',
@@ -69,6 +96,9 @@ const MapGeofence = () => {
         if (map.getLayer('geofences-line')) {
           map.removeLayer('geofences-line');
         }
+        if (map.getLayer('geofences-icons')) {
+          map.removeLayer('geofences-icons');
+        }
         if (map.getLayer('geofences-title')) {
           map.removeLayer('geofences-title');
         }
@@ -82,14 +112,33 @@ const MapGeofence = () => {
 
   useEffect(() => {
     if (mapGeofences) {
+      const features = Object.values(geofences)
+        .filter((geofence) => !geofence.attributes.hide)
+        .map((geofence) => geofenceToFeature(theme, geofence));
+      
+      console.log('[MapGeofence] Total geofences:', Object.values(geofences).length);
+      console.log('[MapGeofence] Visible features:', features.length);
+      console.log('[MapGeofence] Features:', features.map(f => ({
+        name: f.properties.name,
+        type: f.geometry.type,
+        hasIcon: !!f.properties.icon,
+        icon: f.properties.icon
+      })));
+      
+      // Load any missing icons dynamically
+      features.forEach(async (feature) => {
+        if (feature.properties.icon && !map.hasImage(feature.properties.icon)) {
+          console.log(`[MapGeofence] Loading missing icon: ${feature.properties.icon}`);
+          await loadMarkerIcon(feature.properties.icon);
+        }
+      });
+      
       map.getSource(id)?.setData({
         type: 'FeatureCollection',
-        features: Object.values(geofences)
-          .filter((geofence) => !geofence.attributes.hide)
-          .map((geofence) => geofenceToFeature(theme, geofence)),
+        features,
       });
     }
-  }, [mapGeofences, geofences]);
+  }, [mapGeofences, geofences, theme, id]);
 
   return null;
 };

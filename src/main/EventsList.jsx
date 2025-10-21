@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import {
   List,
   ListItem,
@@ -112,18 +113,58 @@ const useStyles = makeStyles()((theme) => ({
 
 const EventsList = () => {
   const { classes } = useStyles();
+  
+  // Get events from Redux store (populated by WebSocket)
+  const storeEvents = useSelector((state) => state.events.items);
+  const devices = useSelector((state) => state.devices.items);
+  
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Sync Redux events to local state with device names
+  useEffect(() => {
+    if (Object.keys(devices).length > 0) {
+      const eventsWithDevices = Object.values(storeEvents).map(event => ({
+        ...event,
+        deviceName: devices[event.deviceId]?.name || `Device ${event.deviceId}`,
+      })).sort((a, b) => dayjs(b.eventTime).valueOf() - dayjs(a.eventTime).valueOf());
+      
+      setEvents(eventsWithDevices);
+      setLoading(false);
+    }
+  }, [storeEvents, devices]);
 
   const filteredEvents = events.filter(event => 
-    event.deviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    event.deviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     getEventDescription(event).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleRefresh = () => {
-    fetchEvents();
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      // Fetch events from API endpoint
+      const from = dayjs().subtract(24, 'hours').toISOString();
+      const to = dayjs().toISOString();
+      
+      const response = await fetchOrThrow(`/api/reports/events?from=${from}&to=${to}`);
+      const apiEvents = await response.json();
+      
+      // Process and merge with store events
+      const eventsWithDevices = apiEvents.map(event => ({
+        ...event,
+        deviceName: devices[event.deviceId]?.name || `Device ${event.deviceId}`,
+      })).sort((a, b) => dayjs(b.eventTime).valueOf() - dayjs(a.eventTime).valueOf());
+      
+      setEvents(eventsWithDevices);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+      setError('Gagal memuat events');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleExport = () => {
@@ -146,7 +187,7 @@ const EventsList = () => {
   const handleDelete = async () => {
     if (window.confirm('Apakah Anda yakin ingin menghapus semua events?')) {
       try {
-        await fetchOrThrow('/api/events/delete', { method: 'POST' });
+        await fetchOrThrow('/api/events', { method: 'DELETE' });
         setEvents([]);
       } catch (err) {
         console.error('Error deleting events:', err);
@@ -154,66 +195,28 @@ const EventsList = () => {
       }
     }
   };
-
-  const fetchEvents = async () => {
-    setLoading(true);
-    try {
-      // First get all devices
-      const devicesResponse = await fetchOrThrow('/api/devices');
-      const devices = await devicesResponse.json();
-      const deviceMap = devices.reduce((acc, device) => {
-        acc[device.id] = device.name;
-        return acc;
-      }, {});
-
-      // Get all positions history
-      const response = await fetchOrThrow('/api/positions');
-      const positions = await response.json();
-
-      // Process positions into events
-      const events = positions.map(position => ({
-        id: position.id,
-        deviceId: position.deviceId,
-        serverTime: position.deviceTime,
-        type: position.attributes.ignition ? 'ignitionOn' : 'ignitionOff',
-        attributes: position.attributes,
-        speed: position.speed,
-        status: position.attributes.motion ? 'Berjalan' : 'Berhenti',
-        motion: position.attributes.motion
-      }));
-
-      // Sort by time descending
-      const sortedEvents = events.sort((a, b) => 
-        dayjs(b.serverTime).valueOf() - dayjs(a.serverTime).valueOf()
-      );
-      // Add device names to events
-      const eventsWithNames = sortedEvents.map(event => ({
-          ...event,
-          deviceName: deviceMap[event.deviceId] || `Device ${event.deviceId}`
-        }))
-        .sort((a, b) => dayjs(b.serverTime).valueOf() - dayjs(a.serverTime).valueOf());
-      
-      setEvents(eventsWithNames);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching events:', err);
-      setError(err.message || 'Failed to load events');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
+  // Initial load from API
   useEffect(() => {
-    fetchEvents();
-    // Refresh events every minute
-    const interval = setInterval(fetchEvents, 60000);
-    return () => clearInterval(interval);
+    handleRefresh();
   }, []);
 
   const getEventDescription = (event) => {
-    if (event.type === 'ignitionOn') return 'Mesin dihidupkan';
-    if (event.type === 'ignitionOff') return 'Mesin dimatikan';
-    return event.status || 'Status tidak diketahui';
+    // Map event types to Indonesian descriptions
+    const eventTypeMap = {
+      deviceOnline: 'Perangkat Online',
+      deviceOffline: 'Perangkat Offline',
+      deviceMoving: 'Perangkat Bergerak',
+      deviceStopped: 'Perangkat Berhenti',
+      ignitionOn: 'Mesin Dihidupkan',
+      ignitionOff: 'Mesin Dimatikan',
+      geofenceEnter: 'Masuk Geofence',
+      geofenceExit: 'Keluar Geofence',
+      alarm: 'Alarm',
+      maintenance: 'Maintenance',
+    };
+    
+    return eventTypeMap[event.type] || event.type || 'Event tidak diketahui';
   };
 
   if (loading && events.length === 0) {
@@ -286,14 +289,14 @@ const EventsList = () => {
         {filteredEvents.map((event) => (
           <ListItem key={event.id} className={classes.listItem} disablePadding>
             <Typography className={classes.time}>
-              {dayjs(event.serverTime).format('HH:mm:ss')}
+              {dayjs(event.eventTime || event.serverTime).format('HH:mm:ss')}
             </Typography>
             <Typography className={classes.deviceName}>
               {event.deviceName}
             </Typography>
             <Typography className={classes.event}>
               {getEventDescription(event)}
-              {event.attributes?.motion ? ' - Demo S5' : ''}
+              {event.attributes?.message && ` - ${event.attributes.message}`}
             </Typography>
           </ListItem>
         ))}

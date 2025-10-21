@@ -11,8 +11,26 @@ const CachingController = () => {
 
   useEffectAsync(async () => {
     if (authenticated) {
-      const response = await fetchOrThrow('/api/geofences');
-      dispatch(geofencesActions.refresh(await response.json()));
+      try {
+        // Fetch markers, routes, and zones separately then combine
+        const [markersRes, routesRes, zonesRes] = await Promise.all([
+          fetchOrThrow('/api/markers'),
+          fetchOrThrow('/api/routes'),
+          fetchOrThrow('/api/zones'),
+        ]);
+        
+        const markers = await markersRes.json();
+        const routes = await routesRes.json();
+        const zones = await zonesRes.json();
+        
+        // Combine all geofences into one array
+        const allGeofences = [...markers, ...routes, ...zones];
+        dispatch(geofencesActions.refresh(allGeofences));
+      } catch (error) {
+        console.error('Error loading geofences:', error);
+        // Fallback to empty array if error
+        dispatch(geofencesActions.refresh([]));
+      }
     }
   }, [authenticated]);
 

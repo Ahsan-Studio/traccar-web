@@ -64,25 +64,48 @@ export const reverseCoordinates = (it) => {
 };
 
 export const geofenceToFeature = (theme, item) => {
+  const isMarker = item.attributes?.type === 'marker' || item.area?.startsWith('CIRCLE');
+  const hasIcon = isMarker && item.attributes?.icon;
+  
   let geometry;
+  let properties = {
+    name: item.name,
+    color: item.attributes.color || theme.palette.geometry.main,
+    width: item.attributes.mapLineWidth || 2,
+    opacity: item.attributes.mapLineOpacity || 1,
+  };
+  
   if (item.area.indexOf('CIRCLE') > -1) {
     const coordinates = item.area.replace(/CIRCLE|\(|\)|,/g, ' ').trim().split(/ +/);
-    const options = { steps: 32, units: 'meters' };
-    const polygon = circle([Number(coordinates[1]), Number(coordinates[0])], Number(coordinates[2]), options);
-    geometry = polygon.geometry;
+    const centerLng = Number(coordinates[1]);
+    const centerLat = Number(coordinates[0]);
+    const radius = Number(coordinates[2]);
+    
+    // If marker has icon, create Point geometry for icon display
+    if (hasIcon) {
+      geometry = {
+        type: 'Point',
+        coordinates: [centerLng, centerLat],
+      };
+      const iconName = item.attributes.icon.replace('.svg', '').replace('.png', '');
+      properties.icon = iconName;
+      console.log('[geofenceToFeature] Marker with icon:', item.name, 'Icon:', iconName, 'Coords:', [centerLng, centerLat]);
+    } else {
+      // Otherwise create circle polygon for boundary
+      const options = { steps: 32, units: 'meters' };
+      const polygon = circle([centerLng, centerLat], radius, options);
+      geometry = polygon.geometry;
+      console.log('[geofenceToFeature] Marker without icon (circle):', item.name);
+    }
   } else {
     geometry = reverseCoordinates(parse(item.area));
   }
+  
   return {
     id: item.id,
     type: 'Feature',
     geometry,
-    properties: {
-      name: item.name,
-      color: item.attributes.color || theme.palette.geometry.main,
-      width: item.attributes.mapLineWidth || 2,
-      opacity: item.attributes.mapLineOpacity || 1,
-    },
+    properties,
   };
 };
 

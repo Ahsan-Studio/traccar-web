@@ -3,10 +3,11 @@ import { CustomTable } from "../../common/components/custom";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 import RemoveDialog from "../../common/components/RemoveDialog";
 import ZoneDialog from "./ZoneDialog";
+import PlaceGroupsDialog from "./PlaceGroupsDialog";
 
-const ZonesTab = () => {
+const ZonesTab = ({ onFocusLocation }) => {
   const [items, setItems] = useState([]);
-  const [selected, setSelected] = useState([]);
+  const [visibleItems, setVisibleItems] = useState([]); // Track which zones are visible on map
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -14,6 +15,14 @@ const ZonesTab = () => {
   const [removing, setRemoving] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [groupsDialogOpen, setGroupsDialogOpen] = useState(false);
+
+  // Toggle zone visibility
+  const toggleVisibility = (id) => {
+    setVisibleItems((prev) => 
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   // Fetch zones from API
   useEffect(() => {
@@ -26,12 +35,16 @@ const ZonesTab = () => {
         });
         const data = await response.json();
         if (!cancelled) {
-          setItems(Array.isArray(data) ? data : []);
-          // Remove selections that no longer exist
-          setSelected((prev) => prev.filter((id) => (Array.isArray(data) ? data : []).some((r) => r.id === id)));
+          const zones = Array.isArray(data) ? data : [];
+          setItems(zones);
+          // By default, show all zones
+          setVisibleItems(zones.map(z => z.id));
         }
       } catch (e) {
-        if (!cancelled) setItems([]);
+        if (!cancelled) {
+          setItems([]);
+          setVisibleItems([]);
+        }
         console.error("Error fetching zones:", e);
       } finally {
         if (!cancelled) setLoading(false);
@@ -45,68 +58,50 @@ const ZonesTab = () => {
   const rows = useMemo(() => {
     const q = search.toLowerCase();
     return items.filter((it) => 
-      (it.name || "").toLowerCase().includes(q) ||
-      (it.description || "").toLowerCase().includes(q)
+      (it.name || "").toLowerCase().includes(q)
     );
   }, [items, search]);
 
+  // Define columns for CustomTable
   const columns = [
     { 
       key: "name", 
       label: "Name",
-      minWidth: 150,
-    },
-    { 
-      key: "description", 
-      label: "Description",
-      minWidth: 200,
-    },
-    { 
-      key: "area", 
-      label: "Type",
-      minWidth: 100,
-      align: "center",
-      format: (value) => {
-        return value?.startsWith("POLYGON") ? "Polygon" : "Area";
-      }
-    },
-    {
-      key: "attributes",
-      label: "Color",
-      minWidth: 80,
-      align: "center",
-      format: (value) => {
-        const color = value?.color || "#FF5733";
-        return (
-          <div style={{
-            width: "20px",
-            height: "20px",
-            backgroundColor: color,
-            borderRadius: "3px",
-            margin: "0 auto",
-            border: "1px solid #ccc"
-          }} />
-        );
-      }
-    },
-    {
-      key: "attributes",
-      label: "Visible",
-      minWidth: 80,
-      align: "center",
-      format: (value) => {
-        return value?.visible ? "Yes" : "No";
-      }
+      width: "100%",
     },
   ];
 
-  const onToggleAll = () => {
-    if (selected.length === rows.length) setSelected([]);
-    else setSelected(rows.map((r) => r.id));
+  const handleToggleAll = () => {
+    if (visibleItems.length === rows.length) {
+      setVisibleItems([]); // Hide all
+    } else {
+      setVisibleItems(rows.map((z) => z.id)); // Show all
+    }
   };
 
-  const onToggleRow = (id) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  // Handle row click - focus map on zone center
+  const handleRowClick = (row) => {
+    if (row.area && onFocusLocation) {
+      // Parse POLYGON geometry: POLYGON ((lat1 lng1, lat2 lng2, ...))
+      const match = row.area.match(/POLYGON\s*\(\s*\(([^)]+)\)/);
+      if (match) {
+        const coords = match[1].split(',').map(coord => {
+          const [lat, lng] = coord.trim().split(/\s+/).map(parseFloat);
+          return { lat, lng };
+        });
+        
+        // Calculate center of polygon
+        if (coords.length > 0) {
+          const sumLat = coords.reduce((sum, c) => sum + c.lat, 0);
+          const sumLng = coords.reduce((sum, c) => sum + c.lng, 0);
+          const center = {
+            lat: sumLat / coords.length,
+            lng: sumLng / coords.length
+          };
+          onFocusLocation(center, row);
+        }
+      }
+    }
   };
 
   const onAdd = () => {
@@ -124,9 +119,20 @@ const ZonesTab = () => {
     setRemoveOpen(true);
   };
 
+  const onRefresh = () => {
+    setRefreshVersion((v) => v + 1);
+  };
+
   const handleDialogClose = (saved) => {
     setDialogOpen(false);
     setEditing(null);
+    if (saved) {
+      setRefreshVersion((v) => v + 1);
+    }
+  };
+
+  const handleGroupsDialogClose = (saved) => {
+    setGroupsDialogOpen(false);
     if (saved) {
       setRefreshVersion((v) => v + 1);
     }
@@ -138,20 +144,28 @@ const ZonesTab = () => {
         rows={rows}
         columns={columns}
         loading={loading}
-        selected={selected}
-        onToggleAll={onToggleAll}
-        onToggleRow={onToggleRow}
+        selected={visibleItems} // Use visibleItems for checkbox state
+        onToggleAll={handleToggleAll}
+        onToggleRow={toggleVisibility}
         onEdit={onEdit}
         onDelete={onDelete}
         search={search}
         onSearchChange={setSearch}
         onAdd={onAdd}
+        onRefresh={onRefresh}
+        onOpenGroups={() => setGroupsDialogOpen(true)}
         onOpenSettings={() => {}}
+        onRowClick={handleRowClick} // Add row click handler
       />
+
       <ZoneDialog
         open={dialogOpen}
         onClose={handleDialogClose}
         zone={editing}
+      />
+      <PlaceGroupsDialog
+        open={groupsDialogOpen}
+        onClose={handleGroupsDialogClose}
       />
       <RemoveDialog
         open={removeOpen}

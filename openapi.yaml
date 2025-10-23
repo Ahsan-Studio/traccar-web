@@ -4055,6 +4055,10 @@ components:
           nullable: true
           example: '{"speed":{"operator":">","value":80}}'
         # Webhook
+        webhookEnabled:
+          type: boolean
+          description: Enable webhook notifications
+          default: false
         webhookUrl:
           type: string
           description: Webhook POST URL for custom integrations

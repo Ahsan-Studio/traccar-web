@@ -1284,10 +1284,11 @@ paths:
           content: {}
   /events/history:
     get:
-      summary: Fetch event history with filters
+      summary: Fetch event history with pagination and search
       description: >-
-        Query historical events with optional filters. Without deviceId, returns events 
+        Query historical events with optional filters, pagination, and search. Without deviceId, returns events 
         for all user's devices. Users can only see events for devices they have access to.
+        The response includes pagination metadata.
       tags:
         - Events
       parameters:
@@ -1316,23 +1317,57 @@ paths:
             type: string
             format: date-time
           example: "2025-10-31T23:59:59Z"
-        - name: limit
+        - name: search
           in: query
-          description: Maximum number of results (default 100, max 1000)
+          description: Search keyword for device name or event type (case-insensitive)
+          schema:
+            type: string
+          example: "alarm"
+        - name: page
+          in: query
+          description: Page number (default 1, minimum 1)
           schema:
             type: integer
             minimum: 1
-            maximum: 1000
-            default: 100
+            default: 1
+        - name: pageSize
+          in: query
+          description: Number of items per page (default 20, max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         "200":
-          description: OK
+          description: OK - Returns paginated events with metadata
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Event"
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Event"
+                  total:
+                    type: integer
+                    description: Total number of events matching the filters
+                  page:
+                    type: integer
+                    description: Current page number
+                  pageSize:
+                    type: integer
+                    description: Number of items per page
+                  totalPages:
+                    type: integer
+                    description: Total number of pages
+                example:
+                  data: []
+                  total: 150
+                  page: 1
+                  pageSize: 20
+                  totalPages: 8
         "403":
           description: Forbidden - No permission to access device
           content: {}

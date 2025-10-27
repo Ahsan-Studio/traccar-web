@@ -66,7 +66,7 @@ const MapGeofence = () => {
             ['get', 'icon'],
             'default-green' // Fallback icon
           ],
-          'icon-size': 0.5, // Reduced from 1 to 0.5 for smaller size
+          'icon-size': 0.25, // Reduced untuk ukuran lebih kecil dan elegant
           'icon-allow-overlap': true,
           'icon-anchor': 'bottom',
         },

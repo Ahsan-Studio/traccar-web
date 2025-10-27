@@ -145,11 +145,8 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
 
         // Try to fetch odometer and engine hours from positions API
         try {
-          console.log('Attempting to fetch position data for device:', device.id);
           const positionResponse = await fetchOrThrow(`/api/positions?deviceId=${device.id}`);
           const positionData = await positionResponse.json();
-          
-          console.log('Position data received:', positionData);
           
           // Get the latest position (first in array)
           if (positionData && positionData.length > 0) {
@@ -158,21 +155,17 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
             // Get odometer from totalDistance in attributes (convert meters to km)
             if (latestPosition.attributes?.totalDistance) {
               odometer = latestPosition.attributes.totalDistance / 1000;
-              console.log('Odometer from position API:', odometer, 'km');
             }
             
             // Get engine hours from hours in attributes
             if (latestPosition.attributes?.hours !== undefined) {
               engineHours = latestPosition.attributes.hours;
-              console.log('Engine hours from position API:', engineHours);
             }
           } else {
-            console.log('No position data available, using device attributes');
             odometer = device?.attributes?.totalDistance ? (device.attributes.totalDistance / 1000) : 0;
             engineHours = device?.attributes?.hours || 0;
           }
-        } catch (error) {
-          console.warn('Position API not available or failed, using device attributes fallback:', error.message);
+        } catch {
           // Fallback to device attributes if position API fails
           odometer = device?.attributes?.totalDistance ? (device.attributes.totalDistance / 1000) : 0;
           engineHours = device?.attributes?.hours || 0;
@@ -202,13 +195,6 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
       initializeFormData();
     }
   }, [device]);
-
-  // Debug logging for device data
-  console.log('EditDeviceDialog - Device data:', {
-    device,
-    deviceDriverId: device?.attributes?.driverId,
-    formDataDriverId: formData.attributes?.driverId
-  });
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -368,10 +354,8 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
         
         // Try to get engine hours and odometer from positions API
         try {
-          console.log('Attempting to fetch position data for refresh, deviceId:', refreshedDevice.id);
           const positionResponse = await fetchOrThrow(`/api/positions?deviceId=${refreshedDevice.id}`);
           const positionData = await positionResponse.json();
-          console.log('Position data for accumulators:', positionData);
           
           // Get the latest position (first in array)
           if (positionData && positionData.length > 0) {
@@ -382,20 +366,15 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
             
             if (latestPosition.attributes?.hours !== undefined) {
               updatedAttributes.hours = latestPosition.attributes.hours;
-              console.log('Updated device with engine hours from position:', latestPosition.attributes.hours);
             }
             
             if (latestPosition.attributes?.totalDistance !== undefined) {
               updatedAttributes.totalDistance = latestPosition.attributes.totalDistance;
-              console.log('Updated device with odometer from position:', latestPosition.attributes.totalDistance, 'meters =', (latestPosition.attributes.totalDistance / 1000), 'km');
             }
             
             refreshedDevice.attributes = updatedAttributes;
-          } else {
-            console.log('No position data available for refresh, using existing device attributes');
           }
-        } catch (positionError) {
-          console.warn('Position API not available for refresh, continuing without position data:', positionError.message);
+        } catch {
           // Continue without position data - device attributes will remain as they are
         }
         

@@ -89,7 +89,7 @@ const useStyles = makeStyles()((theme) => ({
     position: 'relative',
   },
   sidebar: {
-    width: '366px',
+    width: '330px',
     backgroundColor: 'white',
     borderRight: `1px solid ${theme.palette.divider}`,
     display: 'flex',
@@ -134,6 +134,7 @@ const useStyles = makeStyles()((theme) => ({
       fontWeight: 'normal',
       padding: '6px 16px',
       color: '#444444',
+      minWidth: '70px',
       borderRadius: 0,
       '&.Mui-selected': {
         backgroundColor: '#ffffff',

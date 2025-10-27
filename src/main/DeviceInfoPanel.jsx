@@ -6,12 +6,9 @@ import {
   Tab,
   Typography,
   IconButton,
-  Collapse,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import SimCardIcon from '@mui/icons-material/SimCard';
 import SpeedIcon from '@mui/icons-material/Speed';
@@ -26,7 +23,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import BadgeIcon from '@mui/icons-material/Badge';
 import PinDropIcon from '@mui/icons-material/PinDrop';
 import InfoIcon from '@mui/icons-material/Info';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { useAttributePreference } from '../common/util/preferences';
 import { useTranslation } from '../common/components/LocalizationProvider';
@@ -36,13 +33,13 @@ import {
   distanceToPolygon,
   formatDistanceValue,
 } from '../common/util/distance';
+import { devicesActions } from '../store';
 import dayjs from 'dayjs';
 
 const useStyles = makeStyles()(() => ({
   root: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
     right: 0,
     zIndex: 1000,
     backgroundColor: '#fff',
@@ -71,57 +68,81 @@ const useStyles = makeStyles()(() => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '8px 16px',
+    padding: '0px 16px 0px 0px',
     borderBottom: '1px solid #e0e0e0',
-    backgroundColor: '#f8f9fa',
-    minHeight: '40px',
+    backgroundColor: '#fff',
+    minHeight: '38px',
   },
   tabs: {
     minHeight: '38px',
-    borderBottom: '1px solid #e0e0e0',
-    backgroundColor: '#fff',
+    flex: 1,
+    '& .MuiTabs-flexContainer': {
+      height: '38px',
+    },
     '& .MuiTab-root': {
       minHeight: '38px',
+      height: '38px',
       textTransform: 'none',
-      fontSize: '13px',
+      fontSize: '11px',
       fontWeight: 500,
-      padding: '8px 20px',
+      padding: '0px 16px',
+      minWidth: 'auto',
+      color: '#666',
+      '&.Mui-selected': {
+        color: '#1976d2',
+      },
+    },
+    '& .MuiTabs-indicator': {
+      backgroundColor: '#1976d2',
     },
   },
   content: {
-    padding: '16px',
+    padding: '0px',
     flex: 1,
     overflow: 'auto',
     backgroundColor: '#fff',
   },
   dataGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '12px 32px',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '0px',
   },
   field: {
     display: 'flex',
     alignItems: 'center',
-    fontSize: '13px',
-    gap: '8px',
+    fontSize: '11px',
+    gap: '6px',
+    minHeight: '24px',
+    padding: '2px 12px',
+    '&:nth-of-type(6n+1), &:nth-of-type(6n+2), &:nth-of-type(6n+3)': {
+      backgroundColor: '#f5f5f5',
+    },
+    '&:nth-of-type(6n+4), &:nth-of-type(6n+5), &:nth-of-type(6n+6)': {
+      backgroundColor: '#fff',
+    },
   },
   fieldIcon: {
-    fontSize: '18px',
+    fontSize: '16px',
     color: '#666',
-    minWidth: '18px',
+    minWidth: '16px',
   },
   label: {
-    minWidth: '140px',
-    color: '#555',
+    minWidth: '110px',
+    color: '#333',
     fontWeight: 500,
+    fontSize: '11px',
   },
   value: {
     color: '#333',
     flex: 1,
     fontWeight: 400,
+    fontSize: '11px',
   },
-  sectionTitle: {
-    display: 'none', // Hide section titles untuk match web lama
+  closeButton: {
+    padding: '4px',
+    '& .MuiSvgIcon-root': {
+      fontSize: '18px',
+    },
   },
 }));
 
@@ -129,9 +150,9 @@ const DeviceInfoPanel = () => {
   const { classes } = useStyles();
   const theme = useTheme();
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
+  const dispatch = useDispatch();
   const t = useTranslation();
   const [tab, setTab] = useState(0);
-  const [expanded, setExpanded] = useState(true);
   const [panelHeight, setPanelHeight] = useState(() => {
     const saved = localStorage.getItem('deviceInfoPanelHeight');
     return saved ? parseInt(saved, 10) : 280; // Default 280px
@@ -156,9 +177,33 @@ const DeviceInfoPanel = () => {
     'time_position', 'engine_status'
   ];
   
-  // Calculate left position based on sidebar state
-  const devicesOpen = useSelector((state) => state.devices.visible);
-  const sidebarWidth = desktop && devicesOpen ? 366 : 0;
+  // Calculate left position based on sidebar state - auto detect sidebar width
+  const [sidebarWidth, setSidebarWidth] = useState(desktop ? 330 : 0);
+  
+  useEffect(() => {
+    if (!desktop) {
+      setSidebarWidth(0);
+      return;
+    }
+    
+    // Auto detect sidebar width from DOM
+    const updateSidebarWidth = () => {
+      const sidebar = document.querySelector('[class*="sidebar"]');
+      if (sidebar) {
+        const width = sidebar.offsetWidth;
+        setSidebarWidth(width);
+      }
+    };
+    
+    updateSidebarWidth();
+    
+    // Update on window resize
+    window.addEventListener('resize', updateSidebarWidth);
+    
+    return () => {
+      window.removeEventListener('resize', updateSidebarWidth);
+    };
+  }, [desktop]);
   
   // Preferences for formatting
   const speedUnit = useAttributePreference('speedUnit', 'kmh');
@@ -178,7 +223,7 @@ const DeviceInfoPanel = () => {
 
     const handleMouseMove = (e) => {
       const deltaY = startYRef.current - e.clientY;
-      const newHeight = Math.max(200, Math.min(window.innerHeight - 100, startHeightRef.current + deltaY));
+      const newHeight = Math.max(100, startHeightRef.current + deltaY);
       setPanelHeight(newHeight);
     };
 
@@ -435,10 +480,10 @@ const DeviceInfoPanel = () => {
     <Paper 
       className={classes.root} 
       elevation={4}
-      sx={{
+      style={{
         left: `${sidebarWidth}px`,
         height: `${panelHeight}px`,
-        display: expanded || tab !== 0 ? 'flex' : 'none',
+        display: 'flex',
       }}
     >
       {/* Vertical resize handle */}
@@ -446,32 +491,24 @@ const DeviceInfoPanel = () => {
         className={classes.resizer}
         onMouseDown={handleMouseDown}
       />
-      
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Box className={classes.header}>
-          <Typography variant="subtitle1" sx={{ fontSize: '13px', fontWeight: 600 }}>
-            {device.name}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <IconButton size="small" onClick={() => setExpanded(!expanded)}>
-              {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-            </IconButton>
-            <IconButton size="small" onClick={() => setExpanded(false)}>
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        </Box>
-
-        <Collapse in={expanded}>
-          <Tabs
-            value={tab}
-            onChange={handleTabChange}
+          <Tabs 
             className={classes.tabs}
+            value={tab} 
+            onChange={handleTabChange}
           >
-          <Tab label="Data" />
-          <Tab label="Graph" />
-          <Tab label="Messages" />
-        </Tabs>
+            <Tab label="Data" />
+            <Tab label="Graph" />
+            <Tab label="Messages" />
+          </Tabs>
+          <IconButton 
+            className={classes.closeButton}
+            onClick={() => dispatch(devicesActions.selectId(null))}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
 
         {tab === 0 && (
           <Box className={classes.content}>
@@ -502,7 +539,6 @@ const DeviceInfoPanel = () => {
             </Typography>
           </Box>
         )}
-      </Collapse>
       </Box>
     </Paper>
   );

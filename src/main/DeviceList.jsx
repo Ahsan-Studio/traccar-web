@@ -325,23 +325,23 @@ const DeviceList = ({ devices }) => {
         alignItems: 'center',
         background: '#f8f8f8',
         borderBottom: '1px solid #e0e0e0',
-        minHeight: 24,
+        minHeight: 33,
         fontWeight: 500,
         fontSize: '12px',
         padding: 0,
       }}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 24, borderRight: '1px solid #e0e0e0', background: '#f5f5f5' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33, borderRight: '1px solid #e0e0e0', background: '#f5f5f5' }}>
           <img src="/img/eye.svg" alt="eye" style={{ width: 14, height: 14 }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 24, borderRight: '1px solid #e0e0e0', background: '#f5f5f5' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33, borderRight: '1px solid #e0e0e0', background: '#f5f5f5' }}>
           <img src="/img/follow.svg" alt="follow" style={{ width: 14, height: 14 }} />
         </div>
         <div style={{
-          color: '#444', background: '#f5f5f5', height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #e0e0e0'
+          color: '#444', background: '#f5f5f5', height: 33, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #e0e0e0'
         }}>
           Object
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 24, background: '#f5f5f5' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 33, background: '#f5f5f5' }}>
         </div>
       </div>
       {/* Device/group list */}

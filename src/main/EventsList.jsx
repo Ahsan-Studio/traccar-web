@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   List,
   ListItem,
@@ -17,6 +17,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { makeStyles } from 'tss-react/mui';
 import dayjs from 'dayjs';
 import fetchOrThrow from '../common/util/fetchOrThrow';
+import { EVENTS_HISTORY_PERIOD } from '../common/config/constants';
+import { devicesActions } from '../store';
+import { map } from '../map/core/MapView';
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -85,6 +88,7 @@ const useStyles = makeStyles()((theme) => ({
     paddingTop: '2px',
     paddingBottom: '2px',
     borderBottom: '1px solid #e0e0e0',
+    cursor: 'pointer',
     ":hover": {
       backgroundColor: '#f5f5f5',
     },
@@ -113,26 +117,36 @@ const useStyles = makeStyles()((theme) => ({
 
 const EventsList = () => {
   const { classes } = useStyles();
+  const dispatch = useDispatch();
   
   // Get events from Redux store (populated by WebSocket)
   const storeEvents = useSelector((state) => state.events.items);
   const devices = useSelector((state) => state.devices.items);
+  const positions = useSelector((state) => state.session.positions);
   
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed to false
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   
   // Sync Redux events to local state with device names
   useEffect(() => {
-    if (Object.keys(devices).length > 0) {
-      const eventsWithDevices = Object.values(storeEvents).map(event => ({
-        ...event,
-        deviceName: devices[event.deviceId]?.name || `Device ${event.deviceId}`,
-      })).sort((a, b) => dayjs(b.eventTime).valueOf() - dayjs(a.eventTime).valueOf());
-      
-      setEvents(eventsWithDevices);
-      setLoading(false);
+    // Always sync, even if devices is empty (will show Device ID as fallback)
+    const eventsWithDevices = Object.values(storeEvents || {}).map(event => ({
+      ...event,
+      deviceName: devices[event.deviceId]?.name || `Device ${event.deviceId}`,
+    })).sort((a, b) => {
+      const timeA = dayjs(a.eventTime || a.serverTime).valueOf();
+      const timeB = dayjs(b.eventTime || b.serverTime).valueOf();
+      return timeB - timeA;
+    });
+    
+    setEvents(eventsWithDevices);
+    
+    // If we have store events, consider it loaded
+    if (Object.keys(storeEvents || {}).length > 0) {
+      setInitialLoadDone(true);
     }
   }, [storeEvents, devices]);
 
@@ -141,27 +155,106 @@ const EventsList = () => {
     getEventDescription(event).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Handle event click - zoom to position and select device
+  const handleEventClick = async (event) => {
+    console.log('🎯 Event clicked:', event);
+    
+    // First, check if position exists in Redux store
+    let position = positions[event.positionId];
+    
+    // If not in store, fetch from API
+    if (!position && event.positionId) {
+      try {
+        console.log('📡 Fetching position:', event.positionId);
+        const response = await fetchOrThrow(`/api/positions?id=${event.positionId}`);
+        const positionsData = await response.json();
+        if (positionsData.length > 0) {
+          position = positionsData[0];
+          console.log('✅ Position fetched:', position);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching position:', err);
+        return;
+      }
+    }
+    
+    if (!position || !position.latitude || !position.longitude) {
+      console.warn('⚠️ Position not available for event:', event);
+      return;
+    }
+    
+    // Select the device in Redux (this will trigger MapSelectedDevice and show DeviceInfoPanel)
+    dispatch(devicesActions.selectId(event.deviceId));
+    
+    // Pan map to position
+    if (map) {
+      try {
+        map.easeTo({
+          center: [position.longitude, position.latitude],
+          zoom: Math.max(map.getZoom(), 15),
+          duration: 1000,
+        });
+        console.log('🗺️ Map panned to:', position.latitude, position.longitude);
+      } catch (err) {
+        console.error('❌ Error panning map:', err);
+      }
+    }
+  };
+
   const handleRefresh = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      // Fetch events from API endpoint
-      const from = dayjs().subtract(24, 'hours').toISOString();
+      // Build query parameters for custom /events/history API
+      const from = dayjs().subtract(EVENTS_HISTORY_PERIOD, 'days').toISOString();
       const to = dayjs().toISOString();
       
-      const response = await fetchOrThrow(`/api/reports/events?from=${from}&to=${to}`);
-      const apiEvents = await response.json();
+      console.log('📅 Date range:', { from, to });
+      
+      // Use custom API endpoint with pagination support
+      // No need to pass deviceId - API returns events for all user's devices
+      const params = new URLSearchParams();
+      params.append('from', from);
+      params.append('to', to);
+      params.append('page', '1');
+      params.append('pageSize', '1000'); // Get large batch for now
+      
+      const url = `/api/events/history?${params.toString()}`;
+      console.log('📡 Fetching events from:', url);
+      
+      const response = await fetchOrThrow(url);
+      const result = await response.json();
+      
+      console.log('📥 API Response:', result);
+      console.log('📥 Events loaded:', result.data?.length || 0);
+      console.log('📥 Total events:', result.total);
+      
+      // Extract events from paginated response
+      const apiEvents = result.data || [];
       
       // Process and merge with store events
       const eventsWithDevices = apiEvents.map(event => ({
         ...event,
         deviceName: devices[event.deviceId]?.name || `Device ${event.deviceId}`,
-      })).sort((a, b) => dayjs(b.eventTime).valueOf() - dayjs(a.eventTime).valueOf());
+      })).sort((a, b) => {
+        const timeA = dayjs(a.eventTime || a.serverTime).valueOf();
+        const timeB = dayjs(b.eventTime || b.serverTime).valueOf();
+        return timeB - timeA;
+      });
       
+      console.log('✅ Processed events:', eventsWithDevices.length);
       setEvents(eventsWithDevices);
+      setInitialLoadDone(true);
       setError(null);
     } catch (err) {
-      console.error('Error fetching events:', err);
-      setError('Gagal memuat events');
+      console.error('❌ Error fetching events:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        stack: err.stack,
+        response: err.response
+      });
+      setError(`Gagal memuat events: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -198,28 +291,62 @@ const EventsList = () => {
   
   // Initial load from API
   useEffect(() => {
-    handleRefresh();
-  }, []);
+    // Only load from API if we don't have initial data from Redux
+    if (!initialLoadDone) {
+      handleRefresh();
+    }
+  }, [initialLoadDone]);
 
   const getEventDescription = (event) => {
     // Map event types to Indonesian descriptions
+    // Based on Traccar's 18 predefined event types
     const eventTypeMap = {
+      // Device Status Events
       deviceOnline: 'Perangkat Online',
       deviceOffline: 'Perangkat Offline',
+      deviceUnknown: 'Status Tidak Diketahui',
+      deviceInactive: 'Perangkat Tidak Aktif',
+      
+      // Motion Events
       deviceMoving: 'Perangkat Bergerak',
       deviceStopped: 'Perangkat Berhenti',
-      ignitionOn: 'Mesin Dihidupkan',
-      ignitionOff: 'Mesin Dimatikan',
+      
+      // Geofence Events
       geofenceEnter: 'Masuk Geofence',
       geofenceExit: 'Keluar Geofence',
+      
+      // Speed Events
+      deviceOverspeed: 'Kecepatan Berlebih',
+      
+      // Fuel Events
+      deviceFuelDrop: 'Bahan Bakar Turun',
+      deviceFuelIncrease: 'Bahan Bakar Bertambah',
+      
+      // Ignition Events
+      ignitionOn: 'Mesin Dihidupkan',
+      ignitionOff: 'Mesin Dimatikan',
+      
+      // Alarm Events
       alarm: 'Alarm',
+      
+      // Maintenance Events
       maintenance: 'Maintenance',
+      
+      // Driver Events
+      driverChanged: 'Pengemudi Berganti',
+      
+      // Command Events
+      commandResult: 'Hasil Perintah',
+      
+      // Media Events
+      media: 'Media Diterima',
     };
     
     return eventTypeMap[event.type] || event.type || 'Event tidak diketahui';
   };
 
-  if (loading && events.length === 0) {
+  // Show loading only on initial load or refresh
+  if (loading) {
     return (
       <div className={classes.loader}>
         <CircularProgress size={24} />
@@ -286,20 +413,48 @@ const EventsList = () => {
 
       {/* List */}
       <List disablePadding>
-        {filteredEvents.map((event) => (
-          <ListItem key={event.id} className={classes.listItem} disablePadding>
-            <Typography className={classes.time}>
-              {dayjs(event.eventTime || event.serverTime).format('HH:mm:ss')}
+        {filteredEvents.length === 0 ? (
+          <Box 
+            sx={{ 
+              padding: 4, 
+              textAlign: 'center',
+              color: '#999'
+            }}
+          >
+            <Typography variant="body2" sx={{ fontSize: '11px' }}>
+              {searchQuery 
+                ? 'Tidak ada events yang sesuai dengan pencarian' 
+                : initialLoadDone 
+                  ? `Tidak ada events dalam ${EVENTS_HISTORY_PERIOD} hari terakhir` 
+                  : 'Belum ada events'}
             </Typography>
-            <Typography className={classes.deviceName}>
-              {event.deviceName}
-            </Typography>
-            <Typography className={classes.event}>
-              {getEventDescription(event)}
-              {event.attributes?.message && ` - ${event.attributes.message}`}
-            </Typography>
-          </ListItem>
-        ))}
+            {!searchQuery && !initialLoadDone && (
+              <Typography variant="caption" sx={{ fontSize: '10px', display: 'block', mt: 1 }}>
+                Klik tombol refresh untuk memuat events
+              </Typography>
+            )}
+          </Box>
+        ) : (
+          filteredEvents.map((event) => (
+            <ListItem 
+              key={event.id} 
+              className={classes.listItem} 
+              disablePadding
+              onClick={() => handleEventClick(event)}
+            >
+              <Typography className={classes.time}>
+                {dayjs(event.eventTime || event.serverTime).format('HH:mm:ss')}
+              </Typography>
+              <Typography className={classes.deviceName}>
+                {event.deviceName}
+              </Typography>
+              <Typography className={classes.event}>
+                {getEventDescription(event)}
+                {event.attributes?.message && ` - ${event.attributes.message}`}
+              </Typography>
+            </ListItem>
+          ))
+        )}
       </List>
     </div>
   );

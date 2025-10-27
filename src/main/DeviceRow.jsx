@@ -161,11 +161,12 @@ const DeviceRow = ({ data, index, style }) => {
         disabled={!admin && item.disabled}
         selected={selectedDeviceId === item.id}
         className={selectedDeviceId === item.id ? classes.selected : null}
+        style={{ paddingLeft: 4 }}
         sx={{ 
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
-          px: 1,
+          padding: 0,
           height: '33px',
           borderBottom: '1px solid #e0e0e0',
           backgroundColor: getRowBackgroundColor(),
@@ -186,12 +187,12 @@ const DeviceRow = ({ data, index, style }) => {
             size="small"
             checked={isVisible}
             onClick={handleVisibilityToggle}
-            icon={<VisibilityOffIcon sx={{ fontSize: 16 }} />}
-            checkedIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
+            icon={<VisibilityOffIcon sx={{ fontSize: 13 }} />}
+            checkedIcon={<VisibilityIcon sx={{ fontSize: 13 }} />}
             sx={{
               padding: '2px',
               marginRight: '2px',
-              '& svg': { fontSize: 16 }
+              '& svg': { fontSize: 13 }
             }}
           />
         </Tooltip>
@@ -203,12 +204,12 @@ const DeviceRow = ({ data, index, style }) => {
             checked={isFocused}
             onClick={handleFocusToggle}
             disabled={!position}
-            icon={<MyLocationIcon sx={{ fontSize: 16, color: '#ccc' }} />}
-            checkedIcon={<MyLocationIcon sx={{ fontSize: 16, color: '#1976d2' }} />}
+            icon={<MyLocationIcon sx={{ fontSize: 13, color: '#ccc' }} />}
+            checkedIcon={<MyLocationIcon sx={{ fontSize: 13, color: '#1976d2' }} />}
             sx={{
               padding: '2px',
               marginRight: '2px',
-              '& svg': { fontSize: 16 }
+              '& svg': { fontSize: 13 }
             }}
           />
         </Tooltip>

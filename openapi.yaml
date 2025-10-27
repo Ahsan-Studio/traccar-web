@@ -4655,4 +4655,8 @@ components:
       scheme: basic
     ApiKey:
       type: http
+<<<<<<< HEAD
       scheme: bearer
+=======
+      scheme: bearer
+>>>>>>> 0fb948ab0fdd749054919bbafb34158ac8d2c59f

@@ -5,7 +5,7 @@ import RemoveDialog from "../../common/components/RemoveDialog";
 import RouteDialog from "./RouteDialog";
 import PlaceGroupsDialog from "./PlaceGroupsDialog";
 
-const RoutesTab = ({ onFocusLocation }) => {
+const RoutesTab = ({ onFocusLocation, onCountChange }) => {
   const [items, setItems] = useState([]);
   const [visibleItems, setVisibleItems] = useState([]); // Track which routes are visible on map
   const [search, setSearch] = useState("");
@@ -39,6 +39,10 @@ const RoutesTab = ({ onFocusLocation }) => {
           setItems(routes);
           // By default, show all routes
           setVisibleItems(routes.map(r => r.id));
+          // Report count to parent
+          if (onCountChange) {
+            onCountChange(routes.length);
+          }
         }
       } catch (e) {
         if (!cancelled) {

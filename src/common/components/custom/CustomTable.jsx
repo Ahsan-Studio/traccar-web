@@ -10,6 +10,8 @@ import {
   TableRow,
   IconButton,
   CircularProgress,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
 import AddIcon from "@mui/icons-material/Add";
@@ -18,10 +20,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
-import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import FolderIcon from "@mui/icons-material/Folder";
-import { CustomCheckbox, CustomInput } from "./index";
+import { CustomCheckbox } from "./index";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
@@ -30,19 +31,46 @@ const useStyles = makeStyles()((theme) => ({
     flexDirection: "column",
     height: "100%",
   },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: '0px',
-    border: `0px solid ${theme.palette.divider}`,
-    borderBottom: 0,
-    backgroundColor: "transparent",
+  toolbar: {
+    display: 'flex',
+    gap: '5px',
+    padding: '0px 0px 10px 0px',
+    backgroundColor: 'white',
     flexShrink: 0,
   },
-  search: {
-    width: "100%",
-    marginBottom: '10px',
+  searchField: {
+    flex: 1,
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: '#f5f5f5',
+      height: '28px',
+      fontSize: '11px',
+      '& fieldset': {
+        border: 'none',
+      },
+    },
+    '& .MuiInputBase-input': {
+      padding: '6px 8px',
+      fontSize: '11px',
+    },
+  },
+  actionButton: {
+    width: '28px',
+    height: '28px',
+    minWidth: '28px',
+    padding: 0,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 0,
+    '&:hover': {
+      backgroundColor: '#e0e0e0',
+    },
+    '&:disabled': {
+      backgroundColor: '#f5f5f5',
+      opacity: 0.5,
+    },
+  },
+  buttonIcon: {
+    width: '16px',
+    height: '16px',
   },
   searchIcon: {
     color: '#999',
@@ -94,18 +122,6 @@ const useStyles = makeStyles()((theme) => ({
     padding: "4px 8px 0px 8px !important",
     verticalAlign: "middle !important",
     textAlign: "center",
-  },
-  actionCell: {
-    width: 80,
-    padding: "0px 8px !important",
-    textAlign: "right",
-  },
-  actionButton: {
-    padding: 2,
-    margin: "0 2px",
-    "& .MuiSvgIcon-root": {
-      fontSize: 14,
-    },
   },
   footer: {
     flexShrink: 0,
@@ -190,6 +206,8 @@ const CustomTable = ({
   onRefresh = () => {},
   onOpenGroups,
   onOpenSettings = () => {},
+  onImport,
+  onExport,
   customActions,
   showSearch = true,
   hideTable = false,
@@ -220,21 +238,108 @@ const CustomTable = ({
 
   return (
     <Box className={classes.container}>
-      {showSearch && (
-        <Box className={classes.header}>
-          <CustomInput
+      {/* Toolbar with search and action buttons in one row */}
+      <Box className={classes.toolbar}>
+        {showSearch && (
+          <TextField
+            className={classes.searchField}
             placeholder="Search"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            size="large"
-            fullWidth
-            startAdornment={
-              <SearchIcon className={classes.searchIcon} />
-            }
-            className={classes.search}
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <img 
+                    src="/img/theme/search.svg" 
+                    alt="Search" 
+                    className={classes.buttonIcon}
+                  />
+                </InputAdornment>
+              ),
+            }}
           />
-        </Box>
-      )}
+        )}
+        <IconButton 
+          className={classes.actionButton}
+          onClick={onRefresh}
+          title="Refresh"
+        >
+          <img 
+            src="/img/theme/refresh.svg" 
+            alt="Refresh" 
+            className={classes.buttonIcon}
+          />
+        </IconButton>
+        <IconButton 
+          className={classes.actionButton}
+          onClick={onAdd}
+          title="Add New"
+        >
+          <img 
+            src="/img/theme/create.svg" 
+            alt="Add" 
+            className={classes.buttonIcon}
+          />
+        </IconButton>
+        {onOpenGroups && (
+          <IconButton 
+            className={classes.actionButton}
+            onClick={onOpenGroups}
+            title="Manage Groups"
+          >
+            <img 
+              src="/img/theme/groups.svg" 
+              alt="Groups" 
+              className={classes.buttonIcon}
+            />
+          </IconButton>
+        )}
+        {onImport && (
+          <IconButton 
+            className={classes.actionButton}
+            onClick={onImport}
+            title="Import"
+          >
+            <img 
+              src="/img/theme/import.svg" 
+              alt="Import" 
+              className={classes.buttonIcon}
+            />
+          </IconButton>
+        )}
+        {onExport && (
+          <IconButton 
+            className={classes.actionButton}
+            onClick={onExport}
+            title="Export"
+          >
+            <img 
+              src="/img/theme/export.svg" 
+              alt="Export" 
+              className={classes.buttonIcon}
+            />
+          </IconButton>
+        )}
+        <IconButton 
+          className={classes.actionButton}
+          onClick={() => {
+            if (selected.length > 0 && window.confirm(`Delete ${selected.length} selected item(s)?`)) {
+              // Handle bulk delete
+              console.log('Delete selected:', selected);
+            }
+          }}
+          title="Delete Selected"
+          disabled={selected.length === 0}
+        >
+          <img 
+            src="/img/theme/remove.svg" 
+            alt="Delete" 
+            className={classes.buttonIcon}
+            style={{ opacity: selected.length === 0 ? 0.5 : 1 }}
+          />
+        </IconButton>
+      </Box>
 
       {!hideTable && (
         <TableContainer 

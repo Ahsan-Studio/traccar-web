@@ -7,7 +7,7 @@ import PlaceGroupsDialog from "./PlaceGroupsDialog";
 import MapClickHandler from "./MapClickHandler";
 import MapMarkerPreview from "./MapMarkerPreview";
 
-const MarkersTab = ({ onFocusLocation }) => {
+const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   const [items, setItems] = useState([]);
   const [visibleItems, setVisibleItems] = useState([]); // Track which markers are visible on map
   const [search, setSearch] = useState("");
@@ -48,6 +48,10 @@ const MarkersTab = ({ onFocusLocation }) => {
           setItems(markers);
           // By default, show all markers
           setVisibleItems(markers.map(m => m.id));
+          // Report count to parent
+          if (onCountChange) {
+            onCountChange(markers.length);
+          }
         }
       } catch (e) {
         if (!cancelled) {

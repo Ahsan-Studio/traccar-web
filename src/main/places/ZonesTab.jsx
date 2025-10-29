@@ -5,7 +5,7 @@ import RemoveDialog from "../../common/components/RemoveDialog";
 import ZoneDialog from "./ZoneDialog";
 import PlaceGroupsDialog from "./PlaceGroupsDialog";
 
-const ZonesTab = ({ onFocusLocation }) => {
+const ZonesTab = ({ onFocusLocation, onCountChange }) => {
   const [items, setItems] = useState([]);
   const [visibleItems, setVisibleItems] = useState([]); // Track which zones are visible on map
   const [search, setSearch] = useState("");
@@ -39,6 +39,10 @@ const ZonesTab = ({ onFocusLocation }) => {
           setItems(zones);
           // By default, show all zones
           setVisibleItems(zones.map(z => z.id));
+          // Report count to parent
+          if (onCountChange) {
+            onCountChange(zones.length);
+          }
         }
       } catch (e) {
         if (!cancelled) {

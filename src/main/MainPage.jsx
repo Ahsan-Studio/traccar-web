@@ -220,6 +220,9 @@ const MainPage = () => {
   const [eventsOpen, setEventsOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
   const [placesTab, setPlacesTab] = useState(0);
+  const [markersCount, setMarkersCount] = useState(0);
+  const [routesCount, setRoutesCount] = useState(0);
+  const [zonesCount, setZonesCount] = useState(0);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -412,15 +415,15 @@ const MainPage = () => {
                 scrollButtons={false}
                 className={classes.tabs}
               >
-                <Tab label="Markers" />
-                <Tab label="Routes" />
-                <Tab label="Zones" />
+                <Tab label={`Markers (${markersCount})`} />
+                <Tab label={`Routes (${routesCount})`} />
+                <Tab label={`Zones (${zonesCount})`} />
               </Tabs>
               
               <div className={classes.deviceListContainer}>
-                {placesTab === 0 && <MarkersTab />}
-                {placesTab === 1 && <RoutesTab />}
-                {placesTab === 2 && <ZonesTab />}
+                {placesTab === 0 && <MarkersTab onCountChange={setMarkersCount} />}
+                {placesTab === 1 && <RoutesTab onCountChange={setRoutesCount} />}
+                {placesTab === 2 && <ZonesTab onCountChange={setZonesCount} />}
               </div>
             </>
           )}

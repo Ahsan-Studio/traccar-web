@@ -8,30 +8,21 @@ import { mapIconKey } from './core/preloadImages';
 import { useAttributePreference } from '../common/util/preferences';
 import { useCatchCallback } from '../reactHelper';
 import { findFonts, loadImage } from './core/mapUtil';
-import { speedFromKnots, speedUnitString } from '../common/util/converter';
-import { useTranslation } from '../common/components/LocalizationProvider';
 
-// Cache untuk custom device icons yang sudah di-load
 const loadedCustomIcons = new Set();
 
-// Function untuk load custom device icon - langsung pakai SVG asli tanpa background
 const loadCustomDeviceIcon = async (iconName) => {
-  // Skip jika sudah pernah di-load
   if (loadedCustomIcons.has(iconName)) {
     return true;
   }
 
   try {
-    // Load icon SVG langsung dari folder objects - pakai warna asli SVG
     const icon = await loadImage(`/img/markers/objects/${iconName}.svg`);
     
-    // Add ke map dengan nama icon (tanpa suffix color)
-    // Gunakan iconName langsung karena tidak ada color variants
     if (!map.hasImage(iconName)) {
       map.addImage(iconName, icon, { sdf: false });
     }
     
-    // Mark sebagai sudah di-load
     loadedCustomIcons.add(iconName);
     return true;
   } catch (error) {
@@ -48,8 +39,6 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
   const theme = useTheme();
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
   const iconScale = useAttributePreference('iconScale', desktop ? 0.75 : 1);
-  const speedUnit = useAttributePreference('speedUnit');
-  const t = useTranslation();
 
   const devices = useSelector((state) => state.devices.items);
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
@@ -73,38 +62,29 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
         break;
     }
     
-    // Get custom icon from device attributes if available, otherwise use category
     let iconKey = mapIconKey(device.category);
     let useCustomIcon = false;
     
     if (device.attributes?.icon?.deviceImage) {
-      // Extract icon name from path (e.g., "land-car.svg" -> "land-car")
       const customIcon = device.attributes.icon.deviceImage.replace('.svg', '').replace('/img/markers/objects/', '');
       
-      // Cek apakah custom icon sudah ada di map (tanpa color suffix karena pakai warna asli)
       if (map.hasImage(customIcon)) {
         iconKey = customIcon;
         useCustomIcon = true;
       }
-      // Jika custom icon belum loaded, akan otomatis pakai default category icon
     }
     
-    // Format label seperti web lama: "Name (Speed kph)"
-    // Gunakan speedFromKnots untuk konversi yang konsisten dengan sidebar
-    const speed = position.speed || 0; // speed dalam knots dari server
-    const speedConverted = speedFromKnots(speed, speedUnit); // convert ke unit yang dipilih user
-    const speedDisplay = Math.round(speedConverted); // No decimal, rounded
-    const unitStr = speedUnitString(speedUnit, t); // Get unit string (kph, mph, kn)
-    const label = `${device.name} (${speedDisplay} ${unitStr})`;
+    const speed = position.speed || 0;
+    const speedDisplay = Math.round(speed);
+    const label = `${device.name} (${speedDisplay} kph)`;
     
     return {
       id: position.id,
       deviceId: position.deviceId,
       name: device.name,
-      label: label, // Label dengan speed untuk tooltip
+      label: label,
       fixTime: formatTime(position.fixTime, 'seconds'),
       category: iconKey,
-      // Custom icon tidak pakai color suffix, default icon tetap pakai
       color: useCustomIcon ? '' : (showStatus ? position.attributes.color || getStatusColor(device.status) : 'neutral'),
       rotation: position.course,
       direction: showDirection,
@@ -166,45 +146,39 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
         source,
         filter: ['!has', 'point_count'],
         layout: {
-          // Custom icon (no color): '{category}', Default icon (with color): '{category}-{color}'
           'icon-image': [
             'case',
-            ['==', ['get', 'color'], ''], // Jika color kosong, berarti custom icon
-            ['get', 'category'], // Pakai category saja (custom icon)
-            ['concat', ['get', 'category'], '-', ['get', 'color']] // Pakai category-color (default icon)
+            ['==', ['get', 'color'], ''],
+            ['get', 'category'],
+            ['concat', ['get', 'category'], '-', ['get', 'color']]
           ],
-          // Custom icon lebih kecil (0.25), default icon normal (iconScale)
           'icon-size': [
             'case',
-            ['==', ['get', 'color'], ''], // Jika custom icon
-            desktop ? 0.2 : 0.25, // Lebih kecil lagi untuk custom icon
-            iconScale // Normal untuk default icon
+            ['==', ['get', 'color'], ''],
+            desktop ? 0.2 : 0.25,
+            iconScale
           ],
           'icon-allow-overlap': true,
-          // Gunakan 'label' yang berisi name + speed
           'text-field': '{label}',
           'text-allow-overlap': true,
-          // Posisi label di KANAN icon seperti web lama (bukan di bawah)
           'text-anchor': 'left',
-          // Offset dari icon ke kanan
           'text-offset': [
             'case',
             ['==', ['get', 'color'], ''],
-            ['literal', [1.5, 0]], // Offset untuk custom icon (lebih dekat)
-            ['literal', [2.5, 0]] // Offset untuk default icon
+            ['literal', [2, 0]],
+            ['literal', [3, 0]]
           ],
           'text-font': findFonts(map),
-          'text-size': 10,
-          'text-padding': 8,
+          'text-size': 12,
+          'text-padding': 12,
           'text-justify': 'left',
-          'text-optional': true, // Text tidak wajib, icon lebih prioritas
+          'text-optional': true,
         },
         paint: {
-          // Background putih dengan opacity untuk label
-          'text-color': '#333333',
-          'text-halo-color': 'rgba(255, 255, 255, 0.95)',
-          'text-halo-width': 4, // Diperkecil agar tidak menutupi icon
-          'text-halo-blur': 0.5,
+          'text-color': '#000000',
+          'text-halo-color': 'rgba(255, 255, 255, 1)',
+          'text-halo-width': 7,
+          'text-halo-blur': 1.5,
         },
       });
       map.addLayer({

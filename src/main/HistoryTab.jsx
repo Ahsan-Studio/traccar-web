@@ -27,6 +27,8 @@ const HistoryTab = () => {
   const [stops, setStops] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState(null);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
 
   // Update date/time based on filter selection
   useEffect(() => {
@@ -121,20 +123,36 @@ const HistoryTab = () => {
       const fromDateTime = dayjs(`${dateFrom} ${hourFrom}:${minuteFrom}`).toISOString();
       const toDateTime = dayjs(`${dateTo} ${hourTo}:${minuteTo}`).toISOString();
       
-      // Fetch route data (positions)
-      const routeQuery = new URLSearchParams({
+      // Fetch combined data (route, events, positions, stops)
+      const query = new URLSearchParams({
         deviceId: selectedDevice,
         from: fromDateTime,
         to: toDateTime,
       });
       
-      const routeResponse = await fetchOrThrow(`/api/reports/route?${routeQuery.toString()}`, {
+      const response = await fetchOrThrow(`/api/reports/combined?${query.toString()}`, {
         headers: { Accept: 'application/json' },
       });
-      const positions = await routeResponse.json();
-      setRouteData(positions);
+      const combinedData = await response.json();
       
-      // Fetch stops data
+      // Combined API returns array of device data
+      if (combinedData.length > 0) {
+        const deviceData = combinedData[0];
+        
+        // Use positions array which contains full position objects with all details
+        // route array only contains [longitude, latitude] coordinates for map display
+        setRouteData(deviceData.positions || []);
+        
+        // Set events data if available
+        if (deviceData.events && deviceData.events.length > 0) {
+          // Store events for later use
+          console.log('Events:', deviceData.events);
+        }
+      } else {
+        setRouteData([]);
+      }
+      
+      // Still fetch stops separately as combined may not include them
       const stopsQuery = new URLSearchParams({
         deviceId: selectedDevice,
         from: fromDateTime,
@@ -163,6 +181,124 @@ const HistoryTab = () => {
   const handleImportExport = () => {
     // TODO: Implement import/export logic
     console.log('Import/Export');
+  };
+
+  // Helper function to determine row type and icon
+  const getRowType = (position, index, allPositions) => {
+    if (!position) {
+      return { type: 'moving', label: 'Moving' };
+    }
+    
+    // Check if it's a start position (first in route)
+    if (index === 0) {
+      return { type: 'start', label: 'Start' };
+    }
+    
+    // Check if it's an end position (last in route)
+    if (index === allPositions.length - 1) {
+      return { type: 'stop', label: 'Stop' };
+    }
+    
+    // Check if it's a stop (speed is 0 or very low)
+    if (position.speed !== undefined && position.speed !== null && position.speed < 1) {
+      return { type: 'parking', label: 'Parking' };
+    }
+    
+    // Check for events (if position has attributes with alarm or event)
+    if (position.attributes?.alarm || position.attributes?.event) {
+      return { type: 'event', label: 'Event' };
+    }
+    
+    // Default: moving (lane icon)
+    return { type: 'moving', label: 'Moving' };
+  };
+  
+  // Helper function to format information column
+  const getInformation = (position, index, allPositions) => {
+    const rowType = getRowType(position, index, allPositions);
+    
+    // For parking/stops, show duration
+    if (rowType.type === 'parking') {
+      // Calculate duration to next position
+      if (index < allPositions.length - 1) {
+        const nextPos = allPositions[index + 1];
+        const duration = dayjs(nextPos.fixTime).diff(dayjs(position.fixTime), 'minute');
+        if (duration > 0) {
+          const hours = Math.floor(duration / 60);
+          const mins = duration % 60;
+          return hours > 0 ? `${hours} h ${mins} min` : `${mins} min`;
+        }
+      }
+      return 'Stopped';
+    }
+    
+    // For moving, show duration
+    if (rowType.type === 'moving') {
+      if (index < allPositions.length - 1) {
+        const nextPos = allPositions[index + 1];
+        const duration = dayjs(nextPos.fixTime).diff(dayjs(position.fixTime), 'minute');
+        if (duration > 0) {
+          const hours = Math.floor(duration / 60);
+          const mins = duration % 60;
+          const secs = dayjs(nextPos.fixTime).diff(dayjs(position.fixTime), 'second') % 60;
+          if (hours > 0) return `${hours} h ${mins} min ${secs} s`;
+          if (mins > 0) return `${mins} min ${secs} s`;
+          return `${secs} s`;
+        }
+      }
+    }
+    
+    // For events, show event type
+    if (rowType.type === 'event') {
+      return position.attributes?.alarm || position.attributes?.event || 'Event';
+    }
+    
+    return '';
+  };
+  
+  // Helper function to format detailed popup data
+  const getDetailedInfo = (position, index, allPositions) => {
+    if (!position) return [];
+    
+    const rowType = getRowType(position, index, allPositions);
+    const info = [];
+    
+    if (rowType.type === 'parking' || rowType.type === 'stop') {
+      info.push({ label: 'Arrived', value: formatTime(position.fixTime, 'seconds') });
+      if (index < allPositions.length - 1) {
+        info.push({ label: 'Departed', value: formatTime(allPositions[index + 1].fixTime, 'seconds') });
+        const duration = dayjs(allPositions[index + 1].fixTime).diff(dayjs(position.fixTime), 'minute');
+        if (duration > 0) {
+          const hours = Math.floor(duration / 60);
+          const mins = duration % 60;
+          const secs = dayjs(allPositions[index + 1].fixTime).diff(dayjs(position.fixTime), 'second') % 60;
+          info.push({ label: 'Engine idle', value: hours > 0 ? `${hours} h ${mins} min ${secs} s` : `${mins} min ${secs} s` });
+        }
+      }
+    } else {
+      info.push({ label: 'Time', value: formatTime(position.fixTime, 'seconds') });
+      if (position.speed !== undefined && position.speed !== null) {
+        info.push({ label: 'Speed', value: `${speedFromKnots(position.speed, speedUnit).toFixed(1)} ${speedUnit}` });
+      }
+      if (position.altitude !== undefined && position.altitude !== null) {
+        info.push({ label: 'Altitude', value: `${altitudeFromMeters(position.altitude, altitudeUnit).toFixed(0)} ${altitudeUnit}` });
+      }
+      if (position.course !== undefined && position.course !== null) {
+        info.push({ label: 'Course', value: `${position.course}°` });
+      }
+    }
+    
+    if (position.address) {
+      info.push({ label: 'Address', value: position.address });
+    }
+    if (position.latitude !== undefined && position.latitude !== null) {
+      info.push({ label: 'Latitude', value: position.latitude.toFixed(6) });
+    }
+    if (position.longitude !== undefined && position.longitude !== null) {
+      info.push({ label: 'Longitude', value: position.longitude.toFixed(6) });
+    }
+    
+    return info;
   };
 
   // Generate hour options (00-23)
@@ -323,39 +459,65 @@ const HistoryTab = () => {
             <table className="history-table">
               <thead>
                 <tr>
+                  <th style={{ width: '50px' }}></th>
                   <th>Time</th>
-                  <th>Latitude</th>
-                  <th>Longitude</th>
-                  <th>Speed</th>
-                  <th>Altitude</th>
-                  <th>Course</th>
-                  <th>Address</th>
+                  <th>Information</th>
                 </tr>
               </thead>
               <tbody>
-                {routeData.map((position, index) => (
-                  <tr 
-                    key={position.id || index}
-                    className={selectedPosition?.id === position.id ? 'selected' : ''}
-                    onClick={() => {
-                      setSelectedPosition(position);
-                    }}
-                  >
-                    <td>{formatTime(position.fixTime, 'seconds')}</td>
-                    <td>{position.latitude.toFixed(6)}</td>
-                    <td>{position.longitude.toFixed(6)}</td>
-                    <td>{speedFromKnots(position.speed, speedUnit).toFixed(1)} {speedUnit}</td>
-                    <td>{altitudeFromMeters(position.altitude, altitudeUnit).toFixed(0)} {altitudeUnit}</td>
-                    <td>{position.course}°</td>
-                    <td>{position.address || '-'}</td>
-                  </tr>
-                ))}
+                {routeData.map((position, index) => {
+                  const rowType = getRowType(position, index, routeData);
+                  const information = getInformation(position, index, routeData);
+                  
+                  return (
+                    <tr 
+                      key={position.id || index}
+                      className={selectedPosition?.id === position.id ? 'selected' : ''}
+                      onClick={() => {
+                        setSelectedPosition(position);
+                      }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setPopupPosition({ x: rect.right + 10, y: rect.top });
+                        setHoveredRow(index);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredRow(null);
+                      }}
+                    >
+                      <td className="history-icon-cell">
+                        <span className={`history-icon history-icon-${rowType.type}`}></span>
+                      </td>
+                      <td>{formatTime(position.fixTime, 'seconds')}</td>
+                      <td>{information}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             
+            {/* Hover Popup */}
+            {hoveredRow !== null && (
+              <div 
+                className="history-popup"
+                style={{
+                  position: 'fixed',
+                  left: `${popupPosition.x}px`,
+                  top: `${popupPosition.y}px`,
+                }}
+              >
+                {getDetailedInfo(routeData[hoveredRow], hoveredRow, routeData).map((item, idx) => (
+                  <div key={idx} className="history-popup-row">
+                    <span className="history-popup-label">{item.label}:</span>
+                    <span className="history-popup-value">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             {stops.length > 0 && (
               <div className="history-stops-section">
-                <h4>Stops ({stops.length})</h4>
+                <h4 style={{marginLeft: '8px'}}>Stops ({stops.length})</h4>
                 <table className="history-table">
                   <thead>
                     <tr>

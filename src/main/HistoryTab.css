@@ -10,6 +10,10 @@
 .history-parameters-section {
   padding: 12px;
   border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  background-color: #ffffff;
+  z-index: 10;
 }
 
 /* Row Layout */
@@ -58,7 +62,7 @@
 .history-route-section {
   flex: 1;
   overflow: auto;
-  padding: 16px;
+  padding: 0;
 }
 
 .history-no-data {
@@ -79,6 +83,7 @@
 /* Table Styles */
 .history-table-container {
   width: 100%;
+  padding: 0px;
 }
 
 .history-table {
@@ -92,7 +97,7 @@
   background-color: #f5f5f5;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 5;
 }
 
 .history-table th {
@@ -126,7 +131,9 @@
 /* Stops Section */
 .history-stops-section {
   margin-top: 20px;
+  margin-bottom: 20px;
   padding-top: 20px;
+  padding-bottom: 20px;
   border-top: 2px solid #e0e0e0;
 }
 
@@ -135,6 +142,77 @@
   font-size: 13px;
   color: #444444;
   font-weight: 600;
+}
+
+/* Icon Cell */
+.history-icon-cell {
+  text-align: center;
+  padding: 4px !important;
+}
+
+.history-icon {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+}
+
+.history-icon-start {
+  background-image: url('/img/markers/route-start.svg');
+}
+
+.history-icon-stop {
+  background-image: url('/img/markers/route-end.svg');
+}
+
+.history-icon-parking {
+  background-image: url('/img/markers/route-stop.svg');
+}
+
+.history-icon-event {
+  background-image: url('/img/markers/route-event.svg');
+}
+
+.history-icon-moving {
+  background-image: url('/img/markers/route-drive.svg');
+}
+
+/* Hover Popup */
+.history-popup {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  z-index: 1000;
+  min-width: 250px;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.history-popup-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.history-popup-row:last-child {
+  margin-bottom: 0;
+}
+
+.history-popup-label {
+  font-weight: 600;
+  color: #666666;
+  margin-right: 12px;
+}
+
+.history-popup-value {
+  color: #333333;
+  text-align: right;
+  flex: 1;
 }
 
 /* Custom component overrides for history tab */

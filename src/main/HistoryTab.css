@@ -1,0 +1,229 @@
+/* History Tab Container */
+.history-tab-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #ffffff;
+}
+
+/* Parameters Section */
+.history-parameters-section {
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  background-color: #ffffff;
+  z-index: 10;
+}
+
+/* Row Layout */
+.history-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.history-label {
+  width: 35%;
+  font-size: 12px;
+  color: #444444;
+  font-weight: 500;
+}
+
+.history-field {
+  flex: 1;
+}
+
+/* Time Row Layout */
+.history-time-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex: 1;
+}
+
+.history-date-field {
+  width: 31%;
+}
+
+.history-time-field {
+  width: 15%;
+}
+
+/* Button Row */
+.history-button-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+/* Route Section */
+.history-route-section {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.history-no-data {
+  text-align: center;
+  color: #999999;
+  font-size: 12px;
+  margin-top: 16px;
+}
+
+.history-loading {
+  text-align: center;
+  color: #666666;
+  font-size: 12px;
+  margin-top: 16px;
+  padding: 20px;
+}
+
+/* Table Styles */
+.history-table-container {
+  width: 100%;
+  padding: 0px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  background-color: #ffffff;
+}
+
+.history-table thead {
+  background-color: #f5f5f5;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.history-table th {
+  padding: 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #444444;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 11px;
+}
+
+.history-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #444444;
+}
+
+.history-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.history-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.history-table tbody tr.selected {
+  background-color: #e3f2fd;
+}
+
+/* Stops Section */
+.history-stops-section {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.history-stops-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #444444;
+  font-weight: 600;
+}
+
+/* Icon Cell */
+.history-icon-cell {
+  text-align: center;
+  padding: 4px !important;
+}
+
+.history-icon {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+}
+
+.history-icon-start {
+  background-image: url('/img/markers/route-start.svg');
+}
+
+.history-icon-stop {
+  background-image: url('/img/markers/route-end.svg');
+}
+
+.history-icon-parking {
+  background-image: url('/img/markers/route-stop.svg');
+}
+
+.history-icon-event {
+  background-image: url('/img/markers/route-event.svg');
+}
+
+.history-icon-moving {
+  background-image: url('/img/markers/route-drive.svg');
+}
+
+/* Hover Popup */
+.history-popup {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  z-index: 1000;
+  min-width: 250px;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.history-popup-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.history-popup-row:last-child {
+  margin-bottom: 0;
+}
+
+.history-popup-label {
+  font-weight: 600;
+  color: #666666;
+  margin-right: 12px;
+}
+
+.history-popup-value {
+  color: #333333;
+  text-align: right;
+  flex: 1;
+}
+
+/* Custom component overrides for history tab */
+.history-tab-container .custom-select-container {
+  width: 100%;
+}
+
+.history-tab-container .custom-input {
+  width: 100%;
+}
+
+.history-tab-container .custom-button {
+  margin-right: 3px;
+}

@@ -8,7 +8,6 @@ import {
   TextField,
   IconButton,
   InputAdornment,
-  Typography,
   Toolbar,
   Divider,
 } from '@mui/material';
@@ -35,6 +34,7 @@ import { useAttributePreference } from '../common/util/preferences';
 import MarkersTab from './places/MarkersTab';
 import RoutesTab from './places/RoutesTab';
 import ZonesTab from './places/ZonesTab';
+import HistoryTab from './HistoryTab';
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -428,9 +428,7 @@ const MainPage = () => {
             </>
           )}
           {currentTab === 3 && (
-            <Box p={2}>
-              <Typography variant="body2" color="textSecondary">History content will go here</Typography>
-            </Box>
+            <HistoryTab />
           )}
         </div>
 

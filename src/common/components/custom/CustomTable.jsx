@@ -34,8 +34,9 @@ const useStyles = makeStyles()((theme) => ({
   toolbar: {
     display: 'flex',
     gap: '5px',
-    padding: '0px 0px 10px 0px',
+    padding: '10px',
     backgroundColor: 'white',
+    borderBottom: '1px solid #e0e0e0',
     flexShrink: 0,
   },
   searchField: {
@@ -48,33 +49,19 @@ const useStyles = makeStyles()((theme) => ({
         border: 'none',
       },
     },
-    '& .MuiInputBase-input': {
-      padding: '6px 8px',
-      fontSize: '11px',
-    },
   },
   actionButton: {
     width: '28px',
     height: '28px',
-    minWidth: '28px',
-    padding: 0,
     backgroundColor: '#f5f5f5',
     borderRadius: 0,
     '&:hover': {
       backgroundColor: '#e0e0e0',
     },
-    '&:disabled': {
-      backgroundColor: '#f5f5f5',
-      opacity: 0.5,
-    },
   },
   buttonIcon: {
     width: '16px',
     height: '16px',
-  },
-  searchIcon: {
-    color: '#999',
-    fontSize: 16,
   },
   tableContainer: {
     flex: 1,
@@ -173,6 +160,7 @@ export const BoolIcon = ({ value }) => (value ? (
  * @param {Function} onOpenSettings - Callback when settings button is clicked
  * @param {Function} customActions - Function that returns custom action buttons for each row: (row) => ReactNode
  * @param {Boolean} showSearch - Show/hide search input (default: true). Set to false to disable search
+ * @param {Boolean} hideToolbar - Hide entire toolbar (default: false). Set to true to hide toolbar completely
  * @param {Boolean} hideTable - Hide table body (for grouped view header only)
  * @param {Boolean} hideHeader - Hide table header row
  * @param {Boolean} hideActions - Hide footer action buttons
@@ -184,6 +172,9 @@ export const BoolIcon = ({ value }) => (value ? (
  * 
  * // Without search
  * <CustomTable rows={data} columns={cols} showSearch={false} />
+ * 
+ * // Without toolbar
+ * <CustomTable rows={data} columns={cols} hideToolbar={true} />
  * 
  * // With custom actions
  * <CustomTable rows={data} columns={cols} customActions={(row) => <IconButton>...</IconButton>} />
@@ -210,6 +201,7 @@ const CustomTable = ({
   onExport,
   customActions,
   showSearch = true,
+  hideToolbar = false,
   hideTable = false,
   hideHeader = false,
   hideActions = false,
@@ -239,107 +231,109 @@ const CustomTable = ({
   return (
     <Box className={classes.container}>
       {/* Toolbar with search and action buttons in one row */}
-      <Box className={classes.toolbar}>
-        {showSearch && (
-          <TextField
-            className={classes.searchField}
-            placeholder="Search"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <img 
-                    src="/img/theme/search.svg" 
-                    alt="Search" 
-                    className={classes.buttonIcon}
-                  />
-                </InputAdornment>
-              ),
+      {!hideToolbar && (
+        <Box className={classes.toolbar}>
+          {showSearch && (
+            <TextField
+              className={classes.searchField}
+              placeholder="Search"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <img 
+                      src="/img/theme/search.svg" 
+                      alt="Search" 
+                      className={classes.buttonIcon}
+                    />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
+          <IconButton 
+            className={classes.actionButton}
+            onClick={onRefresh}
+            title="Refresh"
+          >
+            <img 
+              src="/img/theme/refresh.svg" 
+              alt="Refresh" 
+              className={classes.buttonIcon}
+            />
+          </IconButton>
+          <IconButton 
+            className={classes.actionButton}
+            onClick={onAdd}
+            title="Add New"
+          >
+            <img 
+              src="/img/theme/create.svg" 
+              alt="Add" 
+              className={classes.buttonIcon}
+            />
+          </IconButton>
+          {onOpenGroups && (
+            <IconButton 
+              className={classes.actionButton}
+              onClick={onOpenGroups}
+              title="Manage Groups"
+            >
+              <img 
+                src="/img/theme/groups.svg" 
+                alt="Groups" 
+                className={classes.buttonIcon}
+              />
+            </IconButton>
+          )}
+          {onImport && (
+            <IconButton 
+              className={classes.actionButton}
+              onClick={onImport}
+              title="Import"
+            >
+              <img 
+                src="/img/theme/import.svg" 
+                alt="Import" 
+                className={classes.buttonIcon}
+              />
+            </IconButton>
+          )}
+          {onExport && (
+            <IconButton 
+              className={classes.actionButton}
+              onClick={onExport}
+              title="Export"
+            >
+              <img 
+                src="/img/theme/export.svg" 
+                alt="Export" 
+                className={classes.buttonIcon}
+              />
+            </IconButton>
+          )}
+          <IconButton 
+            className={classes.actionButton}
+            onClick={() => {
+              if (selected.length > 0 && window.confirm(`Delete ${selected.length} selected item(s)?`)) {
+                // Handle bulk delete
+                console.log('Delete selected:', selected);
+              }
             }}
-          />
-        )}
-        <IconButton 
-          className={classes.actionButton}
-          onClick={onRefresh}
-          title="Refresh"
-        >
-          <img 
-            src="/img/theme/refresh.svg" 
-            alt="Refresh" 
-            className={classes.buttonIcon}
-          />
-        </IconButton>
-        <IconButton 
-          className={classes.actionButton}
-          onClick={onAdd}
-          title="Add New"
-        >
-          <img 
-            src="/img/theme/create.svg" 
-            alt="Add" 
-            className={classes.buttonIcon}
-          />
-        </IconButton>
-        {onOpenGroups && (
-          <IconButton 
-            className={classes.actionButton}
-            onClick={onOpenGroups}
-            title="Manage Groups"
+            title="Delete Selected"
+            disabled={selected.length === 0}
           >
             <img 
-              src="/img/theme/groups.svg" 
-              alt="Groups" 
+              src="/img/theme/remove.svg" 
+              alt="Delete" 
               className={classes.buttonIcon}
+              style={{ opacity: selected.length === 0 ? 0.5 : 1 }}
             />
           </IconButton>
-        )}
-        {onImport && (
-          <IconButton 
-            className={classes.actionButton}
-            onClick={onImport}
-            title="Import"
-          >
-            <img 
-              src="/img/theme/import.svg" 
-              alt="Import" 
-              className={classes.buttonIcon}
-            />
-          </IconButton>
-        )}
-        {onExport && (
-          <IconButton 
-            className={classes.actionButton}
-            onClick={onExport}
-            title="Export"
-          >
-            <img 
-              src="/img/theme/export.svg" 
-              alt="Export" 
-              className={classes.buttonIcon}
-            />
-          </IconButton>
-        )}
-        <IconButton 
-          className={classes.actionButton}
-          onClick={() => {
-            if (selected.length > 0 && window.confirm(`Delete ${selected.length} selected item(s)?`)) {
-              // Handle bulk delete
-              console.log('Delete selected:', selected);
-            }
-          }}
-          title="Delete Selected"
-          disabled={selected.length === 0}
-        >
-          <img 
-            src="/img/theme/remove.svg" 
-            alt="Delete" 
-            className={classes.buttonIcon}
-            style={{ opacity: selected.length === 0 ? 0.5 : 1 }}
-          />
-        </IconButton>
-      </Box>
+        </Box>
+      )}
 
       {!hideTable && (
         <TableContainer 

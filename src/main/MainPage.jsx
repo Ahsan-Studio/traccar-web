@@ -246,6 +246,58 @@ const MainPage = () => {
     }
   };
 
+  // Fetch counts for Places tabs when Places tab is active
+  useEffect(() => {
+    if (currentTab === 2) { // Places tab
+      const fetchCounts = async () => {
+        try {
+          // Fetch markers count (only if not already set by child component)
+          if (markersCount === 0) {
+            const markersRes = await fetchOrThrow('/api/markers?page=1&pageSize=1', { 
+              headers: { Accept: "application/json" } 
+            });
+            const markersData = await markersRes.json();
+            if (markersData.total !== undefined) {
+              setMarkersCount(markersData.total);
+            } else if (Array.isArray(markersData)) {
+              setMarkersCount(markersData.length);
+            }
+          }
+
+          // Fetch routes count (only if not already set by child component)
+          if (routesCount === 0) {
+            const routesRes = await fetchOrThrow('/api/routes?page=1&pageSize=1', { 
+              headers: { Accept: "application/json" } 
+            });
+            const routesData = await routesRes.json();
+            if (routesData.total !== undefined) {
+              setRoutesCount(routesData.total);
+            } else if (Array.isArray(routesData)) {
+              setRoutesCount(routesData.length);
+            }
+          }
+
+          // Fetch zones count (only if not already set by child component)
+          if (zonesCount === 0) {
+            const zonesRes = await fetchOrThrow('/api/zones?page=1&pageSize=1', { 
+              headers: { Accept: "application/json" } 
+            });
+            const zonesData = await zonesRes.json();
+            if (zonesData.total !== undefined) {
+              setZonesCount(zonesData.total);
+            } else if (Array.isArray(zonesData)) {
+              setZonesCount(zonesData.length);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching counts:', error);
+        }
+      };
+
+      fetchCounts();
+    }
+  }, [currentTab, markersCount, routesCount, zonesCount]);
+
   useEffect(() => {
     if (!desktop && mapOnSelect && selectedDeviceId) {
       setDevicesOpen(false);
@@ -421,9 +473,13 @@ const MainPage = () => {
               </Tabs>
               
               <div className={classes.deviceListContainer}>
-                {placesTab === 0 && <MarkersTab onCountChange={setMarkersCount} />}
-                {placesTab === 1 && <RoutesTab onCountChange={setRoutesCount} />}
-                {placesTab === 2 && <ZonesTab onCountChange={setZonesCount} />}
+                {placesTab === 0 ? (
+                  <MarkersTab onCountChange={setMarkersCount} />
+                ) : placesTab === 1 ? (
+                  <RoutesTab onCountChange={setRoutesCount} />
+                ) : placesTab === 2 ? (
+                  <ZonesTab onCountChange={setZonesCount} />
+                ) : null}
               </div>
             </>
           )}

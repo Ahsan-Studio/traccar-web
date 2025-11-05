@@ -4,7 +4,6 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { useEffect, useMemo, useRef } from 'react';
 import { map } from '../../map/core/MapView';
 import { geometryToArea } from '../../map/core/mapUtil';
-import drawTheme from '../../map/draw/theme';
 
 MapboxDraw.constants.classes.CONTROL_BASE = 'maplibregl-ctrl';
 MapboxDraw.constants.classes.CONTROL_PREFIX = 'maplibregl-ctrl-';
@@ -15,8 +14,64 @@ MapboxDraw.constants.classes.CONTROL_GROUP = 'maplibregl-ctrl-group';
  * Drawing persists until dialog is saved or cancelled
  * Double-click to finish line
  */
-const MapRouteDrawer = ({ enabled, onRouteChange }) => {
+const MapRouteDrawer = ({ enabled, onRouteChange, color = '#2196F3', polylineDistance = 100, onDrawReady }) => {
   const drawRef = useRef(null);
+
+  // Create custom theme with dynamic color and width
+  const customTheme = useMemo(() => {
+    const width = parseInt(polylineDistance) / 50; // Convert distance to line width (100m = 2px)
+    const lineWidth = Math.max(2, Math.min(width, 8)); // Clamp between 2-8px
+    
+    return [
+      // Active line (being drawn)
+      {
+        'id': 'gl-draw-line',
+        'type': 'line',
+        'filter': ['all', ['==', '$type', 'LineString'], ['!=', 'mode', 'static']],
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        'paint': {
+          'line-color': color,
+          'line-width': lineWidth
+        }
+      },
+      // Inactive line (already drawn)
+      {
+        'id': 'gl-draw-line-inactive',
+        'type': 'line',
+        'filter': ['all', ['==', '$type', 'LineString'], ['==', 'active', 'false']],
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        'paint': {
+          'line-color': color,
+          'line-width': lineWidth
+        }
+      },
+      // Vertex points
+      {
+        'id': 'gl-draw-polygon-and-line-vertex-halo-active',
+        'type': 'circle',
+        'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
+        'paint': {
+          'circle-radius': 6,
+          'circle-color': '#FFF'
+        }
+      },
+      {
+        'id': 'gl-draw-polygon-and-line-vertex-active',
+        'type': 'circle',
+        'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
+        'paint': {
+          'circle-radius': 4,
+          'circle-color': color
+        }
+      },
+    ];
+  }, [color, polylineDistance]);
 
   const draw = useMemo(() => new MapboxDraw({
     displayControlsDefault: false,
@@ -24,28 +79,69 @@ const MapRouteDrawer = ({ enabled, onRouteChange }) => {
       line_string: true,
       trash: true,
     },
-    styles: drawTheme,
-  }), []);
+    styles: customTheme,
+  }), [customTheme]);
 
+  // Setup and update draw control
   useEffect(() => {
     if (!enabled || !map) return;
-
-    // Check if control already exists on map
-    const existingControl = map._controls.find(ctrl => ctrl instanceof MapboxDraw);
     
-    if (!existingControl) {
-      map.addControl(draw, 'top-left');
-      drawRef.current = draw;
-    } else {
-      drawRef.current = existingControl;
+    // Get current features if control already exists
+    const currentFeatures = drawRef.current ? drawRef.current.getAll() : null;
+    
+    // Remove old control if it exists
+    if (drawRef.current) {
+      try {
+        if (map._controls && map._controls.includes(drawRef.current)) {
+          map.removeControl(drawRef.current);
+        }
+      } catch (e) {
+        console.warn('Error removing draw control:', e);
+      }
     }
-
-    // Automatically activate line drawing mode when dialog opens
+    
+    // Add new control with updated theme
+    map.addControl(draw, 'top-left');
+    drawRef.current = draw;
+    
+    // Expose function to get current features (including unfinished drawing)
+    if (onDrawReady) {
+      onDrawReady(() => {
+        if (drawRef.current) {
+          return drawRef.current.getAll();
+        }
+        return null;
+      });
+    }
+    
+    // Restore features or activate drawing mode
+    if (currentFeatures && currentFeatures.features && currentFeatures.features.length > 0) {
+      // Restore existing features
+      currentFeatures.features.forEach(feature => {
+        draw.add(feature);
+      });
+      // Keep in select mode if there are features
+      draw.changeMode('simple_select');
+    }
+    
+    // Always try to activate drawing mode if no complete features exist
+    // This ensures user can start drawing immediately when dialog opens
     setTimeout(() => {
       if (drawRef.current) {
-        drawRef.current.changeMode('draw_line_string');
+        const allFeatures = drawRef.current.getAll();
+        const hasCompleteFeatures = allFeatures.features && allFeatures.features.length > 0;
+        
+        // Only auto-activate if no features or if we're in simple_select mode
+        if (!hasCompleteFeatures) {
+          drawRef.current.changeMode('draw_line_string');
+        }
       }
-    }, 100);
+    }, 150);
+  }, [draw, enabled, onDrawReady]);
+
+  // Handle draw events
+  useEffect(() => {
+    if (!enabled || !map) return;
 
     // Listen for draw.create event (when user double-clicks to finish)
     const handleCreate = (e) => {

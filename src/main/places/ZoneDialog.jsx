@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -118,6 +118,7 @@ const ZoneDialog = ({ open, onClose, zone }) => {
   });
   const [groups, setGroups] = useState([{ id: 0, name: 'Ungrouped' }]);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
+  const getCurrentFeaturesRef = useRef(null); // Ref to store function to get current drawing
 
   // Fetch groups from Traccar API
   useEffect(() => {
@@ -192,16 +193,52 @@ const ZoneDialog = ({ open, onClose, zone }) => {
         return;
       }
 
-      // Check if zone has been drawn
-      if (!formData.area) {
-        alert("Please draw the zone on the map first (click points to create polygon, right-click to undo)");
+      // Check if zone has been drawn or is currently being drawn
+      let areaToSave = formData.area;
+      
+      // If area is not set, try to get current drawing features
+      if (!areaToSave && getCurrentFeaturesRef.current) {
+        const features = getCurrentFeaturesRef.current();
+        console.log('Current drawing features:', features);
+        
+        if (features && features.features && features.features.length > 0) {
+          // Filter only Polygon features and get the last one (most recent)
+          const polygonFeatures = features.features.filter(f => 
+            f.geometry && f.geometry.type === 'Polygon'
+          );
+          
+          console.log('Polygon features:', polygonFeatures);
+          
+          if (polygonFeatures.length > 0) {
+            const feature = polygonFeatures[polygonFeatures.length - 1]; // Get last drawn
+            console.log('Using feature:', feature);
+            
+            const coordinates = feature.geometry.coordinates[0]; // Get outer ring
+            
+            // Ensure we have at least 3 points for a valid Polygon (4 including closing point)
+            if (coordinates && coordinates.length >= 4) {
+              // Convert feature geometry to POLYGON format
+              const coords = coordinates.map(coord => 
+                `${coord[1]} ${coord[0]}` // lat lng format
+              ).join(', ');
+              areaToSave = `POLYGON ((${coords}))`;
+              console.log('Generated POLYGON:', areaToSave);
+            } else {
+              console.warn('Polygon needs at least 3 points, got:', coordinates?.length - 1);
+            }
+          }
+        }
+      }
+      
+      if (!areaToSave) {
+        alert("Please draw the zone on the map first (click at least 3 points to create polygon)");
         return;
       }
 
       const payload = {
         name: formData.name,
-        groupId: formData.groupId || 0,
-        area: formData.area,
+        groupId: formData.groupId === 0 ? null : formData.groupId, // Use null for ungrouped
+        area: areaToSave, // Use the area we got (either from formData or current drawing)
         attributes: {
           type: "zone",
           color: formData.color,
@@ -250,6 +287,8 @@ const ZoneDialog = ({ open, onClose, zone }) => {
       <MapZoneDrawer 
         enabled={drawingEnabled && open}
         onZoneChange={handleZoneDrawn}
+        color={formData.color}
+        onDrawReady={(fn) => { getCurrentFeaturesRef.current = fn; }}
       />
       <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false} hideBackdrop={true} disableEnforceFocus={true}>
         <DialogTitle className={classes.dialogTitle}>

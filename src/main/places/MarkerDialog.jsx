@@ -262,7 +262,7 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
       const payload = {
         name: formData.name,
         description: formData.description || "",
-        groupId: formData.groupId || 0,
+        groupId: formData.groupId === 0 ? null : formData.groupId, // Use null for ungrouped
         area: area,
         attributes: {
           type: "marker",
@@ -332,18 +332,6 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
       </DialogTitle>
 
       <DialogContent className={classes.dialogContent}>
-        {/* Map click hint */}
-        <Box sx={{ 
-          mb: 2, 
-          p: 1, 
-          backgroundColor: '#e3f2fd', 
-          borderRadius: 1,
-          border: '1px solid #90caf9',
-        }}>
-          <Typography variant="body2" sx={{ fontSize: '11px', color: '#1976d2' }}>
-            💡 Click on map to pick location
-          </Typography>
-        </Box>
 
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Name</Typography>

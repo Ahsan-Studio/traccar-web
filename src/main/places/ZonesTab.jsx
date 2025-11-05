@@ -542,7 +542,15 @@ const ZonesTab = ({ onFocusLocation, onCountChange }) => {
                     </Box>
                     {/* Zone name - clickable to focus on map */}
                     <Box 
-                      sx={{ flex: 1, paddingLeft: '8px' }}
+                      sx={{ 
+                        flex: 1, 
+                        paddingLeft: '8px',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                          color: '#2b82d4'
+                        }
+                      }}
                       onClick={() => handleRowClick(zone)}
                     >
                       {zone.name}

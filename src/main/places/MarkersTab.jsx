@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import {
   Box,
   TextField,
@@ -15,6 +16,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { makeStyles } from "tss-react/mui";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
+import { geofencesActions } from "../../store";
 import RemoveDialog from "../../common/components/RemoveDialog";
 import MarkerDialog from "./MarkerDialog";
 import PlaceGroupsDialog from "./PlaceGroupsDialog";
@@ -110,6 +112,7 @@ const useStyles = makeStyles()(() => ({
 
 const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   const { classes } = useStyles();
+  const dispatch = useDispatch();
   const [items, setItems] = useState([]);
   const [groups, setGroups] = useState([]);
   const [visibleItems, setVisibleItems] = useState([]); // Track which markers are visible on map
@@ -359,13 +362,34 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
     setRefreshVersion((v) => v + 1);
   };
 
-  const handleDialogClose = (saved) => {
+  const handleDialogClose = async (saved) => {
     setDialogOpen(false);
     setEditing(null);
     setMapClickEnabled(false); // Disable map click
     setPickedLocation(null);
     if (saved) {
+      // Refresh local list
       setRefreshVersion((v) => v + 1);
+      
+      // Also update Redux store so map shows marker immediately
+      try {
+        // Fetch all geofences (markers + routes + zones) to refresh store
+        const [markersRes, routesRes, zonesRes] = await Promise.all([
+          fetchOrThrow('/api/markers', { headers: { Accept: "application/json" } }),
+          fetchOrThrow('/api/routes', { headers: { Accept: "application/json" } }),
+          fetchOrThrow('/api/zones', { headers: { Accept: "application/json" } }),
+        ]);
+        
+        const markers = await markersRes.json();
+        const routes = await routesRes.json();
+        const zones = await zonesRes.json();
+        
+        // Use refresh to completely replace geofences
+        const allGeofences = [...markers, ...routes, ...zones];
+        dispatch(geofencesActions.refresh(allGeofences));
+      } catch (error) {
+        console.error('Failed to refresh markers for map:', error);
+      }
     }
   };
 
@@ -555,7 +579,15 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
                     </Box>
                     {/* Marker name - clickable to focus on map */}
                     <Box 
-                      sx={{ flex: 1, paddingLeft: '8px' }}
+                      sx={{ 
+                        flex: 1, 
+                        paddingLeft: '8px',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                          color: '#2b82d4'
+                        }
+                      }}
                       onClick={() => handleRowClick(marker)}
                     >
                       {marker.name}
@@ -665,10 +697,33 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
         open={removeOpen}
         endpoint="markers"
         itemId={removing?.id}
-        onResult={(ok) => {
+        onResult={async (ok) => {
           setRemoveOpen(false);
           setRemoving(null);
-          if (ok) setRefreshVersion((v) => v + 1);
+          if (ok) {
+            // Refresh local list
+            setRefreshVersion((v) => v + 1);
+            
+            // Also update Redux store so marker is removed from map immediately
+            try {
+              // Fetch all geofences (markers + routes + zones) to refresh store
+              const [markersRes, routesRes, zonesRes] = await Promise.all([
+                fetchOrThrow('/api/markers', { headers: { Accept: "application/json" } }),
+                fetchOrThrow('/api/routes', { headers: { Accept: "application/json" } }),
+                fetchOrThrow('/api/zones', { headers: { Accept: "application/json" } }),
+              ]);
+              
+              const markers = await markersRes.json();
+              const routes = await routesRes.json();
+              const zones = await zonesRes.json();
+              
+              // Use refresh to completely replace geofences (removes deleted items)
+              const allGeofences = [...markers, ...routes, ...zones];
+              dispatch(geofencesActions.refresh(allGeofences));
+            } catch (error) {
+              console.error('Failed to refresh markers for map:', error);
+            }
+          }
         }}
       />
     </Box>

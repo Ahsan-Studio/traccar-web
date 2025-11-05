@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -119,6 +119,7 @@ const RouteDialog = ({ open, onClose, route }) => {
   });
   const [groups, setGroups] = useState([{ id: 0, name: 'Ungrouped' }]);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
+  const getCurrentFeaturesRef = useRef(null); // Ref to store function to get current drawing
 
   // Fetch groups from Traccar API
   useEffect(() => {
@@ -193,16 +194,52 @@ const RouteDialog = ({ open, onClose, route }) => {
         return;
       }
 
-      // Check if route has been drawn
-      if (!formData.area) {
-        alert("Please draw the route on the map first (click points to create path, right-click to undo)");
+      // Check if route has been drawn or is currently being drawn
+      let areaToSave = formData.area;
+      
+      // If area is not set, try to get current drawing features
+      if (!areaToSave && getCurrentFeaturesRef.current) {
+        const features = getCurrentFeaturesRef.current();
+        console.log('Current drawing features:', features);
+        
+        if (features && features.features && features.features.length > 0) {
+          // Filter only LineString features and get the last one (most recent)
+          const lineStringFeatures = features.features.filter(f => 
+            f.geometry && f.geometry.type === 'LineString'
+          );
+          
+          console.log('LineString features:', lineStringFeatures);
+          
+          if (lineStringFeatures.length > 0) {
+            const feature = lineStringFeatures[lineStringFeatures.length - 1]; // Get last drawn
+            console.log('Using feature:', feature);
+            
+            const coordinates = feature.geometry.coordinates;
+            
+            // Ensure we have at least 2 points for a valid LineString
+            if (coordinates && coordinates.length >= 2) {
+              // Convert feature geometry to LINESTRING format
+              const coords = coordinates.map(coord => 
+                `${coord[1]} ${coord[0]}` // lat lng format
+              ).join(', ');
+              areaToSave = `LINESTRING (${coords})`;
+              console.log('Generated LINESTRING:', areaToSave);
+            } else {
+              console.warn('LineString needs at least 2 points, got:', coordinates?.length);
+            }
+          }
+        }
+      }
+      
+      if (!areaToSave) {
+        alert("Please draw the route on the map first (click at least 2 points to create path)");
         return;
       }
 
       const payload = {
         name: formData.name,
-        groupId: formData.groupId || 0,
-        area: formData.area,
+        groupId: formData.groupId === 0 ? null : formData.groupId, // Use null for ungrouped
+        area: areaToSave, // Use the area we got (either from formData or current drawing)
         attributes: {
           type: "route",
           color: formData.color,
@@ -251,6 +288,9 @@ const RouteDialog = ({ open, onClose, route }) => {
       <MapRouteDrawer 
         enabled={drawingEnabled && open}
         onRouteChange={handleRouteDrawn}
+        color={formData.color}
+        polylineDistance={parseInt(formData.polylineDistance) || 100}
+        onDrawReady={(fn) => { getCurrentFeaturesRef.current = fn; }}
       />
       <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false} hideBackdrop={true} disableEnforceFocus={true}>
         <DialogTitle className={classes.dialogTitle}>

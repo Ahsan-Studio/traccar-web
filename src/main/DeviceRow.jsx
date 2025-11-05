@@ -67,6 +67,11 @@ const DeviceRow = ({ data, index, style }) => {
 
   const item = data[index];
   const position = useSelector((state) => state.session.positions[item.id]);
+  
+  // Explicitly select position properties to trigger re-render
+  const positionOutdated = useSelector((state) => state.session.positions[item.id]?.outdated);
+  const positionValid = useSelector((state) => state.session.positions[item.id]?.valid);
+  
   const isVisible = visibility[item.id] !== false; // default true
   const isFocused = focused[item.id] === true; // default false
 
@@ -277,10 +282,10 @@ const DeviceRow = ({ data, index, style }) => {
             />
             </Tooltip>
           )}
-          <Tooltip title={position?.outdated === false && position?.valid === true ? 'Terkoneksi ke server, sinyal satelit normal' : 'Tidak ada koneksi ke server, tidak ada sinyal satelit'}>
+          <Tooltip title={positionValid && !positionOutdated ? 'Terkoneksi ke server, sinyal satelit normal' : 'Tidak ada koneksi ke server, tidak ada sinyal satelit'}>
             <WifiIcon sx={{ 
               fontSize: 16, 
-              color: position?.outdated === false && position?.valid === true ? '#4CAF50' : '#9e9e9e',
+              color: positionValid && !positionOutdated ? '#4CAF50' : '#9e9e9e',
             }} />
           </Tooltip>
           

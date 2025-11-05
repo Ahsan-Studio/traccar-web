@@ -35,6 +35,8 @@ import MarkersTab from './places/MarkersTab';
 import RoutesTab from './places/RoutesTab';
 import ZonesTab from './places/ZonesTab';
 import HistoryTab from './HistoryTab';
+import { map } from '../map/core/MapView';
+import dimensions from '../common/theme/dimensions';
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -245,6 +247,23 @@ const MainPage = () => {
       console.error('Logout failed:', error);
     }
   };
+
+  // Handle focus location for markers/routes/zones
+  const handleFocusLocation = useCallback((location, item) => {
+    if (map && location) {
+      // Calculate horizontal offset to compensate for drawer width on desktop
+      const drawerWidth = desktop ? parseInt(dimensions.drawerWidthDesktop, 10) : 0;
+      const spacing = desktop ? parseInt(theme.spacing(1.5), 10) : 0;
+      const horizontalOffset = desktop ? -((drawerWidth + spacing) / 2) : 0;
+      
+      map.easeTo({
+        center: [location.lng, location.lat],
+        zoom: Math.max(map.getZoom(), 15), // Zoom to at least level 15
+        offset: [horizontalOffset, -dimensions.popupMapOffset / 2],
+        duration: 1000, // Smooth animation
+      });
+    }
+  }, [desktop, theme]);
 
   // Fetch counts for Places tabs when Places tab is active
   useEffect(() => {
@@ -474,11 +493,11 @@ const MainPage = () => {
               
               <div className={classes.deviceListContainer}>
                 {placesTab === 0 ? (
-                  <MarkersTab onCountChange={setMarkersCount} />
+                  <MarkersTab onCountChange={setMarkersCount} onFocusLocation={handleFocusLocation} />
                 ) : placesTab === 1 ? (
-                  <RoutesTab onCountChange={setRoutesCount} />
+                  <RoutesTab onCountChange={setRoutesCount} onFocusLocation={handleFocusLocation} />
                 ) : placesTab === 2 ? (
-                  <ZonesTab onCountChange={setZonesCount} />
+                  <ZonesTab onCountChange={setZonesCount} onFocusLocation={handleFocusLocation} />
                 ) : null}
               </div>
             </>

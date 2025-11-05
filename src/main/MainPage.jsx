@@ -249,7 +249,7 @@ const MainPage = () => {
   };
 
   // Handle focus location for markers/routes/zones
-  const handleFocusLocation = useCallback((location, item) => {
+  const handleFocusLocation = useCallback((location) => {
     if (map && location) {
       // Calculate horizontal offset to compensate for drawer width on desktop
       const drawerWidth = desktop ? parseInt(dimensions.drawerWidthDesktop, 10) : 0;

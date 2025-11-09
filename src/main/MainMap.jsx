@@ -54,6 +54,7 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRo
               name="History Route"
               coordinates={historyRoute.coordinates}
               deviceId={historyRoute.deviceId}
+              isHistoryRoute
             />
             <MapRouteMarkers positions={historyRoute.positions} />
             <MapCamera coordinates={historyRoute.coordinates} />

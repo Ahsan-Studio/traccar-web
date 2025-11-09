@@ -11,8 +11,8 @@ import { speedFromKnots, altitudeFromMeters } from '../common/util/converter';
 const HistoryTab = ({ onRouteChange }) => {
   const devices = useSelector((state) => state.devices.items);
   
-  const speedUnit = useAttributePreference('speedUnit');
-  const altitudeUnit = useAttributePreference('altitudeUnit');
+  const speedUnit = useAttributePreference('speedUnit', 'kmh');
+  const altitudeUnit = useAttributePreference('altitudeUnit', 'm');
 
   const [selectedDevice, setSelectedDevice] = useState('');
   const [filter, setFilter] = useState('2'); // Default to 'Today'

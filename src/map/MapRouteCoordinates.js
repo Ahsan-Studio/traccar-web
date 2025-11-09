@@ -5,12 +5,17 @@ import { map } from './core/MapView';
 import { findFonts } from './core/mapUtil';
 import { useAttributePreference } from '../common/util/preferences';
 
-const MapRouteCoordinates = ({ name, coordinates, deviceId }) => {
+const MapRouteCoordinates = ({ name, coordinates, deviceId, isHistoryRoute }) => {
   const id = useId();
 
   const theme = useTheme();
 
   const reportColor = useSelector((state) => {
+    // For history routes, always use red
+    if (isHistoryRoute) {
+      return '#FF0000';
+    }
+    
     const attributes = state.devices.items[deviceId]?.attributes;
     if (attributes) {
       const color = attributes['web.reportColor'];
@@ -23,6 +28,9 @@ const MapRouteCoordinates = ({ name, coordinates, deviceId }) => {
 
   const mapLineWidth = useAttributePreference('mapLineWidth', 2);
   const mapLineOpacity = useAttributePreference('mapLineOpacity', 1);
+  
+  // Use thicker line for history routes
+  const lineWidth = isHistoryRoute ? mapLineWidth + 1 : mapLineWidth;
 
   useEffect(() => {
     map.addSource(id, {
@@ -87,11 +95,11 @@ const MapRouteCoordinates = ({ name, coordinates, deviceId }) => {
       properties: {
         name,
         color: reportColor,
-        width: mapLineWidth,
+        width: lineWidth,
         opacity: mapLineOpacity,
       },
     });
-  }, [theme, coordinates, reportColor, mapLineWidth, mapLineOpacity]);
+  }, [theme, coordinates, reportColor, lineWidth, mapLineOpacity]);
 
   return null;
 };

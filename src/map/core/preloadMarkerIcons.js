@@ -34,6 +34,14 @@ const PLACES_MARKER_ICONS = [
   'pin-26', 'pin-27', 'pin-28', 'pin-29', 'pin-30',
 ];
 
+// Route marker icons to preload
+const ROUTE_MARKER_ICONS = [
+  'route-start',
+  'route-end',
+  'route-stop',
+  'route-event',
+];
+
 export const preloadMarkerIcons = async () => {
   console.log('[preloadMarkerIcons] Starting to load icons...');
   
@@ -103,7 +111,40 @@ export const preloadMarkerIcons = async () => {
     }
   });
 
-  await Promise.allSettled([...defaultPromises, ...placesPromises]);
+  // Load route markers
+  const routePromises = ROUTE_MARKER_ICONS.map(async (iconName) => {
+    try {
+      const response = await fetch(`/img/markers/${iconName}.svg`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            if (map.hasImage(iconName)) {
+              map.updateImage(iconName, img);
+            } else {
+              map.addImage(iconName, img, { sdf: false });
+            }
+            console.log(`[preloadMarkerIcons] Loaded route icon: ${iconName}`);
+            URL.revokeObjectURL(imageUrl);
+            resolve();
+          };
+          img.onerror = () => {
+            console.warn(`Failed to load route icon: ${iconName}`);
+            URL.revokeObjectURL(imageUrl);
+            reject();
+          };
+          img.src = imageUrl;
+        });
+      }
+    } catch (error) {
+      console.warn(`Error loading route icon ${iconName}:`, error);
+    }
+  });
+
+  await Promise.allSettled([...defaultPromises, ...placesPromises, ...routePromises]);
   console.log('[preloadMarkerIcons] Finished loading icons');
 };
 

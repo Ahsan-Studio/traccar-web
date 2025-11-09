@@ -228,6 +228,7 @@ const MainPage = () => {
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [historyRoute, setHistoryRoute] = useState(null);
 
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
   
@@ -503,7 +504,7 @@ const MainPage = () => {
             </>
           )}
           {currentTab === 3 && (
-            <HistoryTab />
+            <HistoryTab onRouteChange={setHistoryRoute} />
           )}
         </div>
 
@@ -514,6 +515,7 @@ const MainPage = () => {
               filteredPositions={filteredPositions}
               selectedPosition={selectedPosition}
               onEventsClick={onEventsClick}
+              historyRoute={historyRoute}
             />
           </div>
         </div>

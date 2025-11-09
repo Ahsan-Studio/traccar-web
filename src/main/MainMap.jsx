@@ -18,8 +18,11 @@ import MapGeocoder from '../map/geocoder/MapGeocoder';
 import MapScale from '../map/MapScale';
 import MapNotification from '../map/notification/MapNotification';
 import useFeatures from '../common/util/useFeatures';
+import MapRouteCoordinates from '../map/MapRouteCoordinates';
+import MapCamera from '../map/MapCamera';
+import MapRouteMarkers from '../map/MapRouteMarkers';
 
-const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
+const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRoute }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
 
@@ -45,6 +48,17 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
           selectedPosition={selectedPosition}
           showStatus
         />
+        {historyRoute && historyRoute.coordinates && (
+          <>
+            <MapRouteCoordinates
+              name="History Route"
+              coordinates={historyRoute.coordinates}
+              deviceId={historyRoute.deviceId}
+            />
+            <MapRouteMarkers positions={historyRoute.positions} />
+            <MapCamera coordinates={historyRoute.coordinates} />
+          </>
+        )}
         <MapDefaultCamera />
         <MapSelectedDevice />
         <PoiMap />

@@ -8,7 +8,7 @@ import { formatTime } from '../common/util/formatter';
 import { useAttributePreference } from '../common/util/preferences';
 import { speedFromKnots, altitudeFromMeters } from '../common/util/converter';
 
-const HistoryTab = () => {
+const HistoryTab = ({ onRouteChange }) => {
   const devices = useSelector((state) => state.devices.items);
   
   const speedUnit = useAttributePreference('speedUnit');
@@ -143,6 +143,15 @@ const HistoryTab = () => {
         // route array only contains [longitude, latitude] coordinates for map display
         setRouteData(deviceData.positions || []);
         
+        // Pass route coordinates to parent for map display
+        if (onRouteChange && deviceData.route && deviceData.route.length > 0) {
+          onRouteChange({
+            coordinates: deviceData.route, // Array of [longitude, latitude]
+            deviceId: selectedDevice,
+            positions: deviceData.positions || [],
+          });
+        }
+        
         // Set events data if available
         if (deviceData.events && deviceData.events.length > 0) {
           // Store events for later use
@@ -150,6 +159,9 @@ const HistoryTab = () => {
         }
       } else {
         setRouteData([]);
+        if (onRouteChange) {
+          onRouteChange(null);
+        }
       }
       
       // Still fetch stops separately as combined may not include them
@@ -176,6 +188,9 @@ const HistoryTab = () => {
     setRouteData([]);
     setStops([]);
     setSelectedPosition(null);
+    if (onRouteChange) {
+      onRouteChange(null);
+    }
   };
 
   const handleImportExport = () => {

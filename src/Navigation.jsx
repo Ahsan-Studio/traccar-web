@@ -62,6 +62,7 @@ import { generateLoginToken } from './common/components/NativeInterface';
 import { useLocalization } from './common/components/LocalizationProvider';
 import fetchOrThrow from './common/util/fetchOrThrow';
 import AuditPage from './reports/AuditPage';
+import FollowPage from './other/FollowPage';
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -118,6 +119,7 @@ const Navigation = () => {
         <Route path="network/:positionId" element={<NetworkPage />} />
         <Route path="event/:id" element={<EventPage />} />
         <Route path="replay" element={<ReplayPage />} />
+        <Route path="follow/:deviceId" element={<FollowPage />} />
         <Route path="geofences" element={<GeofencesPage />} />
         <Route path="emulator" element={<EmulatorPage />} />
 

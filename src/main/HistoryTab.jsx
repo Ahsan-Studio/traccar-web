@@ -8,7 +8,7 @@ import { formatTime } from '../common/util/formatter';
 import { useAttributePreference } from '../common/util/preferences';
 import { speedFromKnots, altitudeFromMeters } from '../common/util/converter';
 
-const HistoryTab = ({ onRouteChange }) => {
+const HistoryTab = ({ onRouteChange, historyTrigger }) => {
   const devices = useSelector((state) => state.devices.items);
   
   const speedUnit = useAttributePreference('speedUnit', 'kmh');
@@ -29,6 +29,7 @@ const HistoryTab = ({ onRouteChange }) => {
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+  const [shouldAutoLoad, setShouldAutoLoad] = useState(false);
 
   // Update date/time based on filter selection
   useEffect(() => {
@@ -111,6 +112,16 @@ const HistoryTab = ({ onRouteChange }) => {
     }
   }, [filter]);
 
+  // Handle auto-trigger from device menu - set device and filter first
+  useEffect(() => {
+    if (historyTrigger && historyTrigger.deviceId && historyTrigger.period) {
+      const { deviceId, period } = historyTrigger;
+      setSelectedDevice(deviceId.toString());
+      setFilter(period);
+      setShouldAutoLoad(true);
+    }
+  }, [historyTrigger]);
+
   const handleShowRoute = async () => {
     if (!selectedDevice) {
       alert('Please select an object');
@@ -192,6 +203,18 @@ const HistoryTab = ({ onRouteChange }) => {
       onRouteChange(null);
     }
   };
+
+  // Auto-load data after device and filter are set from trigger
+  useEffect(() => {
+    if (shouldAutoLoad && selectedDevice && dateFrom && dateTo) {
+      // Small delay to ensure all states are updated
+      const timer = setTimeout(() => {
+        handleShowRoute();
+        setShouldAutoLoad(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldAutoLoad, selectedDevice, dateFrom, dateTo, hourFrom, minuteFrom, hourTo, minuteTo]);
 
   const handleImportExport = () => {
     // TODO: Implement import/export logic

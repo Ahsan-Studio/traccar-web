@@ -229,8 +229,14 @@ const MainPage = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [historyRoute, setHistoryRoute] = useState(null);
+  const [historyTrigger, setHistoryTrigger] = useState(null); // { deviceId, period }
 
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
+
+  const handleShowHistory = useCallback((deviceId, period) => {
+    setHistoryTrigger({ deviceId, period });
+    setCurrentTab(3); // Switch to History tab (index 3)
+  }, []);
   
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -469,7 +475,7 @@ const MainPage = () => {
                 </Box>
               </div>
               <div className={classes.deviceListContainer}>
-                <DeviceList devices={filteredDevices} />
+                <DeviceList devices={filteredDevices} onShowHistory={handleShowHistory} />
               </div>
             </>
           )}
@@ -504,7 +510,7 @@ const MainPage = () => {
             </>
           )}
           {currentTab === 3 && (
-            <HistoryTab onRouteChange={setHistoryRoute} />
+            <HistoryTab onRouteChange={setHistoryRoute} historyTrigger={historyTrigger} />
           )}
         </div>
 

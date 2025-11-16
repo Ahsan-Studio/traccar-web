@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { makeStyles } from 'tss-react/mui';
 import {
   IconButton, Tooltip, ListItemText, ListItemButton,
@@ -7,11 +8,11 @@ import {
 } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
 import NearMeIcon from '@mui/icons-material/NearMe';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import NavigationIcon from '@mui/icons-material/Navigation';
 import SendIcon from '@mui/icons-material/Send';
 import EditIcon from '@mui/icons-material/Edit';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import WifiIcon from '@mui/icons-material/Wifi';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -23,6 +24,7 @@ import { devicesActions } from '../store';
 import { useAdministrator } from '../common/util/permissions';
 import { useAttributePreference } from '../common/util/preferences';
 import EditDeviceDialog from '../settings/object/EditDeviceDialog';
+import FollowDialog from './FollowDialog';
 import useDeviceStatus from '../common/hooks/useDeviceStatus';
 import useDeviceMaintenance from '../common/hooks/useDeviceMaintenance';
 
@@ -56,9 +58,10 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-const DeviceRow = ({ data, index, style }) => {
+const DeviceRow = ({ data, index, style, onShowHistory }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const admin = useAdministrator();
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
@@ -85,8 +88,15 @@ const DeviceRow = ({ data, index, style }) => {
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const menuOpen = Boolean(menuAnchorEl);
   
+  // Submenu state for Show history
+  const [historyMenuAnchorEl, setHistoryMenuAnchorEl] = useState(null);
+  const historyMenuOpen = Boolean(historyMenuAnchorEl);
+  
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // Follow dialog state
+  const [followDialogOpen, setFollowDialogOpen] = useState(false);
 
   const handleMenuOpen = (event) => {
     event.stopPropagation();
@@ -96,6 +106,86 @@ const DeviceRow = ({ data, index, style }) => {
   const handleMenuClose = (event) => {
     if (event) event.stopPropagation();
     setMenuAnchorEl(null);
+    setHistoryMenuAnchorEl(null); // Close submenu too
+  };
+
+  const handleHistoryMenuOpen = (event) => {
+    event.stopPropagation();
+    setHistoryMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleHistoryMenuClose = (event) => {
+    if (event) event.stopPropagation();
+    setHistoryMenuAnchorEl(null);
+  };
+
+  const handleShowHistory = (period) => {
+    if (onShowHistory) {
+      // Use callback to trigger History tab in MainPage
+      const periodMap = {
+        'lastHour': '1',
+        'today': '2',
+        'yesterday': '3',
+        'before2days': '4',
+        'before3days': '5',
+        'thisWeek': '6',
+        'lastWeek': '7',
+        'thisMonth': '8',
+        'lastMonth': '9',
+      };
+      onShowHistory(item.id, periodMap[period] || '2');
+      handleMenuClose();
+    } else {
+      // Fallback to navigate to replay page
+      const now = dayjs();
+      let from, to;
+
+      switch (period) {
+        case 'lastHour':
+          from = now.subtract(1, 'hour').toISOString();
+          to = now.toISOString();
+          break;
+        case 'today':
+          from = now.startOf('day').toISOString();
+          to = now.toISOString();
+          break;
+        case 'yesterday':
+          from = now.subtract(1, 'day').startOf('day').toISOString();
+          to = now.subtract(1, 'day').endOf('day').toISOString();
+          break;
+        case 'before2days':
+          from = now.subtract(2, 'day').startOf('day').toISOString();
+          to = now.subtract(2, 'day').endOf('day').toISOString();
+          break;
+        case 'before3days':
+          from = now.subtract(3, 'day').startOf('day').toISOString();
+          to = now.subtract(3, 'day').endOf('day').toISOString();
+          break;
+        case 'thisWeek':
+          from = now.startOf('week').toISOString();
+          to = now.toISOString();
+          break;
+        case 'lastWeek':
+          from = now.subtract(1, 'week').startOf('week').toISOString();
+          to = now.subtract(1, 'week').endOf('week').toISOString();
+          break;
+        case 'thisMonth':
+          from = now.startOf('month').toISOString();
+          to = now.toISOString();
+          break;
+        case 'lastMonth':
+          from = now.subtract(1, 'month').startOf('month').toISOString();
+          to = now.subtract(1, 'month').endOf('month').toISOString();
+          break;
+        default:
+          from = now.startOf('day').toISOString();
+          to = now.toISOString();
+      }
+
+      // Navigate to replay page with deviceId and time range
+      navigate(`/replay?deviceId=${item.id}&from=${from}&to=${to}`);
+      handleMenuClose();
+    }
   };
 
   const handleVisibilityToggle = (event) => {
@@ -116,6 +206,22 @@ const DeviceRow = ({ data, index, style }) => {
   const handleCloseEditDialog = () => {
     setEditDialogOpen(false);
   };
+
+  const handleFollow = () => {
+    handleMenuClose();
+    setFollowDialogOpen(true);
+  };
+
+  const handleFollowNewWindow = () => {
+    handleMenuClose();
+    // Open in new window/tab
+    window.open(`/follow/${item.id}`, '_blank');
+  };
+
+  const handleCloseFollowDialog = () => {
+    setFollowDialogOpen(false);
+  };
+
   const devicePrimary = useAttributePreference('devicePrimary', 'name');
 
   // Get device icon from API and add proper path
@@ -334,7 +440,7 @@ const DeviceRow = ({ data, index, style }) => {
             }}
           >
             <MenuItem 
-              onClick={handleMenuClose} 
+              onClick={handleHistoryMenuOpen}
               sx={{
                 py: 1,
                 px: 2,
@@ -347,12 +453,13 @@ const DeviceRow = ({ data, index, style }) => {
               <ListItemIcon sx={{ minWidth: 32 }}>
                 <HistoryIcon sx={{ fontSize: 18, color: '#666' }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: '13px', color: '#333', flex: 1 }}>
                 Show history
               </Typography>
+              <ChevronRightIcon sx={{ fontSize: 18, color: '#666', ml: 1 }} />
             </MenuItem>
             <MenuItem 
-              onClick={handleMenuClose}
+              onClick={handleFollow}
               sx={{
                 py: 1,
                 px: 2,
@@ -370,7 +477,7 @@ const DeviceRow = ({ data, index, style }) => {
               </Typography>
             </MenuItem>
             <MenuItem 
-              onClick={() => { handleMenuClose(); window.open(`#follow/${item.id}`, '_blank'); }}
+              onClick={handleFollowNewWindow}
               sx={{
                 py: 1,
                 px: 2,
@@ -381,14 +488,25 @@ const DeviceRow = ({ data, index, style }) => {
               }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <OpenInNewIcon sx={{ fontSize: 18, color: '#666' }} />
+                <NearMeIcon sx={{ fontSize: 18, color: '#666' }} />
               </ListItemIcon>
               <Typography sx={{ fontSize: '13px', color: '#333' }}>
-                Follow (new window)
+                Follow (New Window)
               </Typography>
             </MenuItem>
             <MenuItem 
-              onClick={() => { handleMenuClose(); window.open(`#street/${item.id}`, '_blank'); }}
+              onClick={() => { 
+                handleMenuClose(); 
+                if (position) {
+                  const lat = position.latitude;
+                  const lng = position.longitude;
+                  // Format Street View URL dengan parameter yang benar
+                  const streetViewUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m7!1e1!3m5!1e2!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com!7i16384!8i8192?entry=ttu`;
+                  window.open(streetViewUrl, '_blank');
+                } else {
+                  alert('Position not available for this device');
+                }
+              }}
               sx={{
                 py: 1,
                 px: 2,
@@ -442,6 +560,181 @@ const DeviceRow = ({ data, index, style }) => {
               </Typography>
             </MenuItem>
           </Menu>
+
+          {/* Submenu for Show History */}
+          <Menu
+            anchorEl={historyMenuAnchorEl}
+            open={historyMenuOpen}
+            onClose={handleHistoryMenuClose}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+            slotProps={{
+              paper: {
+                elevation: 3,
+                sx: {
+                  minWidth: 200,
+                  borderRadius: '8px',
+                  ml: 0.5,
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.15)',
+                  '& .MuiList-root': {
+                    padding: '4px 0',
+                  },
+                },
+              },
+            }}
+          >
+            <MenuItem 
+              onClick={() => handleShowHistory('lastHour')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                Last hour
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('today')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                Today
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('yesterday')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                Yesterday
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('before2days')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                Before 2 days
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('before3days')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                Before 3 days
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('thisWeek')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                This week
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('lastWeek')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                Last week
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('thisMonth')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                This month
+              </Typography>
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleShowHistory('lastMonth')}
+              sx={{
+                py: 0.75,
+                px: 2.5,
+                minHeight: 'auto',
+                fontSize: '13px',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+                Last month
+              </Typography>
+            </MenuItem>
+          </Menu>
         </Box>
       </ListItemButton>
 
@@ -449,6 +742,12 @@ const DeviceRow = ({ data, index, style }) => {
         open={editDialogOpen} 
         onClose={handleCloseEditDialog} 
         device={item} 
+      />
+
+      <FollowDialog
+        open={followDialogOpen}
+        onClose={handleCloseFollowDialog}
+        device={item}
       />
     </div>
   );

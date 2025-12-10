@@ -240,6 +240,17 @@ const MainPage = () => {
     setCurrentTab(3); // Switch to History tab (index 3)
   }, []);
 
+  // Handle graph point click - pan map to position
+  const handleGraphPointClick = useCallback((pointData) => {
+    if (map && pointData && pointData.latitude && pointData.longitude) {
+      map.flyTo({
+        center: [pointData.longitude, pointData.latitude],
+        zoom: Math.max(map.getZoom(), 16),
+        duration: pointData.isPlaying ? 0 : 1000, // No animation during playback
+      });
+    }
+  }, [map]);
+
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
@@ -654,7 +665,13 @@ const MainPage = () => {
         open={objectControlOpen}
         onClose={() => setObjectControlOpen(false)}
       />
-      {selectedDeviceId && <DeviceInfoPanel deviceId={selectedDeviceId} />}
+      {selectedDeviceId && (
+        <DeviceInfoPanel 
+          deviceId={selectedDeviceId} 
+          historyRoute={historyRoute} 
+          onGraphPointClick={handleGraphPointClick}
+        />
+      )}
     </div>
   );
 };

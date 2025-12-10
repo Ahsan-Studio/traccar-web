@@ -57,10 +57,13 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRo
               isHistoryRoute
             />
             <MapRouteMarkers positions={historyRoute.positions} />
-            <MapCamera coordinates={historyRoute.coordinates} />
+            <MapCamera 
+              key={`history-${historyRoute.deviceId}-${historyRoute.coordinates.length}`}
+              coordinates={historyRoute.coordinates} 
+            />
           </>
         )}
-        <MapDefaultCamera />
+        {!historyRoute && <MapDefaultCamera />}
         <MapSelectedDevice />
         <PoiMap />
       </MapView>

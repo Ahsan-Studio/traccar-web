@@ -89,7 +89,7 @@
 .history-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 10px;
   background-color: #ffffff;
 }
 
@@ -101,18 +101,19 @@
 }
 
 .history-table th {
-  padding: 8px;
+  padding: 4px 6px;
   text-align: left;
   font-weight: 600;
   color: #444444;
   border-bottom: 1px solid #e0e0e0;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .history-table td {
-  padding: 6px 8px;
+  padding: 2px 6px;
   border-bottom: 1px solid #f0f0f0;
   color: #444444;
+  white-space: nowrap;
 }
 
 .history-table tbody tr {
@@ -120,12 +121,20 @@
   transition: background-color 0.2s;
 }
 
+.history-table tbody tr:nth-child(odd) {
+  background-color: #fafafa;
+}
+
+.history-table tbody tr:nth-child(even) {
+  background-color: #fff;
+}
+
 .history-table tbody tr:hover {
-  background-color: #f9f9f9;
+  background-color: #f0f0f0 !important;
 }
 
 .history-table tbody tr.selected {
-  background-color: #e3f2fd;
+  background-color: #e3f2fd !important;
 }
 
 /* Stops Section */
@@ -186,7 +195,7 @@
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   padding: 12px;
-  z-index: 1000;
+  z-index: 1100;
   min-width: 250px;
   max-width: 400px;
   pointer-events: none;

@@ -7,6 +7,7 @@ import fetchOrThrow from '../common/util/fetchOrThrow';
 import { formatTime } from '../common/util/formatter';
 import { useAttributePreference } from '../common/util/preferences';
 import { speedFromKnots, altitudeFromMeters } from '../common/util/converter';
+import { map } from '../map/core/MapView';
 
 const HistoryTab = ({ onRouteChange, historyTrigger }) => {
   const devices = useSelector((state) => state.devices.items);
@@ -513,6 +514,14 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
                       className={selectedPosition?.id === position.id ? 'selected' : ''}
                       onClick={() => {
                         setSelectedPosition(position);
+                        // Pan map to clicked position
+                        if (map && position.latitude && position.longitude) {
+                          map.flyTo({
+                            center: [position.longitude, position.latitude],
+                            zoom: Math.max(map.getZoom(), 14),
+                            duration: 1000,
+                          });
+                        }
                       }}
                       onMouseEnter={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();

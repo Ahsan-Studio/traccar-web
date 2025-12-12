@@ -24,7 +24,7 @@ import RemoveDialog from "../../common/components/RemoveDialog";
 
 const GprsTab = ({ classes, showNotification }) => {
   const [selectedDevice, setSelectedDevice] = useState("");
-  const [selectedCommand, setSelectedCommand] = useState("GPRS");
+  const [selectedCommand, setSelectedCommand] = useState();
   const [commandData, setCommandData] = useState("");
   const [commandHistory, setCommandHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -131,6 +131,7 @@ const GprsTab = ({ classes, showNotification }) => {
         setSelectedCommand(template);
       }
     } else {
+      setSelectedCommand(null);
       setCommandData("");
     }
   };
@@ -141,11 +142,19 @@ const GprsTab = ({ classes, showNotification }) => {
       return;
     }
 
+    if (
+      (!selectedCommand && commandData.trim() === "") ||
+      (selectedCommand?.type === "custom" && commandData.trim() === "")
+    ) {
+      showNotification("Please enter command data", "warning");
+      return;
+    }
+
     setLoading(true);
     try {
       const command = {
         deviceId: parseInt(selectedDevice, 10),
-        type: selectedCommand.type,
+        type: selectedCommand?.type || "custom",
         textChannel: false,
         attributes: {
           data: commandData,
@@ -164,8 +173,6 @@ const GprsTab = ({ classes, showNotification }) => {
         const deviceName = devices[selectedDevice]?.name || "device";
         const resultMessage = `Command sent successfully to ${deviceName}`;
         showNotification(resultMessage, "success");
-        setCommandData("");
-        setSelectedTemplate("");
         fetchCommandHistory();
       } else {
         const errorText = await response.text();

@@ -148,11 +148,18 @@ const ObjectControlDialog = ({ open, onClose }) => {
     setCurrentTab(newValue);
   };
 
+  const handleClose = (event, reason) => {
+    if (reason === "backdropClick") {
+      return;
+    }
+    onClose();
+  };
+
   return (
     <>
       <Dialog
         open={open}
-        onClose={onClose}
+        onClose={handleClose}
         maxWidth={false}
         className={classes.dialog}
       >

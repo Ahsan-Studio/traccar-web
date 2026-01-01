@@ -40,7 +40,7 @@ const OuterElement = forwardRef(function OuterElement(props, ref) {
   );
 });
 
-const DeviceList = ({ devices, onShowHistory }) => {
+const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
   const groups = useSelector((state) => state.groups.items);
@@ -313,7 +313,13 @@ const DeviceList = ({ devices, onShowHistory }) => {
         </div>
       );
     }
-    return <DeviceRow data={[item.content]} index={0} style={style} onShowHistory={onShowHistory} />;
+    return <DeviceRow 
+      data={[item.content]} 
+      index={0} 
+      style={style} 
+      onShowHistory={onShowHistory} 
+      onShowSendCommand={onShowSendCommand} 
+    />;
   };
 
   return (

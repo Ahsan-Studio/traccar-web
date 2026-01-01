@@ -587,6 +587,7 @@ const MainPage = () => {
                 <DeviceList
                   devices={filteredDevices}
                   onShowHistory={handleShowHistory}
+                  onShowSendCommand={() => setObjectControlOpen(true)}
                 />
               </div>
             </>

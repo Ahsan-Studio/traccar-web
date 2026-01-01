@@ -58,7 +58,7 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-const DeviceRow = ({ data, index, style, onShowHistory }) => {
+const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -221,6 +221,12 @@ const DeviceRow = ({ data, index, style, onShowHistory }) => {
   const handleCloseFollowDialog = () => {
     setFollowDialogOpen(false);
   };
+
+  const handleSendCommand = () => {
+    if (onShowSendCommand) {
+      onShowSendCommand();
+    }
+  }
 
   const devicePrimary = useAttributePreference('devicePrimary', 'name');
 
@@ -537,7 +543,7 @@ const DeviceRow = ({ data, index, style, onShowHistory }) => {
               <ListItemIcon sx={{ minWidth: 32 }}>
                 <SendIcon sx={{ fontSize: 18, color: '#666' }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: '13px', color: '#333' }} onClick={handleSendCommand}>
                 Send command
               </Typography>
             </MenuItem>

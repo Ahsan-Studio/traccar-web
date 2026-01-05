@@ -229,6 +229,7 @@ const MainPage = () => {
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [objectControlOpen, setObjectControlOpen] = useState(false);
+  const [objectControlDeviceId, setObjectControlDeviceId] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [historyRoute, setHistoryRoute] = useState(null);
   const [historyTrigger, setHistoryTrigger] = useState(null); // { deviceId, period }
@@ -240,16 +241,24 @@ const MainPage = () => {
     setCurrentTab(3); // Switch to History tab (index 3)
   }, []);
 
+  const handleShowSendCommand = useCallback((deviceId) => {
+    setObjectControlDeviceId(deviceId);
+    setObjectControlOpen(true);
+  }, []);
+
   // Handle graph point click - pan map to position
-  const handleGraphPointClick = useCallback((pointData) => {
-    if (map && pointData && pointData.latitude && pointData.longitude) {
-      map.flyTo({
-        center: [pointData.longitude, pointData.latitude],
-        zoom: Math.max(map.getZoom(), 16),
-        duration: pointData.isPlaying ? 0 : 1000, // No animation during playback
-      });
-    }
-  }, [map]);
+  const handleGraphPointClick = useCallback(
+    (pointData) => {
+      if (map && pointData && pointData.latitude && pointData.longitude) {
+        map.flyTo({
+          center: [pointData.longitude, pointData.latitude],
+          zoom: Math.max(map.getZoom(), 16),
+          duration: pointData.isPlaying ? 0 : 1000, // No animation during playback
+        });
+      }
+    },
+    [map]
+  );
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -587,7 +596,7 @@ const MainPage = () => {
                 <DeviceList
                   devices={filteredDevices}
                   onShowHistory={handleShowHistory}
-                  onShowSendCommand={() => setObjectControlOpen(true)}
+                  onShowSendCommand={handleShowSendCommand}
                 />
               </div>
             </>
@@ -664,12 +673,16 @@ const MainPage = () => {
       />
       <ObjectControlDialog
         open={objectControlOpen}
-        onClose={() => setObjectControlOpen(false)}
+        onClose={() => {
+          setObjectControlOpen(false);
+          setObjectControlDeviceId(null);
+        }}
+        preselectedDeviceId={objectControlDeviceId}
       />
       {selectedDeviceId && (
-        <DeviceInfoPanel 
-          deviceId={selectedDeviceId} 
-          historyRoute={historyRoute} 
+        <DeviceInfoPanel
+          deviceId={selectedDeviceId}
+          historyRoute={historyRoute}
           onGraphPointClick={handleGraphPointClick}
         />
       )}

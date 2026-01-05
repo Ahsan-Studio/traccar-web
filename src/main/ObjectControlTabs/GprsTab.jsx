@@ -22,7 +22,7 @@ import {
 } from "../../common/components/custom";
 import RemoveDialog from "../../common/components/RemoveDialog";
 
-const GprsTab = ({ classes, showNotification }) => {
+const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [selectedCommand, setSelectedCommand] = useState();
   const [commandData, setCommandData] = useState("");
@@ -33,6 +33,13 @@ const GprsTab = ({ classes, showNotification }) => {
   const [removingCommandId, setRemovingCommandId] = useState(null);
 
   const devices = useSelector((state) => state.devices.items);
+
+  // Set preselected device when provided
+  useEffect(() => {
+    if (preselectedDeviceId) {
+      setSelectedDevice(preselectedDeviceId.toString());
+    }
+  }, [preselectedDeviceId]);
 
   const getDeviceName = (deviceId) => {
     const device = devices[deviceId];

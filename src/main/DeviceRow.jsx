@@ -1,45 +1,53 @@
-import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { makeStyles } from 'tss-react/mui';
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { makeStyles } from "tss-react/mui";
 import {
-  IconButton, Tooltip, ListItemText, ListItemButton,
-  Typography, Box, Menu, MenuItem, ListItemIcon, Checkbox,
-} from '@mui/material';
-import HistoryIcon from '@mui/icons-material/History';
-import NearMeIcon from '@mui/icons-material/NearMe';
-import NavigationIcon from '@mui/icons-material/Navigation';
-import SendIcon from '@mui/icons-material/Send';
-import EditIcon from '@mui/icons-material/Edit';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import WifiIcon from '@mui/icons-material/Wifi';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import MyLocationIcon from '@mui/icons-material/MyLocation';
-import BuildIcon from '@mui/icons-material/Build';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import { devicesActions } from '../store';
-import { useAdministrator } from '../common/util/permissions';
-import { useAttributePreference } from '../common/util/preferences';
-import EditDeviceDialog from '../settings/object/EditDeviceDialog';
-import FollowDialog from './FollowDialog';
-import useDeviceStatus from '../common/hooks/useDeviceStatus';
-import useDeviceMaintenance from '../common/hooks/useDeviceMaintenance';
+  IconButton,
+  Tooltip,
+  ListItemText,
+  ListItemButton,
+  Typography,
+  Box,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  Checkbox,
+} from "@mui/material";
+import HistoryIcon from "@mui/icons-material/History";
+import NearMeIcon from "@mui/icons-material/NearMe";
+import NavigationIcon from "@mui/icons-material/Navigation";
+import SendIcon from "@mui/icons-material/Send";
+import EditIcon from "@mui/icons-material/Edit";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import WifiIcon from "@mui/icons-material/Wifi";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
+import BuildIcon from "@mui/icons-material/Build";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import { devicesActions } from "../store";
+import { useAdministrator } from "../common/util/permissions";
+import { useAttributePreference } from "../common/util/preferences";
+import EditDeviceDialog from "../settings/object/EditDeviceDialog";
+import FollowDialog from "./FollowDialog";
+import useDeviceStatus from "../common/hooks/useDeviceStatus";
+import useDeviceMaintenance from "../common/hooks/useDeviceMaintenance";
 
 dayjs.extend(relativeTime);
 
 const useStyles = makeStyles()((theme) => ({
   icon: {
-    width: '25px',
-    height: '25px',
-    filter: 'brightness(0) invert(1)',
+    width: "25px",
+    height: "25px",
+    filter: "brightness(0) invert(1)",
   },
   batteryText: {
-    fontSize: '0.75rem',
-    fontWeight: 'normal',
-    lineHeight: '0.875rem',
+    fontSize: "0.75rem",
+    fontWeight: "normal",
+    lineHeight: "0.875rem",
   },
   success: {
     color: theme.palette.success.main,
@@ -58,7 +66,13 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => {
+const DeviceRow = ({
+  data,
+  index,
+  style,
+  onShowHistory,
+  onShowSendCommand,
+}) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -70,11 +84,15 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
 
   const item = data[index];
   const position = useSelector((state) => state.session.positions[item.id]);
-  
+
   // Explicitly select position properties to trigger re-render
-  const positionOutdated = useSelector((state) => state.session.positions[item.id]?.outdated);
-  const positionValid = useSelector((state) => state.session.positions[item.id]?.valid);
-  
+  const positionOutdated = useSelector(
+    (state) => state.session.positions[item.id]?.outdated
+  );
+  const positionValid = useSelector(
+    (state) => state.session.positions[item.id]?.valid
+  );
+
   const isVisible = visibility[item.id] !== false; // default true
   const isFocused = focused[item.id] === true; // default false
 
@@ -87,14 +105,14 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
   // Context menu state
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const menuOpen = Boolean(menuAnchorEl);
-  
+
   // Submenu state for Show history
   const [historyMenuAnchorEl, setHistoryMenuAnchorEl] = useState(null);
   const historyMenuOpen = Boolean(historyMenuAnchorEl);
-  
+
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  
+
   // Follow dialog state
   const [followDialogOpen, setFollowDialogOpen] = useState(false);
 
@@ -123,17 +141,17 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
     if (onShowHistory) {
       // Use callback to trigger History tab in MainPage
       const periodMap = {
-        'lastHour': '1',
-        'today': '2',
-        'yesterday': '3',
-        'before2days': '4',
-        'before3days': '5',
-        'thisWeek': '6',
-        'lastWeek': '7',
-        'thisMonth': '8',
-        'lastMonth': '9',
+        lastHour: "1",
+        today: "2",
+        yesterday: "3",
+        before2days: "4",
+        before3days: "5",
+        thisWeek: "6",
+        lastWeek: "7",
+        thisMonth: "8",
+        lastMonth: "9",
       };
-      onShowHistory(item.id, periodMap[period] || '2');
+      onShowHistory(item.id, periodMap[period] || "2");
       handleMenuClose();
     } else {
       // Fallback to navigate to replay page
@@ -141,44 +159,44 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
       let from, to;
 
       switch (period) {
-        case 'lastHour':
-          from = now.subtract(1, 'hour').toISOString();
+        case "lastHour":
+          from = now.subtract(1, "hour").toISOString();
           to = now.toISOString();
           break;
-        case 'today':
-          from = now.startOf('day').toISOString();
+        case "today":
+          from = now.startOf("day").toISOString();
           to = now.toISOString();
           break;
-        case 'yesterday':
-          from = now.subtract(1, 'day').startOf('day').toISOString();
-          to = now.subtract(1, 'day').endOf('day').toISOString();
+        case "yesterday":
+          from = now.subtract(1, "day").startOf("day").toISOString();
+          to = now.subtract(1, "day").endOf("day").toISOString();
           break;
-        case 'before2days':
-          from = now.subtract(2, 'day').startOf('day').toISOString();
-          to = now.subtract(2, 'day').endOf('day').toISOString();
+        case "before2days":
+          from = now.subtract(2, "day").startOf("day").toISOString();
+          to = now.subtract(2, "day").endOf("day").toISOString();
           break;
-        case 'before3days':
-          from = now.subtract(3, 'day').startOf('day').toISOString();
-          to = now.subtract(3, 'day').endOf('day').toISOString();
+        case "before3days":
+          from = now.subtract(3, "day").startOf("day").toISOString();
+          to = now.subtract(3, "day").endOf("day").toISOString();
           break;
-        case 'thisWeek':
-          from = now.startOf('week').toISOString();
+        case "thisWeek":
+          from = now.startOf("week").toISOString();
           to = now.toISOString();
           break;
-        case 'lastWeek':
-          from = now.subtract(1, 'week').startOf('week').toISOString();
-          to = now.subtract(1, 'week').endOf('week').toISOString();
+        case "lastWeek":
+          from = now.subtract(1, "week").startOf("week").toISOString();
+          to = now.subtract(1, "week").endOf("week").toISOString();
           break;
-        case 'thisMonth':
-          from = now.startOf('month').toISOString();
+        case "thisMonth":
+          from = now.startOf("month").toISOString();
           to = now.toISOString();
           break;
-        case 'lastMonth':
-          from = now.subtract(1, 'month').startOf('month').toISOString();
-          to = now.subtract(1, 'month').endOf('month').toISOString();
+        case "lastMonth":
+          from = now.subtract(1, "month").startOf("month").toISOString();
+          to = now.subtract(1, "month").endOf("month").toISOString();
           break;
         default:
-          from = now.startOf('day').toISOString();
+          from = now.startOf("day").toISOString();
           to = now.toISOString();
       }
 
@@ -215,7 +233,7 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
   const handleFollowNewWindow = () => {
     handleMenuClose();
     // Open in new window/tab
-    window.open(`/follow/${item.id}`, '_blank');
+    window.open(`/follow/${item.id}`, "_blank");
   };
 
   const handleCloseFollowDialog = () => {
@@ -224,54 +242,66 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
 
   const handleSendCommand = () => {
     if (onShowSendCommand) {
-      onShowSendCommand();
+      onShowSendCommand(item.id);
     }
-  }
+  };
 
-  const devicePrimary = useAttributePreference('devicePrimary', 'name');
+  const devicePrimary = useAttributePreference("devicePrimary", "name");
 
   // Get device icon from API and add proper path
   const getDeviceIcon = () => {
     const apiIcon = item.attributes?.icon?.deviceImage;
     if (apiIcon) {
       // If API sends just filename (e.g., "land-school-bus.svg"), add path prefix
-      if (!apiIcon.startsWith('/')) {
+      if (!apiIcon.startsWith("/")) {
         return `/img/markers/objects/${apiIcon}`;
       }
       return apiIcon;
     }
-    return '/img/markers/objects/land-car.svg';
+    return "/img/markers/objects/land-car.svg";
   };
 
   const deviceIcon = getDeviceIcon();
-  
+
   // Get user settings for color coding
   const user = useSelector((state) => state.session.user);
   const objectListSettings = user?.attributes?.objectList || {};
-  
+
   // Determine row background color based on status and settings
   const getRowBackgroundColor = () => {
-    const baseColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
-    
+    const baseColor = index % 2 === 0 ? "#ffffff" : "#f8f9fa";
+
     // Apply color coding if enabled in settings
-    if (deviceStatus.type === 'offline' && objectListSettings.noConnectionColorEnabled) {
-      return `#${objectListSettings.noConnectionColor || 'FFAEAE'}`;
+    if (
+      deviceStatus.type === "offline" &&
+      objectListSettings.noConnectionColorEnabled
+    ) {
+      return `#${objectListSettings.noConnectionColor || "FFAEAE"}`;
     }
-    if (deviceStatus.type === 'stopped' && objectListSettings.stoppedColorEnabled) {
-      return `#${objectListSettings.stoppedColor || 'FFAEAE'}`;
+    if (
+      deviceStatus.type === "stopped" &&
+      objectListSettings.stoppedColorEnabled
+    ) {
+      return `#${objectListSettings.stoppedColor || "FFAEAE"}`;
     }
-    if (deviceStatus.type === 'moving' && objectListSettings.movingColorEnabled) {
-      return `#${objectListSettings.movingColor || 'B0E57C'}`;
+    if (
+      deviceStatus.type === "moving" &&
+      objectListSettings.movingColorEnabled
+    ) {
+      return `#${objectListSettings.movingColor || "B0E57C"}`;
     }
-    if (deviceStatus.type === 'idle' && objectListSettings.engineIdleColorEnabled) {
-      return `#${objectListSettings.engineIdleColor || 'FFF0AA'}`;
+    if (
+      deviceStatus.type === "idle" &&
+      objectListSettings.engineIdleColorEnabled
+    ) {
+      return `#${objectListSettings.engineIdleColor || "FFF0AA"}`;
     }
-    
+
     return baseColor;
   };
 
   return (
-    <div style={style} >
+    <div style={style}>
       <ListItemButton
         key={item.id}
         onClick={() => dispatch(devicesActions.selectId(item.id))}
@@ -279,23 +309,24 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
         selected={selectedDeviceId === item.id}
         className={selectedDeviceId === item.id ? classes.selected : null}
         style={{ paddingLeft: 4 }}
-        sx={{ 
-          display: 'flex',
-          alignItems: 'center',
+        sx={{
+          display: "flex",
+          alignItems: "center",
           gap: 0.5,
           padding: 0,
-          height: '33px',
-          borderBottom: '1px solid #e0e0e0',
+          height: "33px",
+          borderBottom: "1px solid #e0e0e0",
           backgroundColor: getRowBackgroundColor(),
-          '&:hover': {
-            backgroundColor: selectedDeviceId === item.id ? '#e3f2fd' : '#f5f5f5'
+          "&:hover": {
+            backgroundColor:
+              selectedDeviceId === item.id ? "#e3f2fd" : "#f5f5f5",
           },
-          '&.Mui-selected': {
-            backgroundColor: '#e3f2fd'
+          "&.Mui-selected": {
+            backgroundColor: "#e3f2fd",
           },
-          '&.Mui-selected:hover': {
-            backgroundColor: '#e3f2fd'
-          }
+          "&.Mui-selected:hover": {
+            backgroundColor: "#e3f2fd",
+          },
         }}
       >
         {/* Checkbox 1: Visibility Toggle */}
@@ -307,9 +338,9 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
             icon={<VisibilityOffIcon sx={{ fontSize: 13 }} />}
             checkedIcon={<VisibilityIcon sx={{ fontSize: 13 }} />}
             sx={{
-              padding: '2px',
-              marginRight: '2px',
-              '& svg': { fontSize: 13 }
+              padding: "2px",
+              marginRight: "2px",
+              "& svg": { fontSize: 13 },
             }}
           />
         </Tooltip>
@@ -321,29 +352,31 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
             checked={isFocused}
             onClick={handleFocusToggle}
             disabled={!position}
-            icon={<MyLocationIcon sx={{ fontSize: 13, color: '#ccc' }} />}
-            checkedIcon={<MyLocationIcon sx={{ fontSize: 13, color: '#1976d2' }} />}
+            icon={<MyLocationIcon sx={{ fontSize: 13, color: "#ccc" }} />}
+            checkedIcon={
+              <MyLocationIcon sx={{ fontSize: 13, color: "#1976d2" }} />
+            }
             sx={{
-              padding: '2px',
-              marginRight: '2px',
-              '& svg': { fontSize: 13 }
+              padding: "2px",
+              marginRight: "2px",
+              "& svg": { fontSize: 13 },
             }}
           />
         </Tooltip>
-        
+
         <Box
           component="img"
           src={deviceIcon}
           alt={item.name}
           onError={(e) => {
-            console.error('Failed to load icon:', deviceIcon);
-            e.target.src = '/img/markers/objects/land-car.svg';
+            console.error("Failed to load icon:", deviceIcon);
+            e.target.src = "/img/markers/objects/land-car.svg";
           }}
-          sx={{ 
-            width: 18, 
-            height: 18, 
-            marginTop: '2px',
-            objectFit: 'contain'
+          sx={{
+            width: 18,
+            height: 18,
+            marginTop: "2px",
+            objectFit: "contain",
           }}
         />
 
@@ -357,68 +390,84 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
               secondary: Typography,
             }}
             slotProps={{
-              primary: { noWrap: true, fontSize: '11px' },
-              secondary: { noWrap: true, fontSize: '10px', color: 'text.secondary' },
+              primary: { noWrap: true, fontSize: "11px" },
+              secondary: {
+                noWrap: true,
+                fontSize: "10px",
+                color: "text.secondary",
+              },
             }}
           />
         </Box>
 
         {/* Status Icons */}
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-
-          <Typography sx={{ fontSize: '11px' }}>
-            {position ? `${position.speed.toFixed(1) || 0} kph` : '0 kph'}
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <Typography sx={{ fontSize: "11px" }}>
+            {position ? `${position.speed.toFixed(1) || 0} kph` : "0 kph"}
           </Typography>
 
           {position?.attributes?.ignition === false && (
-            <Tooltip title='Mesin Mati'>
+            <Tooltip title="Mesin Mati">
               <Box
                 component="img"
                 src="https://s5.gsi-tracking.com/theme/images/engine-off.svg"
-                sx={{ 
-                  width: 16, 
+                sx={{
+                  width: 16,
                   height: 16,
                 }}
               />
             </Tooltip>
           )}
           {position?.attributes?.ignition === true && (
-            <Tooltip title='Mesin Menyala'> 
-            <Box
-              component="img"
-              src="https://s5.gsi-tracking.com/theme/images/engine-on.svg"
-              sx={{ 
-                width: 16, 
-                height: 16,
-              }}
-            />
+            <Tooltip title="Mesin Menyala">
+              <Box
+                component="img"
+                src="https://s5.gsi-tracking.com/theme/images/engine-on.svg"
+                sx={{
+                  width: 16,
+                  height: 16,
+                }}
+              />
             </Tooltip>
           )}
-          <Tooltip title={positionValid && !positionOutdated ? 'Terkoneksi ke server, sinyal satelit normal' : 'Tidak ada koneksi ke server, tidak ada sinyal satelit'}>
-            <WifiIcon sx={{ 
-              fontSize: 16, 
-              color: positionValid && !positionOutdated ? '#4CAF50' : '#9e9e9e',
-            }} />
+          <Tooltip
+            title={
+              positionValid && !positionOutdated
+                ? "Terkoneksi ke server, sinyal satelit normal"
+                : "Tidak ada koneksi ke server, tidak ada sinyal satelit"
+            }
+          >
+            <WifiIcon
+              sx={{
+                fontSize: 16,
+                color:
+                  positionValid && !positionOutdated ? "#4CAF50" : "#9e9e9e",
+              }}
+            />
           </Tooltip>
-          
+
           {/* Service/Maintenance Alert */}
           {hasExpired && (
             <Tooltip title="Service Expired! Segera lakukan perawatan">
-              <BuildIcon sx={{ 
-                fontSize: 16, 
-                color: '#f44336', // Red
-              }} />
+              <BuildIcon
+                sx={{
+                  fontSize: 16,
+                  color: "#f44336", // Red
+                }}
+              />
             </Tooltip>
           )}
           {!hasExpired && hasWarning && (
             <Tooltip title="Service Warning - Segera jadwalkan perawatan">
-              <BuildIcon sx={{ 
-                fontSize: 16, 
-                color: '#ff9800', // Orange
-              }} />
+              <BuildIcon
+                sx={{
+                  fontSize: 16,
+                  color: "#ff9800", // Orange
+                }}
+              />
             </Tooltip>
           )}
-          
+
           <IconButton size="small" onClick={handleMenuOpen}>
             <MoreVertIcon sx={{ fontSize: 16 }} />
           </IconButton>
@@ -426,142 +475,145 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
             anchorEl={menuAnchorEl}
             open={menuOpen}
             onClose={handleMenuClose}
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "left" }}
             onClick={(e) => e.stopPropagation()}
             slotProps={{
               paper: {
                 elevation: 3,
                 sx: {
                   minWidth: 220,
-                  borderRadius: '8px',
+                  borderRadius: "8px",
                   ml: 0.5,
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.15)',
-                  '& .MuiList-root': {
-                    padding: '4px 0',
+                  backgroundColor: "#ffffff",
+                  boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.15)",
+                  "& .MuiList-root": {
+                    padding: "4px 0",
                   },
                 },
               },
             }}
           >
-            <MenuItem 
+            <MenuItem
               onClick={handleHistoryMenuOpen}
               sx={{
                 py: 1,
                 px: 2,
-                minHeight: 'auto',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <HistoryIcon sx={{ fontSize: 18, color: '#666' }} />
+                <HistoryIcon sx={{ fontSize: 18, color: "#666" }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333', flex: 1 }}>
+              <Typography sx={{ fontSize: "13px", color: "#333", flex: 1 }}>
                 Show history
               </Typography>
-              <ChevronRightIcon sx={{ fontSize: 18, color: '#666', ml: 1 }} />
+              <ChevronRightIcon sx={{ fontSize: 18, color: "#666", ml: 1 }} />
             </MenuItem>
-            <MenuItem 
+            <MenuItem
               onClick={handleFollow}
               sx={{
                 py: 1,
                 px: 2,
-                minHeight: 'auto',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <NearMeIcon sx={{ fontSize: 18, color: '#666' }} />
+                <NearMeIcon sx={{ fontSize: 18, color: "#666" }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Follow
               </Typography>
             </MenuItem>
-            <MenuItem 
+            <MenuItem
               onClick={handleFollowNewWindow}
               sx={{
                 py: 1,
                 px: 2,
-                minHeight: 'auto',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <NearMeIcon sx={{ fontSize: 18, color: '#666' }} />
+                <NearMeIcon sx={{ fontSize: 18, color: "#666" }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Follow (New Window)
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => { 
-                handleMenuClose(); 
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
                 if (position) {
                   const lat = position.latitude;
                   const lng = position.longitude;
                   // Format Street View URL dengan parameter yang benar
                   const streetViewUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m7!1e1!3m5!1e2!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com!7i16384!8i8192?entry=ttu`;
-                  window.open(streetViewUrl, '_blank');
+                  window.open(streetViewUrl, "_blank");
                 } else {
-                  alert('Position not available for this device');
+                  alert("Position not available for this device");
                 }
               }}
               sx={{
                 py: 1,
                 px: 2,
-                minHeight: 'auto',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <NavigationIcon sx={{ fontSize: 18, color: '#666' }} />
+                <NavigationIcon sx={{ fontSize: 18, color: "#666" }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Street View (new window)
               </Typography>
             </MenuItem>
-            <MenuItem 
+            <MenuItem
               onClick={handleMenuClose}
               sx={{
                 py: 1,
                 px: 2,
-                minHeight: 'auto',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <SendIcon sx={{ fontSize: 18, color: '#666' }} />
+                <SendIcon sx={{ fontSize: 18, color: "#666" }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333' }} onClick={handleSendCommand}>
+              <Typography
+                sx={{ fontSize: "13px", color: "#333" }}
+                onClick={handleSendCommand}
+              >
                 Send command
               </Typography>
             </MenuItem>
-            <MenuItem 
+            <MenuItem
               onClick={handleEdit}
               sx={{
                 py: 1,
                 px: 2,
-                minHeight: 'auto',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <EditIcon sx={{ fontSize: 18, color: '#666' }} />
+                <EditIcon sx={{ fontSize: 18, color: "#666" }} />
               </ListItemIcon>
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Edit
               </Typography>
             </MenuItem>
@@ -573,170 +625,170 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
             open={historyMenuOpen}
             onClose={handleHistoryMenuClose}
             anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
+              vertical: "top",
+              horizontal: "right",
             }}
             transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
+              vertical: "top",
+              horizontal: "left",
             }}
             slotProps={{
               paper: {
                 elevation: 3,
                 sx: {
                   minWidth: 200,
-                  borderRadius: '8px',
+                  borderRadius: "8px",
                   ml: 0.5,
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.15)',
-                  '& .MuiList-root': {
-                    padding: '4px 0',
+                  backgroundColor: "#ffffff",
+                  boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.15)",
+                  "& .MuiList-root": {
+                    padding: "4px 0",
                   },
                 },
               },
             }}
           >
-            <MenuItem 
-              onClick={() => handleShowHistory('lastHour')}
+            <MenuItem
+              onClick={() => handleShowHistory("lastHour")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Last hour
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('today')}
+            <MenuItem
+              onClick={() => handleShowHistory("today")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Today
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('yesterday')}
+            <MenuItem
+              onClick={() => handleShowHistory("yesterday")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Yesterday
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('before2days')}
+            <MenuItem
+              onClick={() => handleShowHistory("before2days")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Before 2 days
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('before3days')}
+            <MenuItem
+              onClick={() => handleShowHistory("before3days")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Before 3 days
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('thisWeek')}
+            <MenuItem
+              onClick={() => handleShowHistory("thisWeek")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 This week
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('lastWeek')}
+            <MenuItem
+              onClick={() => handleShowHistory("lastWeek")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Last week
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('thisMonth')}
+            <MenuItem
+              onClick={() => handleShowHistory("thisMonth")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 This month
               </Typography>
             </MenuItem>
-            <MenuItem 
-              onClick={() => handleShowHistory('lastMonth')}
+            <MenuItem
+              onClick={() => handleShowHistory("lastMonth")}
               sx={{
                 py: 0.75,
                 px: 2.5,
-                minHeight: 'auto',
-                fontSize: '13px',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                minHeight: "auto",
+                fontSize: "13px",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
                 },
               }}
             >
-              <Typography sx={{ fontSize: '13px', color: '#333' }}>
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Last month
               </Typography>
             </MenuItem>
@@ -744,10 +796,10 @@ const DeviceRow = ({ data, index, style, onShowHistory, onShowSendCommand }) => 
         </Box>
       </ListItemButton>
 
-      <EditDeviceDialog 
-        open={editDialogOpen} 
-        onClose={handleCloseEditDialog} 
-        device={item} 
+      <EditDeviceDialog
+        open={editDialogOpen}
+        onClose={handleCloseEditDialog}
+        device={item}
       />
 
       <FollowDialog

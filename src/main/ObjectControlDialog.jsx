@@ -128,7 +128,7 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-const ObjectControlDialog = ({ open, onClose }) => {
+const ObjectControlDialog = ({ open, onClose, preselectedDeviceId }) => {
   const { classes } = useStyles();
   const [currentTab, setCurrentTab] = useState(0);
 
@@ -192,7 +192,11 @@ const ObjectControlDialog = ({ open, onClose }) => {
         <DialogContent className={classes.content}>
           {/* GPRS Tab */}
           {currentTab === 0 && (
-            <GprsTab classes={classes} showNotification={showNotification} />
+            <GprsTab
+              classes={classes}
+              showNotification={showNotification}
+              preselectedDeviceId={preselectedDeviceId}
+            />
           )}
 
           {/* Schedule Tab */}

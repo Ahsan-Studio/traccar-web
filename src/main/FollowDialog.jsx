@@ -9,13 +9,6 @@ import {
   IconButton,
   Typography,
   Box,
-  Checkbox,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Table,
   TableBody,
   TableRow,
@@ -23,15 +16,14 @@ import {
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
- formatTime, formatCoordinate, formatSpeed, formatDistance,
+  formatTime, formatCoordinate, formatSpeed, formatDistance,
 } from '../common/util/formatter';
 import { useTranslation } from '../common/components/LocalizationProvider';
 
-const useStyles = makeStyles()((theme) => ({
+const useStyles = makeStyles()(() => ({
   dialog: {
     '& .MuiDialog-paper': {
       width: '90%',
@@ -39,125 +31,102 @@ const useStyles = makeStyles()((theme) => ({
       height: '80vh',
       maxHeight: '700px',
       margin: 0,
+      borderRadius: 0,
+      overflow: 'hidden',
     },
   },
   dialogTitle: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: '#2b82d4',
     color: 'white',
-    padding: theme.spacing(1.5, 2),
+    padding: '8px 12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 'unset',
   },
   closeButton: {
     color: 'white',
-    padding: '4px',
-    '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    },
+    padding: '2px',
+    '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' },
   },
   dialogContent: {
     padding: 0,
-    height: 'calc(100% - 56px)',
+    height: 'calc(100% - 41px)',
     display: 'flex',
     flexDirection: 'row',
     overflow: 'hidden',
+    position: 'relative',
   },
-  controls: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(2),
-    padding: theme.spacing(1, 2),
-    backgroundColor: '#f5f5f5',
-    borderBottom: '1px solid #e0e0e0',
-  },
-  contentWrapper: {
-    display: 'flex',
-    flex: 1,
-    overflow: 'hidden',
-  },
+  // Info panel — left side, only visible when showInfo=true
   infoPanel: {
-    width: '290px',
+    width: '240px',
     borderRight: '1px solid #e0e0e0',
-    backgroundColor: '#fafafa',
+    backgroundColor: '#ffffff',
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
+    flexShrink: 0,
   },
-  mapWrapper: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  mapContainer: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
-    width: '100%',
-    height: '100%',
-    '& .maplibregl-map': {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-    },
-    '& .maplibregl-canvas': {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      width: '100%',
-      height: '100%',
-    },
-  },
-  select: {
-    minWidth: 150,
-    backgroundColor: 'white',
-    '& .MuiOutlinedInput-input': {
-      padding: '8px 14px',
-      fontSize: '13px',
-    },
-  },
-  accordion: {
-    boxShadow: 'none',
-    '&:before': {
-      display: 'none',
-    },
-    '&.Mui-expanded': {
-      margin: 0,
-    },
-  },
-  accordionSummary: {
+  infoPanelHeader: {
     backgroundColor: '#f0f0f0',
-    minHeight: '40px',
-    '&.Mui-expanded': {
-      minHeight: '40px',
-    },
-    '& .MuiAccordionSummary-content': {
-      margin: '8px 0',
-      '&.Mui-expanded': {
-        margin: '8px 0',
-      },
-    },
-  },
-  accordionDetails: {
-    padding: 0,
+    padding: '6px 10px',
+    borderBottom: '1px solid #e0e0e0',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#444',
   },
   dataTable: {
     '& .MuiTableCell-root': {
-      padding: '6px 12px',
+      padding: '4px 10px',
       fontSize: '12px',
-      borderBottom: '1px solid #e0e0e0',
+      borderBottom: '1px solid #f0f0f0',
     },
   },
   dataLabel: {
     fontWeight: 500,
     color: '#666',
-    width: '40%',
+    width: '45%',
+    whiteSpace: 'nowrap',
   },
   dataValue: {
     color: '#333',
     wordBreak: 'break-word',
+  },
+  mapWrapper: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  mapContainer: {
+    position: 'absolute',
+    inset: 0,
+    '& .maplibregl-map': { position: 'absolute', inset: 0 },
+    '& .maplibregl-canvas': { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' },
+  },
+  // Overlay control bar — floats on top of map, top-left (matches old version screenshot)
+  mapOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    border: '1px solid #ccc',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '3px 8px',
+    fontSize: '13px',
+    color: '#333',
+    userSelect: 'none',
+  },
+  overlaySelect: {
+    fontSize: '13px',
+    border: '1px solid #ccc',
+    padding: '1px 4px',
+    backgroundColor: 'white',
+    cursor: 'pointer',
+    outline: 'none',
   },
 }));
 
@@ -170,44 +139,38 @@ const FollowDialog = ({ open, onClose, device }) => {
   const mapContainer = useRef(null);
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
+  const labelRef = useRef(null);
   const [mapReady, setMapReady] = useState(false);
-  
-  // Memoize position selector untuk menghindari re-render tidak perlu
-  const position = useSelector((state) => 
-    device ? state.session.positions[device.id] : null
-  );
 
-  // Memoize map style untuk menghindari recreation
+  const position = useSelector((state) =>
+    device ? state.session.positions[device.id] : null,
+  );
+  const speedUnit = useSelector((state) => state.session.user?.attributes?.speedUnit || 'kmh');
+
   const getMapStyle = useCallback((type) => {
     switch (type) {
       case 'satellite':
         return {
           version: 8,
           sources: {
-            'satellite': {
+            satellite: {
               type: 'raster',
               tiles: ['https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
               tileSize: 256,
             },
           },
-          layers: [{
-            id: 'satellite',
-            type: 'raster',
-            source: 'satellite',
-            minzoom: 0,
-            maxzoom: 20,
-          }],
+          layers: [{ id: 'satellite', type: 'raster', source: 'satellite', minzoom: 0, maxzoom: 20 }],
         };
       case 'hybrid':
         return {
           version: 8,
           sources: {
-            'satellite': {
+            satellite: {
               type: 'raster',
               tiles: ['https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
               tileSize: 256,
             },
-            'labels': {
+            labels: {
               type: 'raster',
               tiles: ['https://mt0.google.com/vt/lyrs=h&x={x}&y={y}&z={z}'],
               tileSize: 256,
@@ -218,335 +181,160 @@ const FollowDialog = ({ open, onClose, device }) => {
             { id: 'labels', type: 'raster', source: 'labels', minzoom: 0, maxzoom: 20 },
           ],
         };
-      default: // osm
+      default:
         return {
           version: 8,
           sources: {
-            'osm': {
+            osm: {
               type: 'raster',
               tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
               tileSize: 256,
               attribution: '© OpenStreetMap contributors',
             },
           },
-          layers: [{
-            id: 'osm',
-            type: 'raster',
-            source: 'osm',
-            minzoom: 0,
-            maxzoom: 19,
-          }],
+          layers: [{ id: 'osm', type: 'raster', source: 'osm', minzoom: 0, maxzoom: 19 }],
         };
     }
   }, []);
 
-  // Handle dialog entered (after animation complete)
   const handleDialogEntered = useCallback(() => {
     if (mapContainer.current && !mapInstance.current) {
-
       try {
         mapInstance.current = new maplibregl.Map({
           container: mapContainer.current,
           style: getMapStyle('osm'),
           center: position ? [position.longitude, position.latitude] : [106.8456, -6.2088],
           zoom: 15,
-          attributionControl: false, // Disable untuk performa
-          trackResize: false, // Disable auto tracking, kita handle manual
+          attributionControl: false,
+          trackResize: false,
         });
-
         mapInstance.current.on('load', () => {
           setMapReady(true);
           mapInstance.current.resize();
         });
-
-        // Add navigation controls
         mapInstance.current.addControl(new maplibregl.NavigationControl(), 'top-right');
-        
       } catch (error) {
         console.error('Error initializing map:', error);
       }
     }
   }, [position, getMapStyle]);
 
-  // Cleanup when dialog closes
+  // Cleanup on close
   useEffect(() => {
     if (!open) {
-      if (markerRef.current) {
-        markerRef.current.remove();
-        markerRef.current = null;
-      }
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
+      if (markerRef.current) { markerRef.current.remove(); markerRef.current = null; }
+      if (mapInstance.current) { mapInstance.current.remove(); mapInstance.current = null; }
       setMapReady(false);
     }
   }, [open]);
 
-  // Handle map type change - optimized dengan debounce
+  // Map style change
   useEffect(() => {
     if (!mapInstance.current || !mapReady) return;
-
     const map = mapInstance.current;
     const currentCenter = map.getCenter();
     const currentZoom = map.getZoom();
-
-    // Change map style
     map.setStyle(getMapStyle(mapType));
-
-    // Restore center, zoom, and marker after style loads
     map.once('styledata', () => {
-      map.jumpTo({ center: currentCenter, zoom: currentZoom }); // jumpTo lebih cepat dari setCenter/setZoom
-      
-      // Re-add marker if it exists
-      if (markerRef.current && position) {
-        const coordinates = [position.longitude, position.latitude];
-        markerRef.current.setLngLat(coordinates);
-      }
+      map.jumpTo({ center: currentCenter, zoom: currentZoom });
     });
-  }, [mapType, mapReady, position, getMapStyle]);
+  }, [mapType, mapReady, getMapStyle]);
 
-  // Update marker position
+  // Update marker + label when position changes
   useEffect(() => {
-    if (mapInstance.current && mapReady && position && device) {
-      const coordinates = [position.longitude, position.latitude];
+    if (!mapInstance.current || !mapReady || !position || !device) return;
 
-      if (!markerRef.current) {
-        // Create marker element
-        const el = document.createElement('div');
-        el.style.width = '40px';
-        el.style.height = '40px';
-        el.style.cursor = 'pointer';
-        
-        // Create img element for icon
-        const img = document.createElement('img');
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'contain';
-        img.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
-        
-        // Determine icon URL - sama seperti di MapPositions.js
-        let iconUrl;
-        if (device.attributes?.icon?.deviceImage) {
-          // Custom icon: extract filename from path like '/img/markers/objects/land-electric-car.svg'
-          const customIconName = device.attributes.icon.deviceImage
-            .replace('.svg', '')
-            .replace('/img/markers/objects/', '');
-          iconUrl = `/img/markers/objects/${customIconName}.svg`;
-        } else {
-          // Default category icon
-          const category = device.category || 'default';
-          iconUrl = `/img/markers/objects/${category}.svg`;
-        }
-        
-        img.src = iconUrl;
-        img.onerror = () => {
-          // Fallback to default icon
-          img.src = '/img/markers/objects/default.svg';
-        };
-        
-        el.appendChild(img);
+    const coordinates = [position.longitude, position.latitude];
+    const course = position.course || 0;
+    const speedText = formatSpeed(position.speed ?? 0, speedUnit, t);
+    const labelText = `${device.name} (${speedText})`;
 
-        markerRef.current = new maplibregl.Marker({ 
-          element: el,
-          anchor: 'center',
-        })
-          .setLngLat(coordinates)
-          .addTo(mapInstance.current);
-      } else {
-        // Update marker position
-        markerRef.current.setLngLat(coordinates);
-      }
+    if (!markerRef.current) {
+      // Arrow marker element — red arrow, rotated by course
+      const el = document.createElement('div');
+      el.style.cssText = 'width:28px;height:28px;cursor:pointer;';
 
-      // Auto-center if follow is enabled
-      if (followEnabled) {
-        mapInstance.current.flyTo({
-          center: coordinates,
-          zoom: 15,
-          duration: 500, // Kurangi durasi untuk performa lebih baik
-          essential: true,
-        });
-      }
+      const img = document.createElement('img');
+      img.src = '/img/markers/arrow-red.svg';
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+      img.style.transform = `rotate(${course}deg)`;
+      img.onerror = () => { img.src = '/img/markers/arrow-black.svg'; };
+      el.appendChild(img);
+
+      // Permanent label next to marker
+      const label = document.createElement('div');
+      label.style.cssText = [
+        'position:absolute',
+        'left:32px',
+        'top:50%',
+        'transform:translateY(-50%)',
+        'background:rgba(255,255,255,0.9)',
+        'border:1px solid #ccc',
+        'padding:2px 6px',
+        'font-size:12px',
+        'white-space:nowrap',
+        'pointer-events:none',
+        'color:#333',
+        'box-shadow:0 1px 3px rgba(0,0,0,0.2)',
+      ].join(';');
+      label.textContent = labelText;
+      el.appendChild(label);
+      labelRef.current = label;
+
+      markerRef.current = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat(coordinates)
+        .addTo(mapInstance.current);
+    } else {
+      // Update position and rotation
+      markerRef.current.setLngLat(coordinates);
+      const img = markerRef.current.getElement().querySelector('img');
+      if (img) img.style.transform = `rotate(${course}deg)`;
+      if (labelRef.current) labelRef.current.textContent = labelText;
     }
-  }, [position, followEnabled, device, mapReady]);
 
-  // Render info panel data - Memoized untuk menghindari re-calculation
-  const renderInfoPanel = useMemo(() => {
+    if (followEnabled) {
+      mapInstance.current.panTo(coordinates, { duration: 400 });
+    }
+  }, [position, followEnabled, device, mapReady, speedUnit, t]);
+
+  // Info panel data
+  const infoSections = useMemo(() => {
     if (!showInfo || !device || !position) return null;
 
-    const generalData = [];
-    const locationData = [];
-    const serviceData = [];
+    const general = [];
+    const location = [];
 
-    // General data (urutan sesuai web lama dan DeviceInfoPanel)
-    // 1. Engine hours
     if (position.attributes?.hours !== undefined) {
-      const hours = (position.attributes.hours / 3600000).toFixed(1);
-      generalData.push({ label: 'Engine hours', value: `${hours} h` });
+      general.push({ label: t('reportEngineHours') || 'Engine hours', value: `${(position.attributes.hours / 3600000).toFixed(1)} h` });
     }
-    
-    // 2. Model
-    if (device.model) {
-      generalData.push({ label: 'Model', value: device.model });
-    }
-    
-    // 3. Odometer
+    if (device.model) general.push({ label: t('deviceModel') || 'Model', value: device.model });
     if (position.attributes?.totalDistance !== undefined) {
-      generalData.push({ label: 'Odometer', value: formatDistance(position.attributes.totalDistance, 'km', t) });
+      general.push({ label: t('deviceTotalDistance') || 'Odometer', value: formatDistance(position.attributes.totalDistance, 'km', t) });
     }
-    
-    // 4. Plate number
-    if (device.attributes?.plateNumber) {
-      generalData.push({ label: 'Plate', value: device.attributes.plateNumber });
-    }
-    
-    // 5. SIM Card Number
-    if (device.phone) {
-      generalData.push({ label: 'SIM Card Number', value: device.phone });
-    }
-    
-    // 6. Status
-    if (position) {
-      let status = 'Stopped';
-      if (position.attributes?.ignition === true) {
-        status = position.speed > 5 ? 'Moving' : 'Engine Idle';
-      }
-      generalData.push({ label: 'Status', value: status });
-    }
-    
-    // 7. VIN
-    if (device.attributes?.vin) {
-      generalData.push({ label: 'VIN', value: device.attributes.vin });
-    }
-    
-    // 8. Driver (if available)
-    if (position.attributes?.driverName) {
-      generalData.push({ label: 'Driver', value: position.attributes.driverName });
-    }
-    
-    // 9. Trailer (if available)
-    if (position.attributes?.trailerName) {
-      generalData.push({ label: 'Trailer', value: position.attributes.trailerName });
-    }
+    if (device.attributes?.plateNumber) general.push({ label: t('devicePlate') || 'Plate', value: device.attributes.plateNumber });
+    if (device.phone) general.push({ label: t('devicePhone') || 'SIM Card', value: device.phone });
 
-    // 10. Custom fields
-    if (device.attributes) {
-      Object.keys(device.attributes).forEach(key => {
-        // Skip standard attributes
-        if (!['vin', 'plateNumber', 'icon', 'deviceImage', 'web.reportColor', 'mail.smtp', 'color'].includes(key)) {
-          const value = device.attributes[key];
-          if (value && typeof value === 'string' && value.length < 100) {
-            generalData.push({ label: key, value });
-          }
-        }
-      });
-    }
+    let status = 'Stopped';
+    if (position.attributes?.ignition === true) status = (position.speed || 0) > 5 ? 'Moving' : 'Engine Idle';
+    general.push({ label: t('deviceStatus') || 'Status', value: status });
 
-    // Location data
-    if (position.altitude !== undefined) {
-      locationData.push({ label: 'Altitude', value: `${Math.round(position.altitude)} m` });
-    }
-    if (position.course !== undefined) {
-      locationData.push({ label: 'Course/Angle', value: `${Math.round(position.course)}°` });
-    }
-    locationData.push({
-      label: 'Position',
+    if (position.altitude !== undefined) location.push({ label: t('positionAltitude') || 'Altitude', value: `${Math.round(position.altitude)} m` });
+    if (position.course !== undefined) location.push({ label: t('positionCourse') || 'Angle', value: `${Math.round(position.course)}°` });
+    location.push({
+      label: t('positionLatitude') || 'Position',
       value: `${formatCoordinate('latitude', position.latitude, 'dd')}, ${formatCoordinate('longitude', position.longitude, 'dd')}`,
     });
     if (position.attributes?.ignition !== undefined) {
-      locationData.push({ label: 'Engine/Status', value: position.attributes.ignition ? 'on' : 'off' });
+      location.push({ label: t('positionIgnition') || 'Engine', value: position.attributes.ignition ? 'ON' : 'OFF' });
     }
-    if (position.speed !== undefined) {
-      locationData.push({ label: 'Speed', value: formatSpeed(position.speed, 'kmh', t) });
-    }
-    if (position.fixTime) {
-      locationData.push({ label: 'Time (Position)', value: formatTime(position.fixTime, 'seconds') });
-    }
-    if (position.serverTime) {
-      locationData.push({ label: 'Time (Server)', value: formatTime(position.serverTime, 'seconds') });
-    }
+    if (position.speed !== undefined) location.push({ label: t('positionSpeed') || 'Speed', value: formatSpeed(position.speed, speedUnit, t) });
+    if (position.fixTime) location.push({ label: t('positionFixTime') || 'GPS Time', value: formatTime(position.fixTime, 'seconds') });
 
-    // Service data (if available from device attributes)
-    if (device.attributes?.serviceData) {
-      const services = device.attributes.serviceData;
-      Object.keys(services).forEach(key => {
-        serviceData.push({ label: services[key].name, value: services[key].status });
-      });
-    }
-
-    return (
-      <Box className={classes.infoPanel}>
-        {generalData.length > 0 && (
-          <Accordion defaultExpanded className={classes.accordion}>
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              className={classes.accordionSummary}
-            >
-              <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>General</Typography>
-            </AccordionSummary>
-            <AccordionDetails className={classes.accordionDetails}>
-              <Table size="small" className={classes.dataTable}>
-                <TableBody>
-                  {generalData.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className={classes.dataLabel}>{item.label}</TableCell>
-                      <TableCell className={classes.dataValue}>{item.value}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </AccordionDetails>
-          </Accordion>
-        )}
-
-        {locationData.length > 0 && (
-          <Accordion defaultExpanded className={classes.accordion}>
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              className={classes.accordionSummary}
-            >
-              <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>Location</Typography>
-            </AccordionSummary>
-            <AccordionDetails className={classes.accordionDetails}>
-              <Table size="small" className={classes.dataTable}>
-                <TableBody>
-                  {locationData.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className={classes.dataLabel}>{item.label}</TableCell>
-                      <TableCell className={classes.dataValue}>{item.value}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </AccordionDetails>
-          </Accordion>
-        )}
-
-        {serviceData.length > 0 && (
-          <Accordion defaultExpanded className={classes.accordion}>
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              className={classes.accordionSummary}
-            >
-              <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>Service</Typography>
-            </AccordionSummary>
-            <AccordionDetails className={classes.accordionDetails}>
-              <Table size="small" className={classes.dataTable}>
-                <TableBody>
-                  {serviceData.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className={classes.dataLabel}>{item.label}</TableCell>
-                      <TableCell className={classes.dataValue}>{item.value}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </AccordionDetails>
-          </Accordion>
-        )}
-      </Box>
-    );
-  }, [showInfo, device, position, classes, t]); // Dependencies untuk useMemo
+    return [
+      { title: 'General', rows: general },
+      { title: 'Location', rows: location },
+    ].filter((s) => s.rows.length > 0);
+  }, [showInfo, device, position, t, speedUnit]);
 
   if (!device) return null;
 
@@ -556,66 +344,75 @@ const FollowDialog = ({ open, onClose, device }) => {
       onClose={onClose}
       className={classes.dialog}
       maxWidth={false}
-      TransitionProps={{
-        onEntered: handleDialogEntered,
-      }}
+      TransitionProps={{ onEntered: handleDialogEntered }}
     >
-      <DialogTitle className={classes.dialogTitle}>
-        <Typography component="span" sx={{ fontSize: '16px', fontWeight: 500 }}>
+      {/* Title bar — blue, matches old version */}
+      <DialogTitle className={classes.dialogTitle} sx={{ p: 0 }}>
+        <Typography sx={{ fontSize: '15px', fontWeight: 500, pl: 1.5 }}>
           Follow ({device.name})
         </Typography>
-        <IconButton
-          className={classes.closeButton}
-          onClick={onClose}
-          size="small"
-        >
-          <CloseIcon sx={{ fontSize: 20 }} />
+        <IconButton className={classes.closeButton} onClick={onClose} size="small" sx={{ mr: 0.5 }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </DialogTitle>
 
       <DialogContent className={classes.dialogContent}>
-        {/* Controls */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-          <Box className={classes.controls}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={showInfo}
-                  onChange={(e) => setShowInfo(e.target.checked)}
-                  size="small"
-                />
-              }
-              label={<Typography sx={{ fontSize: '13px' }}>Info</Typography>}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={followEnabled}
-                  onChange={(e) => setFollowEnabled(e.target.checked)}
-                  size="small"
-                />
-              }
-              label={<Typography sx={{ fontSize: '13px' }}>Follow</Typography>}
-            />
-            <Select
-              value={mapType}
-              onChange={(e) => setMapType(e.target.value)}
-              className={classes.select}
-              size="small"
-            >
-              <MenuItem value="osm">OSM Map</MenuItem>
-              <MenuItem value="satellite">Satellite</MenuItem>
-              <MenuItem value="hybrid">Hybrid</MenuItem>
-            </Select>
+        {/* Info side panel — only when checked */}
+        {showInfo && infoSections && (
+          <Box className={classes.infoPanel}>
+            {infoSections.map((section) => (
+              <Box key={section.title}>
+                <Box className={classes.infoPanelHeader}>{section.title}</Box>
+                <Table size="small" className={classes.dataTable}>
+                  <TableBody>
+                    {section.rows.map((row, i) => (
+                      <TableRow key={i}>
+                        <TableCell className={classes.dataLabel}>{row.label}</TableCell>
+                        <TableCell className={classes.dataValue}>{row.value}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            ))}
           </Box>
+        )}
 
-          {/* Content with Info Panel and Map */}
-          <Box className={classes.contentWrapper}>
-            {renderInfoPanel}
-            <Box className={classes.mapWrapper}>
-              <Box className={classes.mapContainer} ref={mapContainer} />
+        {/* Map area */}
+        <Box className={classes.mapWrapper}>
+          {/* Map takes full area */}
+          <Box className={classes.mapContainer} ref={mapContainer} />
+
+          {/* Controls overlay — floats on top of map, matching old version */}
+          {mapReady && (
+            <Box className={classes.mapOverlay}>
+              <input
+                type="checkbox"
+                id="follow-info"
+                checked={showInfo}
+                style={{ cursor: 'pointer', margin: 0 }}
+                onChange={(e) => setShowInfo(e.target.checked)}
+              />
+              <label htmlFor="follow-info" style={{ cursor: 'pointer', marginRight: 6 }}>Info</label>
+              <input
+                type="checkbox"
+                id="follow-follow"
+                checked={followEnabled}
+                style={{ cursor: 'pointer', margin: 0 }}
+                onChange={(e) => setFollowEnabled(e.target.checked)}
+              />
+              <label htmlFor="follow-follow" style={{ cursor: 'pointer', marginRight: 6 }}>Follow</label>
+              <select
+                value={mapType}
+                onChange={(e) => setMapType(e.target.value)}
+                className={classes.overlaySelect}
+              >
+                <option value="osm">OSM Map</option>
+                <option value="satellite">Satellite</option>
+                <option value="hybrid">Hybrid</option>
+              </select>
             </Box>
-          </Box>
+          )}
         </Box>
       </DialogContent>
     </Dialog>

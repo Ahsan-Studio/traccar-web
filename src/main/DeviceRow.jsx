@@ -12,20 +12,13 @@ import {
   Box,
   Menu,
   MenuItem,
-  ListItemIcon,
   Checkbox,
 } from "@mui/material";
-import HistoryIcon from "@mui/icons-material/History";
-import NearMeIcon from "@mui/icons-material/NearMe";
-import NavigationIcon from "@mui/icons-material/Navigation";
-import SendIcon from "@mui/icons-material/Send";
-import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import BuildIcon from "@mui/icons-material/Build";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { devicesActions } from "../store";
 import { useAdministrator } from "../common/util/permissions";
 import { useAttributePreference } from "../common/util/preferences";
@@ -391,81 +384,88 @@ const DeviceRow = ({
           <IconButton size="small" onClick={handleMenuOpen}>
             <MoreVertIcon sx={{ fontSize: 16 }} />
           </IconButton>
+          {/* Main action menu — styled after old version */}
           <Menu
             anchorEl={menuAnchorEl}
             open={menuOpen}
             onClose={handleMenuClose}
-            anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             transformOrigin={{ vertical: "top", horizontal: "left" }}
             onClick={(e) => e.stopPropagation()}
             slotProps={{
               paper: {
-                elevation: 3,
+                elevation: 0,
                 sx: {
-                  minWidth: 220,
-                  borderRadius: "8px",
-                  ml: 0.5,
+                  minWidth: 200,
+                  borderRadius: 0,
                   backgroundColor: "#ffffff",
-                  boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.15)",
-                  "& .MuiList-root": {
-                    padding: "4px 0",
-                  },
+                  boxShadow: "0 0 5px 0 #9b9b9b",
+                  "& .MuiList-root": { padding: 0 },
                 },
               },
             }}
           >
+            {/* Show history — first item gets blue top border accent */}
             <MenuItem
               onClick={handleHistoryMenuOpen}
               sx={{
-                py: 1,
-                px: 2,
+                borderTop: "3px solid #2b82d4",
+                borderBottom: "1px solid #f5f5f5",
+                py: "5px",
+                px: "10px",
                 minHeight: "auto",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
+                "&:hover": { backgroundColor: "#f5f5f5" },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <HistoryIcon sx={{ fontSize: 18, color: "#666" }} />
-              </ListItemIcon>
-              <Typography sx={{ fontSize: "13px", color: "#333", flex: 1 }}>
+              <Box
+                component="img"
+                src="/img/theme/time.svg"
+                sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0 }}
+              />
+              <Typography sx={{ fontSize: "13px", color: "#444", flex: 1 }}>
                 Show history
               </Typography>
-              <ChevronRightIcon sx={{ fontSize: 18, color: "#666", ml: 1 }} />
+              <Box
+                component="img"
+                src="/img/theme/arrow-right.svg"
+                sx={{ width: 10, height: 10, ml: "8px", flexShrink: 0 }}
+              />
             </MenuItem>
             <MenuItem
               onClick={handleFollow}
               sx={{
-                py: 1,
-                px: 2,
+                borderBottom: "1px solid #f5f5f5",
+                py: "5px",
+                px: "10px",
                 minHeight: "auto",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
+                "&:hover": { backgroundColor: "#f5f5f5" },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <NearMeIcon sx={{ fontSize: 18, color: "#666" }} />
-              </ListItemIcon>
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
+              <Box
+                component="img"
+                src="/img/theme/follow.svg"
+                sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0 }}
+              />
+              <Typography sx={{ fontSize: "13px", color: "#444" }}>
                 Follow
               </Typography>
             </MenuItem>
             <MenuItem
               onClick={handleFollowNewWindow}
               sx={{
-                py: 1,
-                px: 2,
+                borderBottom: "1px solid #f5f5f5",
+                py: "5px",
+                px: "10px",
                 minHeight: "auto",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
+                "&:hover": { backgroundColor: "#f5f5f5" },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <NearMeIcon sx={{ fontSize: 18, color: "#666" }} />
-              </ListItemIcon>
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
+              <Box
+                component="img"
+                src="/img/theme/follow.svg"
+                sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0 }}
+              />
+              <Typography sx={{ fontSize: "13px", color: "#444" }}>
                 Follow (New Window)
               </Typography>
             </MenuItem>
@@ -479,232 +479,108 @@ const DeviceRow = ({
                 window.open(streetViewUrl, "_blank");
               }}
               sx={{
-                py: 1,
-                px: 2,
+                borderBottom: "1px solid #f5f5f5",
+                py: "5px",
+                px: "10px",
                 minHeight: "auto",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
+                "&:hover": { backgroundColor: "#f5f5f5" },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <NavigationIcon sx={{ fontSize: 18, color: "#666" }} />
-              </ListItemIcon>
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
+              <Box
+                component="img"
+                src="/img/theme/street-view.svg"
+                sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0, opacity: !position ? 0.4 : 1 }}
+              />
+              <Typography sx={{ fontSize: "13px", color: "#444" }}>
                 Street View (new window)
               </Typography>
             </MenuItem>
             <MenuItem
               onClick={handleSendCommand}
               sx={{
-                py: 1,
-                px: 2,
+                borderBottom: "1px solid #f5f5f5",
+                py: "5px",
+                px: "10px",
                 minHeight: "auto",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
+                "&:hover": { backgroundColor: "#f5f5f5" },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <SendIcon sx={{ fontSize: 18, color: "#666" }} />
-              </ListItemIcon>
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
+              <Box
+                component="img"
+                src="/img/theme/cmd.svg"
+                sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0 }}
+              />
+              <Typography sx={{ fontSize: "13px", color: "#444" }}>
                 Send command
               </Typography>
             </MenuItem>
             <MenuItem
               onClick={handleEdit}
               sx={{
-                py: 1,
-                px: 2,
+                py: "5px",
+                px: "10px",
                 minHeight: "auto",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
+                "&:hover": { backgroundColor: "#f5f5f5" },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <EditIcon sx={{ fontSize: 18, color: "#666" }} />
-              </ListItemIcon>
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
+              <Box
+                component="img"
+                src="/img/theme/edit.svg"
+                sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0 }}
+              />
+              <Typography sx={{ fontSize: "13px", color: "#444" }}>
                 Edit
               </Typography>
             </MenuItem>
           </Menu>
 
-          {/* Submenu for Show History */}
+          {/* Show history submenu */}
           <Menu
             anchorEl={historyMenuAnchorEl}
             open={historyMenuOpen}
             onClose={handleHistoryMenuClose}
-            anchorOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "left",
-            }}
+            anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "left" }}
             slotProps={{
               paper: {
-                elevation: 3,
+                elevation: 0,
                 sx: {
-                  minWidth: 200,
-                  borderRadius: "8px",
-                  ml: 0.5,
+                  minWidth: 170,
+                  borderRadius: 0,
                   backgroundColor: "#ffffff",
-                  boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.15)",
-                  "& .MuiList-root": {
-                    padding: "4px 0",
-                  },
+                  boxShadow: "3px 0 5px 0 #9b9b9b",
+                  "& .MuiList-root": { padding: 0 },
                 },
               },
             }}
           >
-            <MenuItem
-              onClick={() => handleShowHistory("lastHour")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                Last hour
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("today")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                Today
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("yesterday")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                Yesterday
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("before2days")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                Before 2 days
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("before3days")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                Before 3 days
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("thisWeek")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                This week
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("lastWeek")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                Last week
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("thisMonth")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                This month
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={() => handleShowHistory("lastMonth")}
-              sx={{
-                py: 0.75,
-                px: 2.5,
-                minHeight: "auto",
-                fontSize: "13px",
-                "&:hover": {
-                  backgroundColor: "#f5f5f5",
-                },
-              }}
-            >
-              <Typography sx={{ fontSize: "13px", color: "#333" }}>
-                Last month
-              </Typography>
-            </MenuItem>
+            {[
+              { key: "lastHour",   label: "Last hour" },
+              { key: "today",      label: "Today" },
+              { key: "yesterday",  label: "Yesterday" },
+              { key: "before2days", label: "Before 2 days" },
+              { key: "before3days", label: "Before 3 days" },
+              { key: "thisWeek",   label: "This week" },
+              { key: "lastWeek",   label: "Last week" },
+              { key: "thisMonth",  label: "This month" },
+              { key: "lastMonth",  label: "Last month" },
+            ].map(({ key, label }, i) => (
+              <MenuItem
+                key={key}
+                onClick={() => handleShowHistory(key)}
+                sx={{
+                  borderTop: i === 0 ? "3px solid #2b82d4" : "1px solid #f5f5f5",
+                  py: "5px",
+                  px: "15px",
+                  minHeight: "auto",
+                  "&:hover": { backgroundColor: "#f5f5f5" },
+                }}
+              >
+                <Typography sx={{ fontSize: "13px", color: "#444" }}>
+                  {label}
+                </Typography>
+              </MenuItem>
+            ))}
           </Menu>
         </Box>
       </ListItemButton>

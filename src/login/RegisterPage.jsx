@@ -1,111 +1,24 @@
 import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import EmailIcon from '@mui/icons-material/Email';
+import LockIcon from '@mui/icons-material/Lock';
+import PersonIcon from '@mui/icons-material/Person';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import {
-  Button, TextField, Snackbar, IconButton, InputAdornment, Link,
+  Button, IconButton, InputAdornment, Link, Snackbar, TextField,
 } from '@mui/material';
-import { makeStyles } from 'tss-react/mui';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import LoginLayout from './LoginLayout';
 import { useTranslation } from '../common/components/LocalizationProvider';
 import { snackBarDurationShortMs } from '../common/util/duration';
+import fetchOrThrow from '../common/util/fetchOrThrow';
 import { useCatch, useEffectAsync } from '../reactHelper';
 import { sessionActions } from '../store';
-import fetchOrThrow from '../common/util/fetchOrThrow';
-import EmailIcon from '@mui/icons-material/Email';
-import PersonIcon from '@mui/icons-material/Person';
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import LockIcon from "@mui/icons-material/Lock";
-import Visibility from "@mui/icons-material/Visibility";
-
-const useStyles = makeStyles()((theme) => ({
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: theme.spacing(2),
-  },
-  inputField: {
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "#f5f5f5",
-      [theme.breakpoints.down("sm")]: {
-        fontSize: "0.9rem",
-      },
-      border: "1px solid #f5f5f5",
-      color: "#444444",
-      fontSize: "11px",
-      height: "40px",
-    },
-    "& .MuiInputLabel-root": {
-      color: "#666666",
-      [theme.breakpoints.down("sm")]: {
-        fontSize: "0.9rem",
-      },
-    },
-    "& .MuiInputAdornment-root": {
-      color: "#666666",
-      [theme.breakpoints.down("sm")]: {
-        "& .MuiSvgIcon-root": {
-          fontSize: "1.2rem",
-        },
-      },
-    },
-    "& .MuiInputBase-input.MuiOutlinedInput-input:-webkit-autofill": {
-      WebkitBoxShadow: "0 0 0 1000px #ffffff inset !important",
-      WebkitTextFillColor: "#444444 !important",
-      caretColor: "#444444",
-      transition: "background-color 5000s ease-in-out 0s"
-    }
-  },
-  registerButton: {
-    marginTop: theme.spacing(2),
-    padding: theme.spacing(1.5),
-    fontSize: "11px",
-    fontWeight: 500,
-    height: "40px",
-    backgroundColor: "#2b82d4",
-    color: "white",
-    "&:hover": {
-      backgroundColor: "#3875C5",
-    },
-    [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(1.25),
-      fontSize: "0.95rem",
-      marginTop: theme.spacing(1.5),
-    },
-    "&.Mui-disabled": {
-      backgroundColor: "#2b82d4", // tetap warna aktif
-      color: "white",             // tetap warna teks aktif
-      opacity: 1,                 // hilangkan efek transparan MUI
-      cursor: "not-allowed",      // biar kelihatan tidak bisa diklik
-    },
-  },
-  extraContainer: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    color: "#444444",
-    fontSize: "11px",
-    gap: theme.spacing(0.4),
-    marginTop: theme.spacing(2),
-    [theme.breakpoints.down("sm")]: {
-      gap: theme.spacing(2),
-      flexDirection: "column",
-      alignItems: "center",
-    },
-  },
-  link: {
-    cursor: "pointer",
-    color: "#676767",
-    fontSize: "11px",
-    fontWeight: "bold",
-    textDecoration: "none",
-    "&:hover": {
-      textDecoration: "underline",
-    },
-  },
-}));
+import LoginLayout from './LoginLayout';
+import useLoginStyles from './useLoginStyles';
 
 const RegisterPage = () => {
-  const { classes } = useStyles();
+  const { classes } = useLoginStyles();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const t = useTranslation();
@@ -122,13 +35,7 @@ const RegisterPage = () => {
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
-  const handleMouseDownPassword = (event) => {
-    event.preventDefault();
-  };
-
-  const handleMouseUpPassword = (event) => {
-    event.preventDefault();
-  };
+  const handlePreventDefault = (event) => event.preventDefault();
 
   useEffectAsync(async () => {
     if (totpForce) {
@@ -208,8 +115,8 @@ const RegisterPage = () => {
                       : "display the password"
                   }
                   onClick={handleClickShowPassword}
-                  onMouseDown={handleMouseDownPassword}
-                  onMouseUp={handleMouseUpPassword}
+                  onMouseDown={handlePreventDefault}
+                  onMouseUp={handlePreventDefault}
                   edge="end"
                   color="primary"
                 >
@@ -233,7 +140,7 @@ const RegisterPage = () => {
         <Button
           variant="contained"
           color="secondary"
-          className={classes.registerButton}
+          className={classes.actionButton}
           onClick={handleSubmit}
           type="submit"
           disabled={!name || !password || !(server.newServer || /(.+)@(.+)\.(.{2,})/.test(email))}
@@ -247,15 +154,15 @@ const RegisterPage = () => {
             className={classes.link}
             underline="none"
           >
-            Login
+            {t('loginLogin')}
           </Link>
           or
           <Link
-            onClick={() => navigate("/reset-password")}
+            onClick={() => navigate('/reset-password')}
             className={classes.link}
             underline="none"
           >
-            recover password
+            {t('loginReset')}
           </Link>
         </div>
       </div>

@@ -22,7 +22,7 @@ const LogoImage = () => {
   const logo = useSelector((state) => state.session.server.attributes?.logo);
 
   const logoUrl = logo || DEFAULT_LOGO;
-  return <img className={classes.image} src={logoUrl} alt="GSI Tracking" />;
+  return <img className={classes.image} src={logoUrl} alt="Logo" loading="eager" />;
 };
 
 export default LogoImage;

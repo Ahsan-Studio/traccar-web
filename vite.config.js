@@ -30,6 +30,15 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     plugins: [
+      {
+        name: "html-template-vars",
+        transformIndexHtml(html) {
+          return html
+            .replace(/\$\{title\}/g, "GSI Tracking")
+            .replace(/\$\{description\}/g, "GSI GPS Tracking System")
+            .replace(/\$\{colorPrimary\}/g, "#1976d2");
+        },
+      },
       svgr(),
       react(),
       VitePWA({
@@ -40,9 +49,9 @@ export default defineConfig(({ mode }) => {
           globPatterns: ["**/*.{js,css,html,woff,woff2,mp3}"],
         },
         manifest: {
-          short_name: "${title}",
-          name: "${description}",
-          theme_color: "${colorPrimary}",
+          short_name: "GSI Tracking",
+          name: "GSI GPS Tracking System",
+          theme_color: "#1976d2",
           icons: [
             {
               src: "pwa-64x64.png",

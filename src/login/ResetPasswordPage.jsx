@@ -1,106 +1,19 @@
 import { useState } from 'react';
-import {
-  Button, TextField, Link, Snackbar, InputAdornment,
-} from '@mui/material';
-import { makeStyles } from 'tss-react/mui';
-import { useNavigate } from 'react-router-dom';
-import LoginLayout from './LoginLayout';
-import { useTranslation } from '../common/components/LocalizationProvider';
-import useQuery from '../common/util/useQuery';
-import { snackBarDurationShortMs } from '../common/util/duration';
-import { useCatch } from '../reactHelper';
-import fetchOrThrow from '../common/util/fetchOrThrow';
 import PersonIcon from '@mui/icons-material/Person';
-
-const useStyles = makeStyles()((theme) => ({
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: theme.spacing(2),
-  },
-  inputField: {
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "#f5f5f5",
-      [theme.breakpoints.down("sm")]: {
-        fontSize: "0.9rem",
-      },
-      border: "1px solid #f5f5f5",
-      color: "#444444",
-      fontSize: "11px",
-      height: "40px",
-    },
-    "& .MuiInputLabel-root": {
-      color: "#666666",
-      [theme.breakpoints.down("sm")]: {
-        fontSize: "0.9rem",
-      },
-    },
-    "& .MuiInputAdornment-root": {
-      color: "#666666",
-      [theme.breakpoints.down("sm")]: {
-        "& .MuiSvgIcon-root": {
-          fontSize: "1.2rem",
-        },
-      },
-    },
-    "& .MuiInputBase-input.MuiOutlinedInput-input:-webkit-autofill": {
-      WebkitBoxShadow: "0 0 0 1000px #ffffff inset !important",
-      WebkitTextFillColor: "#444444 !important",
-      caretColor: "#444444",
-      transition: "background-color 5000s ease-in-out 0s"
-    }
-  },
-  resetButton: {
-    marginTop: theme.spacing(2),
-    padding: theme.spacing(1.5),
-    fontSize: "11px",
-    fontWeight: 500,
-    height: "40px",
-    backgroundColor: "#2b82d4",
-    color: "white",
-    "&:hover": {
-      backgroundColor: "#3875C5",
-    },
-    [theme.breakpoints.down("sm")]: {
-      padding: theme.spacing(1.25),
-      fontSize: "0.95rem",
-      marginTop: theme.spacing(1.5),
-    },
-    "&.Mui-disabled": {
-      backgroundColor: "#2b82d4", // tetap warna aktif
-      color: "white",             // tetap warna teks aktif
-      opacity: 1,                 // hilangkan efek transparan MUI
-      cursor: "not-allowed",      // biar kelihatan tidak bisa diklik
-    },
-  },
-  extraContainer: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    color: "#444444",
-    fontSize: "11px",
-    gap: theme.spacing(0.4),
-    marginTop: theme.spacing(2),
-    [theme.breakpoints.down("sm")]: {
-      gap: theme.spacing(2),
-      flexDirection: "column",
-      alignItems: "center",
-    },
-  },
-  link: {
-    cursor: "pointer",
-    color: "#676767",
-    fontSize: "11px",
-    fontWeight: "bold",
-    textDecoration: "none",
-    "&:hover": {
-      textDecoration: "underline",
-    },
-  },
-}));
+import {
+  Button, InputAdornment, Link, Snackbar, TextField,
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../common/components/LocalizationProvider';
+import { snackBarDurationShortMs } from '../common/util/duration';
+import fetchOrThrow from '../common/util/fetchOrThrow';
+import useQuery from '../common/util/useQuery';
+import { useCatch } from '../reactHelper';
+import LoginLayout from './LoginLayout';
+import useLoginStyles from './useLoginStyles';
 
 const ResetPasswordPage = () => {
-  const { classes } = useStyles();
+  const { classes } = useLoginStyles();
   const navigate = useNavigate();
   const t = useTranslation();
   const query = useQuery();
@@ -157,15 +70,18 @@ const ResetPasswordPage = () => {
             name="password"
             value={password}
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
+            className={classes.inputField}
             onChange={(event) => setPassword(event.target.value)}
+            fullWidth
+            variant="outlined"
           />
         )}
         <Button
           variant="contained"
           color="secondary"
           type="submit"
-          className={classes.resetButton}
+          className={classes.actionButton}
           onClick={handleSubmit}
           disabled={!/(.+)@(.+)\.(.{2,})/.test(email) && !password}
           fullWidth
@@ -174,19 +90,19 @@ const ResetPasswordPage = () => {
         </Button>
         <div className={classes.extraContainer}>
           <Link
-            onClick={() => navigate("/login")}
+            onClick={() => navigate('/login')}
             className={classes.link}
             underline="none"
           >
-            Login
+            {t('loginLogin')}
           </Link>
           or
           <Link
-            onClick={() => navigate("/register")}
+            onClick={() => navigate('/register')}
             className={classes.link}
             underline="none"
           >
-            create account
+            {t('loginRegister')}
           </Link>
         </div>
       </div>

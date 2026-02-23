@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Select,
   MenuItem,
@@ -21,7 +21,6 @@ import { makeStyles } from "tss-react/mui";
 import CloseIcon from "@mui/icons-material/Close";
 import VpnLockIcon from "@mui/icons-material/VpnLock";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
-
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { sessionActions } from "../store";
@@ -37,10 +36,10 @@ import {
   nativeEnvironment,
   nativePostMessage,
 } from "../common/components/NativeInterface";
-
 import { useCatch } from "../reactHelper";
 import QrCodeDialog from "../common/components/QrCodeDialog";
 import fetchOrThrow from "../common/util/fetchOrThrow";
+import useLoginStyles from "./useLoginStyles";
 
 const useStyles = makeStyles()((theme) => ({
   options: {
@@ -60,33 +59,6 @@ const useStyles = makeStyles()((theme) => ({
       gap: theme.spacing(2),
     },
   },
-  extraContainer: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    color: "#444444",
-    fontSize: "11px",
-    gap: theme.spacing(0.4),
-    marginTop: theme.spacing(2),
-    [theme.breakpoints.down("sm")]: {
-      gap: theme.spacing(2),
-      flexDirection: "column",
-      alignItems: "center",
-    },
-  },
-  registerButton: {
-    minWidth: "unset",
-  },
-  link: {
-    cursor: "pointer",
-    color: "#676767",
-    fontSize: "11px",
-    fontWeight: "bold",
-    textDecoration: "none",
-    "&:hover": {
-      textDecoration: "underline",
-    },
-  },
   serverInfo: {
     textAlign: "center",
     marginTop: theme.spacing(3),
@@ -104,38 +76,7 @@ const useStyles = makeStyles()((theme) => ({
       fontSize: "0.8rem",
     },
   },
-  inputField: {
-    "& .MuiInputBase-input.MuiOutlinedInput-input:-webkit-autofill": {
-      WebkitBoxShadow: "0 0 0 1000px transparent inset !important",
-      WebkitTextFillColor: "#444444 !important",
-      caretColor: "#444444",
-      transition: "background-color 5000s ease-in-out 0s",
-    },
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "#f5f5f5",
-      [theme.breakpoints.down("sm")]: {
-        fontSize: "0.9rem",
-      },
-      border: "1px solid #f5f5f5",
-      color: "#444444",
-      fontSize: "11px",
-      height: "40px",
-    },
-    "& .MuiInputLabel-root": {
-      color: "#666666",
-      [theme.breakpoints.down("sm")]: {
-        fontSize: "0.9rem",
-      },
-    },
-    "& .MuiInputAdornment-root": {
-      color: "#666666",
-      [theme.breakpoints.down("sm")]: {
-        "& .MuiSvgIcon-root": {
-          fontSize: "1.2rem",
-        },
-      },
-    },
-  },
+  // Login button is taller than the shared actionButton (50px vs 40px)
   loginButton: {
     marginTop: theme.spacing(2),
     padding: theme.spacing(1.5),
@@ -157,17 +98,22 @@ const useStyles = makeStyles()((theme) => ({
 
 const LoginPage = () => {
   const { classes } = useStyles();
+  const { classes: sharedClasses } = useLoginStyles();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const t = useTranslation();
 
   const { languages, language, setLanguage } = useLocalization();
-  const languageList = Object.entries(languages).map((values) => ({
-    code: values[0],
-    country: values[1].country,
-    name: values[1].name,
-  }));
+  const languageList = useMemo(
+    () =>
+      Object.entries(languages).map(([code, { country, name }]) => ({
+        code,
+        country,
+        name,
+      })),
+    [languages]
+  );
 
   const [failed, setFailed] = useState(false);
 
@@ -180,13 +126,7 @@ const LoginPage = () => {
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
-  const handleMouseDownPassword = (event) => {
-    event.preventDefault();
-  };
-
-  const handleMouseUpPassword = (event) => {
-    event.preventDefault();
-  };
+  const handlePreventDefault = (event) => event.preventDefault();
 
   const languageEnabled = useSelector((state) => {
     const attributes = state.session.server.attributes;
@@ -235,7 +175,7 @@ const LoginPage = () => {
       ) {
         setCodeEnabled(true);
       } else {
-        throw Error(await response.text());
+        throw new Error(await response.text());
       }
     } catch {
       setFailed(true);
@@ -262,7 +202,7 @@ const LoginPage = () => {
     const listener = (token) => handleTokenLogin(token);
     handleLoginTokenListeners.add(listener);
     return () => handleLoginTokenListeners.delete(listener);
-  }, []);
+  }, [handleTokenLogin]);
 
   useEffect(() => {
     if (window.localStorage.getItem("hostname") !== window.location.hostname) {
@@ -317,16 +257,16 @@ const LoginPage = () => {
             <TextField
               required
               error={failed}
-              placeholder="Username"
+              placeholder={t('userEmail')}
               name="email"
               value={email}
               autoComplete="email"
               autoFocus={!email}
               onChange={(e) => setEmail(e.target.value)}
-              helperText={failed && "Invalid username or password"}
+              helperText={failed && t('loginFailed')}
               fullWidth
               variant="outlined"
-              className={classes.inputField}
+              className={sharedClasses.inputField}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -338,7 +278,7 @@ const LoginPage = () => {
             <TextField
               required
               error={failed}
-              placeholder="Password"
+              placeholder={t('userPassword')}
               name="password"
               value={password}
               type={showPassword ? "text" : "password"}
@@ -347,7 +287,7 @@ const LoginPage = () => {
               onChange={(e) => setPassword(e.target.value)}
               fullWidth
               variant="outlined"
-              className={classes.inputField}
+              className={sharedClasses.inputField}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -363,8 +303,8 @@ const LoginPage = () => {
                           : "display the password"
                       }
                       onClick={handleClickShowPassword}
-                      onMouseDown={handleMouseDownPassword}
-                      onMouseUp={handleMouseUpPassword}
+                      onMouseDown={handlePreventDefault}
+                      onMouseUp={handlePreventDefault}
                       edge="end"
                       color="primary"
                     >
@@ -385,7 +325,7 @@ const LoginPage = () => {
                 onChange={(e) => setCode(e.target.value)}
                 fullWidth
                 variant="outlined"
-                className={classes.inputField}
+                className={sharedClasses.inputField}
               />
             )}
             <Button
@@ -395,13 +335,13 @@ const LoginPage = () => {
               fullWidth
               className={classes.loginButton}
             >
-              Login
+              {t('loginLogin')}
             </Button>
           </>
         )}
         {openIdEnabled && (
           <Button
-            onClick={() => handleOpenIdLogin()}
+            onClick={handleOpenIdLogin}
             variant="contained"
             color="primary"
             fullWidth
@@ -410,21 +350,21 @@ const LoginPage = () => {
             {t("loginOpenId")}
           </Button>
         )}
-        <div className={classes.extraContainer}>
+        <div className={sharedClasses.extraContainer}>
           <Link
             onClick={() => navigate("/reset-password")}
-            className={classes.link}
+            className={sharedClasses.link}
             underline="none"
           >
-            Recover password
+            {t('loginReset')}
           </Link>
           or
           <Link
             onClick={() => navigate("/register")}
-            className={classes.link}
+            className={sharedClasses.link}
             underline="none"
           >
-            create account
+            {t('loginRegister')}
           </Link>
         </div>
       </div>

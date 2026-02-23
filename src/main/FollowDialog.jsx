@@ -249,16 +249,26 @@ const FollowDialog = ({ open, onClose, device }) => {
     const speedText = formatSpeed(position.speed ?? 0, speedUnit, t);
     const labelText = `${device.name} (${speedText})`;
 
+    // Resolve device icon — same logic as DeviceRow.jsx / MapPositions.js
+    const rawIcon = device.attributes?.icon?.deviceImage;
+    let iconUrl;
+    if (rawIcon) {
+      const clean = rawIcon.replace('/img/markers/objects/', '').replace('.svg', '');
+      iconUrl = `/img/markers/objects/${clean}.svg`;
+    } else {
+      iconUrl = '/img/markers/objects/land-car.svg';
+    }
+
     if (!markerRef.current) {
-      // Arrow marker element — red arrow, rotated by course
+      // Marker element — device configured icon, rotated by course
       const el = document.createElement('div');
       el.style.cssText = 'width:28px;height:28px;cursor:pointer;';
 
       const img = document.createElement('img');
-      img.src = '/img/markers/arrow-red.svg';
+      img.src = iconUrl;
       img.style.cssText = 'width:100%;height:100%;object-fit:contain;';
       img.style.transform = `rotate(${course}deg)`;
-      img.onerror = () => { img.src = '/img/markers/arrow-black.svg'; };
+      img.onerror = () => { img.src = '/img/markers/objects/land-car.svg'; };
       el.appendChild(img);
 
       // Permanent label next to marker
@@ -285,10 +295,13 @@ const FollowDialog = ({ open, onClose, device }) => {
         .setLngLat(coordinates)
         .addTo(mapInstance.current);
     } else {
-      // Update position and rotation
+      // Update position, icon and rotation
       markerRef.current.setLngLat(coordinates);
       const img = markerRef.current.getElement().querySelector('img');
-      if (img) img.style.transform = `rotate(${course}deg)`;
+      if (img) {
+        img.src = iconUrl;
+        img.style.transform = `rotate(${course}deg)`;
+      }
       if (labelRef.current) labelRef.current.textContent = labelText;
     }
 

@@ -74,15 +74,15 @@ const MapView = ({ children }) => {
     (styleId) => savePersistedState('selectedMapStyle', styleId),
     () => {
       map.once('styledata', () => {
-        const waiting = () => {
-          if (!map.loaded()) {
-            setTimeout(waiting, 33);
-          } else {
-            initMap();
-            updateReadyValue(true);
-          }
+        const onIdle = () => {
+          initMap();
+          updateReadyValue(true);
         };
-        waiting();
+        if (map.loaded()) {
+          onIdle();
+        } else {
+          map.once('idle', onIdle);
+        }
       });
     },
   ), []);

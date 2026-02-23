@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { makeStyles } from "tss-react/mui";
 import {
   IconButton,
@@ -26,8 +25,6 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import BuildIcon from "@mui/icons-material/Build";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
 import { devicesActions } from "../store";
 import { useAdministrator } from "../common/util/permissions";
 import { useAttributePreference } from "../common/util/preferences";
@@ -35,8 +32,6 @@ import EditDeviceDialog from "../settings/object/EditDeviceDialog";
 import FollowDialog from "./FollowDialog";
 import useDeviceStatus from "../common/hooks/useDeviceStatus";
 import useDeviceMaintenance from "../common/hooks/useDeviceMaintenance";
-
-dayjs.extend(relativeTime);
 
 const useStyles = makeStyles()((theme) => ({
   icon: {
@@ -75,8 +70,6 @@ const DeviceRow = ({
 }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-
   const admin = useAdministrator();
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const visibility = useSelector((state) => state.devices.visibility);
@@ -84,14 +77,8 @@ const DeviceRow = ({
 
   const item = data[index];
   const position = useSelector((state) => state.session.positions[item.id]);
-
-  // Explicitly select position properties to trigger re-render
-  const positionOutdated = useSelector(
-    (state) => state.session.positions[item.id]?.outdated
-  );
-  const positionValid = useSelector(
-    (state) => state.session.positions[item.id]?.valid
-  );
+  const positionOutdated = position?.outdated;
+  const positionValid = position?.valid;
 
   const isVisible = visibility[item.id] !== false; // default true
   const isFocused = focused[item.id] === true; // default false
@@ -116,189 +103,117 @@ const DeviceRow = ({
   // Follow dialog state
   const [followDialogOpen, setFollowDialogOpen] = useState(false);
 
-  const handleMenuOpen = (event) => {
+  const handleMenuOpen = useCallback((event) => {
     event.stopPropagation();
     setMenuAnchorEl(event.currentTarget);
-  };
+  }, []);
 
-  const handleMenuClose = (event) => {
+  const handleMenuClose = useCallback((event) => {
     if (event) event.stopPropagation();
     setMenuAnchorEl(null);
-    setHistoryMenuAnchorEl(null); // Close submenu too
-  };
+    setHistoryMenuAnchorEl(null);
+  }, []);
 
-  const handleHistoryMenuOpen = (event) => {
+  const handleHistoryMenuOpen = useCallback((event) => {
     event.stopPropagation();
     setHistoryMenuAnchorEl(event.currentTarget);
-  };
+  }, []);
 
-  const handleHistoryMenuClose = (event) => {
+  const handleHistoryMenuClose = useCallback((event) => {
     if (event) event.stopPropagation();
     setHistoryMenuAnchorEl(null);
-  };
+  }, []);
 
-  const handleShowHistory = (period) => {
-    if (onShowHistory) {
-      // Use callback to trigger History tab in MainPage
-      const periodMap = {
-        lastHour: "1",
-        today: "2",
-        yesterday: "3",
-        before2days: "4",
-        before3days: "5",
-        thisWeek: "6",
-        lastWeek: "7",
-        thisMonth: "8",
-        lastMonth: "9",
-      };
-      onShowHistory(item.id, periodMap[period] || "2");
-      handleMenuClose();
-    } else {
-      // Fallback to navigate to replay page
-      const now = dayjs();
-      let from, to;
-
-      switch (period) {
-        case "lastHour":
-          from = now.subtract(1, "hour").toISOString();
-          to = now.toISOString();
-          break;
-        case "today":
-          from = now.startOf("day").toISOString();
-          to = now.toISOString();
-          break;
-        case "yesterday":
-          from = now.subtract(1, "day").startOf("day").toISOString();
-          to = now.subtract(1, "day").endOf("day").toISOString();
-          break;
-        case "before2days":
-          from = now.subtract(2, "day").startOf("day").toISOString();
-          to = now.subtract(2, "day").endOf("day").toISOString();
-          break;
-        case "before3days":
-          from = now.subtract(3, "day").startOf("day").toISOString();
-          to = now.subtract(3, "day").endOf("day").toISOString();
-          break;
-        case "thisWeek":
-          from = now.startOf("week").toISOString();
-          to = now.toISOString();
-          break;
-        case "lastWeek":
-          from = now.subtract(1, "week").startOf("week").toISOString();
-          to = now.subtract(1, "week").endOf("week").toISOString();
-          break;
-        case "thisMonth":
-          from = now.startOf("month").toISOString();
-          to = now.toISOString();
-          break;
-        case "lastMonth":
-          from = now.subtract(1, "month").startOf("month").toISOString();
-          to = now.subtract(1, "month").endOf("month").toISOString();
-          break;
-        default:
-          from = now.startOf("day").toISOString();
-          to = now.toISOString();
-      }
-
-      // Navigate to replay page with deviceId and time range
-      navigate(`/replay?deviceId=${item.id}&from=${from}&to=${to}`);
-      handleMenuClose();
-    }
-  };
-
-  const handleVisibilityToggle = (event) => {
+  const handleVisibilityToggle = useCallback((event) => {
     event.stopPropagation();
     dispatch(devicesActions.toggleVisibility(item.id));
-  };
+  }, [dispatch, item.id]);
 
-  const handleFocusToggle = (event) => {
+  const handleFocusToggle = useCallback((event) => {
     event.stopPropagation();
     dispatch(devicesActions.toggleFocused(item.id));
-  };
+  }, [dispatch, item.id]);
 
-  const handleEdit = () => {
-    handleMenuClose();
+  const handleEdit = useCallback(() => {
+    setMenuAnchorEl(null);
+    setHistoryMenuAnchorEl(null);
     setEditDialogOpen(true);
-  };
+  }, []);
 
-  const handleCloseEditDialog = () => {
-    setEditDialogOpen(false);
-  };
-
-  const handleFollow = () => {
-    handleMenuClose();
+  const handleFollow = useCallback(() => {
+    setMenuAnchorEl(null);
+    setHistoryMenuAnchorEl(null);
     setFollowDialogOpen(true);
-  };
+  }, []);
 
-  const handleFollowNewWindow = () => {
-    handleMenuClose();
-    // Open in new window/tab
+  const handleFollowNewWindow = useCallback(() => {
+    setMenuAnchorEl(null);
+    setHistoryMenuAnchorEl(null);
     window.open(`/follow/${item.id}`, "_blank");
-  };
+  }, [item.id]);
 
-  const handleCloseFollowDialog = () => {
-    setFollowDialogOpen(false);
-  };
+  const handleCloseEditDialog = useCallback(() => setEditDialogOpen(false), []);
+  const handleCloseFollowDialog = useCallback(() => setFollowDialogOpen(false), []);
 
-  const handleSendCommand = () => {
+  const handleSendCommand = useCallback(() => {
+    setMenuAnchorEl(null);
+    setHistoryMenuAnchorEl(null);
     if (onShowSendCommand) {
       onShowSendCommand(item.id);
     }
-  };
+  }, [onShowSendCommand, item.id]);
 
-  const devicePrimary = useAttributePreference("devicePrimary", "name");
+  const handleShowHistory = useCallback((period) => {
+    const periodMap = {
+      lastHour: "1",
+      today: "2",
+      yesterday: "3",
+      before2days: "4",
+      before3days: "5",
+      thisWeek: "6",
+      lastWeek: "7",
+      thisMonth: "8",
+      lastMonth: "9",
+    };
+    if (onShowHistory) {
+      onShowHistory(item.id, periodMap[period] || "2");
+    }
+    handleMenuClose();
+  }, [onShowHistory, item.id, handleMenuClose]);
 
-  // Get device icon from API and add proper path
-  const getDeviceIcon = () => {
+  const deviceIcon = useMemo(() => {
     const apiIcon = item.attributes?.icon?.deviceImage;
     if (apiIcon) {
-      // If API sends just filename (e.g., "land-school-bus.svg"), add path prefix
       if (!apiIcon.startsWith("/")) {
         return `/img/markers/objects/${apiIcon}`;
       }
       return apiIcon;
     }
     return "/img/markers/objects/land-car.svg";
-  };
-
-  const deviceIcon = getDeviceIcon();
+  }, [item.attributes?.icon?.deviceImage]);
 
   // Get user settings for color coding
   const user = useSelector((state) => state.session.user);
   const objectListSettings = user?.attributes?.objectList || {};
 
-  // Determine row background color based on status and settings
-  const getRowBackgroundColor = () => {
+  const rowBackgroundColor = useMemo(() => {
     const baseColor = index % 2 === 0 ? "#ffffff" : "#f8f9fa";
-
-    // Apply color coding if enabled in settings
-    if (
-      deviceStatus.type === "offline" &&
-      objectListSettings.noConnectionColorEnabled
-    ) {
+    if (deviceStatus.type === "offline" && objectListSettings.noConnectionColorEnabled) {
       return `#${objectListSettings.noConnectionColor || "FFAEAE"}`;
     }
-    if (
-      deviceStatus.type === "stopped" &&
-      objectListSettings.stoppedColorEnabled
-    ) {
+    if (deviceStatus.type === "stopped" && objectListSettings.stoppedColorEnabled) {
       return `#${objectListSettings.stoppedColor || "FFAEAE"}`;
     }
-    if (
-      deviceStatus.type === "moving" &&
-      objectListSettings.movingColorEnabled
-    ) {
+    if (deviceStatus.type === "moving" && objectListSettings.movingColorEnabled) {
       return `#${objectListSettings.movingColor || "B0E57C"}`;
     }
-    if (
-      deviceStatus.type === "idle" &&
-      objectListSettings.engineIdleColorEnabled
-    ) {
+    if (deviceStatus.type === "idle" && objectListSettings.engineIdleColorEnabled) {
       return `#${objectListSettings.engineIdleColor || "FFF0AA"}`;
     }
-
     return baseColor;
-  };
+  }, [index, deviceStatus.type, objectListSettings]);
+
+  const devicePrimary = useAttributePreference("devicePrimary", "name");
 
   return (
     <div style={style}>
@@ -316,7 +231,7 @@ const DeviceRow = ({
           padding: 0,
           height: "33px",
           borderBottom: "1px solid #e0e0e0",
-          backgroundColor: getRowBackgroundColor(),
+          backgroundColor: rowBackgroundColor,
           "&:hover": {
             backgroundColor:
               selectedDeviceId === item.id ? "#e3f2fd" : "#f5f5f5",
@@ -550,17 +465,13 @@ const DeviceRow = ({
               </Typography>
             </MenuItem>
             <MenuItem
+              disabled={!position}
               onClick={() => {
                 handleMenuClose();
-                if (position) {
-                  const lat = position.latitude;
-                  const lng = position.longitude;
-                  // Format Street View URL dengan parameter yang benar
-                  const streetViewUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m7!1e1!3m5!1e2!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com!7i16384!8i8192?entry=ttu`;
-                  window.open(streetViewUrl, "_blank");
-                } else {
-                  alert("Position not available for this device");
-                }
+                const lat = position.latitude;
+                const lng = position.longitude;
+                const streetViewUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m7!1e1!3m5!1e2!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com!7i16384!8i8192?entry=ttu`;
+                window.open(streetViewUrl, "_blank");
               }}
               sx={{
                 py: 1,
@@ -579,7 +490,7 @@ const DeviceRow = ({
               </Typography>
             </MenuItem>
             <MenuItem
-              onClick={handleMenuClose}
+              onClick={handleSendCommand}
               sx={{
                 py: 1,
                 px: 2,
@@ -592,10 +503,7 @@ const DeviceRow = ({
               <ListItemIcon sx={{ minWidth: 32 }}>
                 <SendIcon sx={{ fontSize: 18, color: "#666" }} />
               </ListItemIcon>
-              <Typography
-                sx={{ fontSize: "13px", color: "#333" }}
-                onClick={handleSendCommand}
-              >
+              <Typography sx={{ fontSize: "13px", color: "#333" }}>
                 Send command
               </Typography>
             </MenuItem>

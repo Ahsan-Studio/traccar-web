@@ -9,9 +9,7 @@ import { useTheme } from '@mui/material/styles';
 import { IconButton, Checkbox } from '@mui/material';
 import maplibregl from 'maplibre-gl';
 import { devicesActions } from '../store';
-import { useEffectAsync } from '../reactHelper';
 import DeviceRow from './DeviceRow';
-import fetchOrThrow from '../common/util/fetchOrThrow';
 import { map } from '../map/core/MapView';
 
 const useStyles = makeStyles()((theme) => ({
@@ -58,19 +56,14 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
     };
   }, []);
 
-  useEffectAsync(async () => {
-    const response = await fetchOrThrow('/api/devices');
-    dispatch(devicesActions.refresh(await response.json()));
-  }, []);
-
-  const toggleGroup = (groupId) => {
+  const toggleGroup = useCallback((groupId) => {
     setExpandedGroups(prev => ({
       ...prev,
       [groupId]: !prev[groupId]
     }));
-  };
+  }, []);
 
-  const handleGroupVisibilityToggle = (deviceIds, event) => {
+  const handleGroupVisibilityToggle = useCallback((deviceIds, event) => {
     event.stopPropagation();
     // Check if all devices are visible
     const allVisible = deviceIds.every(id => visibility[id] !== false);
@@ -79,7 +72,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
       deviceIds,
       visible: !allVisible
     }));
-  };
+  }, [visibility, dispatch]);
 
   const triggerZoomToDevices = useCallback((deviceIds) => {
     // Check if map is ready
@@ -131,7 +124,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
     }
   }, [positions]);
 
-  const handleGroupFocusToggle = (deviceIds, event) => {
+  const handleGroupFocusToggle = useCallback((deviceIds, event) => {
     event.stopPropagation();
     // Check if all devices are focused
     const allFocused = deviceIds.every(id => focused[id] === true);
@@ -141,15 +134,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
       deviceIds,
       focused: newFocusState
     }));
-
-    // Immediately trigger zoom if focusing
-    if (newFocusState) {
-      // Increase delay to ensure state is updated
-      setTimeout(() => {
-        triggerZoomToDevices(deviceIds);
-      }, 200);
-    }
-  };
+  }, [focused, dispatch]);
 
   // Effect to handle focus changes - zoom to all focused devices
   useEffect(() => {
@@ -236,7 +221,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
 
   // Row heights: header 23px, device 33px
 
-  const renderRow = ({ index, style }) => {
+  const renderRow = useCallback(({ index, style }) => {
   // ...existing code...
   // Row heights: header 23px, device 33px
     const item = groupedDevices[index];
@@ -320,7 +305,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
       onShowHistory={onShowHistory} 
       onShowSendCommand={onShowSendCommand} 
     />;
-  };
+  }, [groupedDevices, visibility, focused, onShowHistory, onShowSendCommand, handleGroupVisibilityToggle, handleGroupFocusToggle, toggleGroup]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: 10 }}>
@@ -359,7 +344,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
               height={height}
               itemCount={groupedDevices.length}
               itemSize={33}
-              overscanCount={10}
+              overscanCount={3}
               outerElementType={OuterElement}
             >
               {renderRow}

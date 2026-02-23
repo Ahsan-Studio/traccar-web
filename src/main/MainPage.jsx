@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Tabs,
   Tab,
@@ -205,8 +205,11 @@ const MainPage = () => {
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const positions = useSelector((state) => state.session.positions);
   const [filteredPositions, setFilteredPositions] = useState([]);
-  const selectedPosition = filteredPositions.find(
-    (position) => selectedDeviceId && position.deviceId === selectedDeviceId
+  const selectedPosition = useMemo(
+    () => filteredPositions.find(
+      (position) => selectedDeviceId && position.deviceId === selectedDeviceId,
+    ),
+    [filteredPositions, selectedDeviceId],
   );
 
   const [filteredDevices, setFilteredDevices] = useState([]);
@@ -260,13 +263,13 @@ const MainPage = () => {
     [map]
   );
 
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = useCallback((event, newValue) => {
     setCurrentTab(newValue);
-  };
+  }, []);
 
-  const handlePlacesTabChange = (event, newValue) => {
+  const handlePlacesTabChange = useCallback((event, newValue) => {
     setPlacesTab(newValue);
-  };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -301,64 +304,40 @@ const MainPage = () => {
 
   // Fetch counts for Places tabs when Places tab is active
   useEffect(() => {
-    if (currentTab === 2) {
-      // Places tab
-      const fetchCounts = async () => {
-        try {
-          // Fetch markers count (only if not already set by child component)
-          if (markersCount === 0) {
-            const markersRes = await fetchOrThrow(
-              "/api/markers?page=1&pageSize=1",
-              {
-                headers: { Accept: "application/json" },
-              }
-            );
-            const markersData = await markersRes.json();
-            if (markersData.total !== undefined) {
-              setMarkersCount(markersData.total);
-            } else if (Array.isArray(markersData)) {
-              setMarkersCount(markersData.length);
-            }
-          }
+    if (currentTab !== 2) return;
+    if (markersCount !== 0 && routesCount !== 0 && zonesCount !== 0) return;
 
-          // Fetch routes count (only if not already set by child component)
-          if (routesCount === 0) {
-            const routesRes = await fetchOrThrow(
-              "/api/routes?page=1&pageSize=1",
-              {
-                headers: { Accept: "application/json" },
-              }
-            );
-            const routesData = await routesRes.json();
-            if (routesData.total !== undefined) {
-              setRoutesCount(routesData.total);
-            } else if (Array.isArray(routesData)) {
-              setRoutesCount(routesData.length);
-            }
-          }
+    const fetchCounts = async () => {
+      try {
+        const endpoints = [
+          markersCount === 0 ? fetchOrThrow('/api/markers?page=1&pageSize=1', { headers: { Accept: 'application/json' } }) : null,
+          routesCount === 0 ? fetchOrThrow('/api/routes?page=1&pageSize=1', { headers: { Accept: 'application/json' } }) : null,
+          zonesCount === 0 ? fetchOrThrow('/api/zones?page=1&pageSize=1', { headers: { Accept: 'application/json' } }) : null,
+        ];
 
-          // Fetch zones count (only if not already set by child component)
-          if (zonesCount === 0) {
-            const zonesRes = await fetchOrThrow(
-              "/api/zones?page=1&pageSize=1",
-              {
-                headers: { Accept: "application/json" },
-              }
-            );
-            const zonesData = await zonesRes.json();
-            if (zonesData.total !== undefined) {
-              setZonesCount(zonesData.total);
-            } else if (Array.isArray(zonesData)) {
-              setZonesCount(zonesData.length);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching counts:", error);
-        }
-      };
+        const [markersRes, routesRes, zonesRes] = await Promise.all(
+          endpoints.map((p) => (p ? p.then((r) => r.json()) : Promise.resolve(null))),
+        );
 
-      fetchCounts();
-    }
+        const extractCount = (data) => {
+          if (!data) return null;
+          if (data.total !== undefined) return data.total;
+          if (Array.isArray(data)) return data.length;
+          return null;
+        };
+
+        const mc = extractCount(markersRes);
+        const rc = extractCount(routesRes);
+        const zc = extractCount(zonesRes);
+        if (mc !== null) setMarkersCount(mc);
+        if (rc !== null) setRoutesCount(rc);
+        if (zc !== null) setZonesCount(zc);
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+      }
+    };
+
+    fetchCounts();
   }, [currentTab, markersCount, routesCount, zonesCount]);
 
   useEffect(() => {

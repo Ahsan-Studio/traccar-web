@@ -1,4 +1,6 @@
-import { useId, useCallback, useEffect } from 'react';
+import {
+ useId, useCallback, useEffect, useRef 
+} from 'react';
 import { useSelector } from 'react-redux';
 import { useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -47,7 +49,7 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
   const mapCluster = useAttributePreference('mapCluster', true);
   const directionType = useAttributePreference('mapDirection', 'selected');
 
-  const createFeature = (devices, position, selectedPositionId) => {
+  const createFeature = useCallback((devices, position, selectedPositionId) => {
     const device = devices[position.deviceId];
     let showDirection;
     switch (directionType) {
@@ -89,10 +91,13 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
       rotation: position.course,
       direction: showDirection,
     };
-  };
+  }, [directionType, showStatus]);
 
-  const onMouseEnter = () => map.getCanvas().style.cursor = 'pointer';
-  const onMouseLeave = () => map.getCanvas().style.cursor = '';
+  const onMouseEnter = useCallback(() => { map.getCanvas().style.cursor = 'pointer'; }, []);
+  const onMouseLeave = useCallback(() => { map.getCanvas().style.cursor = ''; }, []);
+
+  const throttleRef = useRef(null);
+  const lastUpdateRef = useRef(0);
 
   const onMapClickCallback = useCallback((event) => {
     if (!event.defaultPrevented && onMapClick) {
@@ -251,9 +256,9 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
   }, [mapCluster, clusters, onMarkerClickCallback, onClusterClick]);
 
   useEffect(() => {
-    const updateMapPositions = async () => {
+    const applyUpdate = async () => {
       try {
-        // Load custom device icons jika ada
+        // Load custom device icons if needed
         const customIconsToLoad = new Set();
         positions
           .filter((it) => devices.hasOwnProperty(it.deviceId))
@@ -267,23 +272,20 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
               customIconsToLoad.add(customIcon);
             }
           });
-        
-        // Load semua custom icons dan tunggu selesai
+
         if (customIconsToLoad.size > 0) {
           await Promise.all(
-            Array.from(customIconsToLoad).map(iconName => loadCustomDeviceIcon(iconName))
+            Array.from(customIconsToLoad).map((iconName) => loadCustomDeviceIcon(iconName)),
           );
         }
-        
-        // Update map sources setelah icons loaded
+
         [id, selected].forEach((source) => {
           const mapSource = map.getSource(source);
-          if (!mapSource) {
-            return;
-          }
-          
-          const features = positions.filter((it) => devices.hasOwnProperty(it.deviceId))
-            .filter((it) => visibility[it.deviceId] !== false) // Filter by visibility
+          if (!mapSource) return;
+
+          const features = positions
+            .filter((it) => devices.hasOwnProperty(it.deviceId))
+            .filter((it) => visibility[it.deviceId] !== false)
             .filter((it) => (source === id ? it.deviceId !== selectedDeviceId : it.deviceId === selectedDeviceId))
             .map((position) => ({
               type: 'Feature',
@@ -293,19 +295,40 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
               },
               properties: createFeature(devices, position, selectedPosition && selectedPosition.id),
             }));
-          
-          mapSource.setData({
-            type: 'FeatureCollection',
-            features,
-          });
+
+          mapSource.setData({ type: 'FeatureCollection', features });
         });
       } catch (error) {
         console.error('[MapPositions] Error updating positions:', error);
       }
     };
-    
-    updateMapPositions();
-  }, [id, selected, selectedDeviceId, devices, positions, selectedPosition, visibility, theme]);
+
+    const THROTTLE_MS = 1000;
+    const now = Date.now();
+    const elapsed = now - lastUpdateRef.current;
+
+    if (throttleRef.current) {
+      clearTimeout(throttleRef.current);
+    }
+
+    if (elapsed >= THROTTLE_MS) {
+      // Enough time has passed — apply immediately
+      lastUpdateRef.current = now;
+      applyUpdate();
+    } else {
+      // Schedule for the remainder of the throttle window
+      throttleRef.current = setTimeout(() => {
+        lastUpdateRef.current = Date.now();
+        applyUpdate();
+      }, THROTTLE_MS - elapsed);
+    }
+
+    return () => {
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
+      }
+    };
+  }, [id, selected, selectedDeviceId, devices, positions, selectedPosition, visibility, createFeature]);
 
   return null;
 };

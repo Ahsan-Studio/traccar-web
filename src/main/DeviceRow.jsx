@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { makeStyles } from "tss-react/mui";
+import { useTranslation } from '../common/components/LocalizationProvider';
+import { formatSpeed } from '../common/util/formatter';
 import {
   IconButton,
   Tooltip,
@@ -20,7 +22,6 @@ import SendIcon from "@mui/icons-material/Send";
 import EditIcon from "@mui/icons-material/Edit";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import WifiIcon from "@mui/icons-material/Wifi";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
@@ -70,6 +71,7 @@ const DeviceRow = ({
 }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
+  const t = useTranslation();
   const admin = useAdministrator();
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const visibility = useSelector((state) => state.devices.visibility);
@@ -214,6 +216,7 @@ const DeviceRow = ({
   }, [index, deviceStatus.type, objectListSettings]);
 
   const devicePrimary = useAttributePreference("devicePrimary", "name");
+  const speedUnit = useAttributePreference('speedUnit', 'kmh');
 
   return (
     <div style={style}>
@@ -245,7 +248,7 @@ const DeviceRow = ({
         }}
       >
         {/* Checkbox 1: Visibility Toggle */}
-        <Tooltip title={isVisible ? "Sembunyikan marker" : "Tampilkan marker"}>
+        <Tooltip title={isVisible ? t('sharedHide') : 'Show marker'}>
           <Checkbox
             size="small"
             checked={isVisible}
@@ -261,7 +264,7 @@ const DeviceRow = ({
         </Tooltip>
 
         {/* Checkbox 2: Focus to Device */}
-        <Tooltip title="Fokus ke lokasi device">
+        <Tooltip title={t('deviceFollow') + ' / Center'}>
           <Checkbox
             size="small"
             checked={isFocused}
@@ -318,66 +321,68 @@ const DeviceRow = ({
         {/* Status Icons */}
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           <Typography sx={{ fontSize: "11px" }}>
-            {position ? `${position.speed.toFixed(1) || 0} kph` : "0 kph"}
+            {formatSpeed(position?.speed ?? 0, speedUnit, t)}
           </Typography>
 
           {position?.attributes?.ignition === false && (
-            <Tooltip title="Mesin Mati">
+            <Tooltip title={t('positionIgnition') + ': OFF'}>
               <Box
                 component="img"
-                src="https://s5.gsi-tracking.com/theme/images/engine-off.svg"
-                sx={{
-                  width: 16,
-                  height: 16,
-                }}
+                src="/img/theme/engine-off.svg"
+                sx={{ width: 16, height: 16 }}
               />
             </Tooltip>
           )}
           {position?.attributes?.ignition === true && (
-            <Tooltip title="Mesin Menyala">
+            <Tooltip title={t('positionIgnition') + ': ON'}>
               <Box
                 component="img"
-                src="https://s5.gsi-tracking.com/theme/images/engine-on.svg"
-                sx={{
-                  width: 16,
-                  height: 16,
-                }}
+                src="/img/theme/engine-on.svg"
+                sx={{ width: 16, height: 16 }}
               />
             </Tooltip>
           )}
           <Tooltip
             title={
-              positionValid && !positionOutdated
-                ? "Terkoneksi ke server, sinyal satelit normal"
-                : "Tidak ada koneksi ke server, tidak ada sinyal satelit"
+              !position
+                ? t('deviceStatusUnknown')
+                : !positionValid
+                  ? t('deviceStatusOffline')
+                  : positionOutdated
+                    ? t('deviceStatusOffline')
+                    : t('deviceStatusOnline')
             }
           >
-            <WifiIcon
-              sx={{
-                fontSize: 16,
-                color:
-                  positionValid && !positionOutdated ? "#4CAF50" : "#9e9e9e",
-              }}
+            <Box
+              component="img"
+              src={
+                !position || positionOutdated
+                  ? '/img/theme/connection-no.svg'
+                  : !positionValid
+                    ? '/img/theme/connection-gsm.svg'
+                    : '/img/theme/connection-gsm-gps.svg'
+              }
+              sx={{ width: 16, height: 16 }}
             />
           </Tooltip>
 
           {/* Service/Maintenance Alert */}
           {hasExpired && (
-            <Tooltip title="Service Expired! Segera lakukan perawatan">
+            <Tooltip title={`${t('eventMaintenance')} - Expired`}>
               <BuildIcon
                 sx={{
                   fontSize: 16,
-                  color: "#f44336", // Red
+                  color: "#f44336",
                 }}
               />
             </Tooltip>
           )}
           {!hasExpired && hasWarning && (
-            <Tooltip title="Service Warning - Segera jadwalkan perawatan">
+            <Tooltip title={`${t('eventMaintenance')} - Warning`}>
               <BuildIcon
                 sx={{
                   fontSize: 16,
-                  color: "#ff9800", // Orange
+                  color: "#ff9800",
                 }}
               />
             </Tooltip>

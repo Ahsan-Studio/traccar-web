@@ -21,8 +21,9 @@ import useFeatures from '../common/util/useFeatures';
 import MapRouteCoordinates from '../map/MapRouteCoordinates';
 import MapCamera from '../map/MapCamera';
 import MapRouteMarkers from '../map/MapRouteMarkers';
+import MapPlaybackMarker from '../map/MapPlaybackMarker';
 
-const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRoute }) => {
+const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRoute, playbackPosition, routeToggles }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
 
@@ -50,19 +51,26 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRo
         />
         {historyRoute && historyRoute.coordinates && (
           <>
-            <MapRouteCoordinates
-              name="History Route"
-              coordinates={historyRoute.coordinates}
-              deviceId={historyRoute.deviceId}
-              isHistoryRoute
+            {routeToggles?.route !== false && (
+              <MapRouteCoordinates
+                name="History Route"
+                coordinates={historyRoute.coordinates}
+                deviceId={historyRoute.deviceId}
+                isHistoryRoute
+              />
+            )}
+            <MapRouteMarkers
+              positions={historyRoute.positions}
+              showStops={routeToggles?.stops !== false}
+              showEvents={routeToggles?.events !== false}
             />
-            <MapRouteMarkers positions={historyRoute.positions} />
             <MapCamera 
               key={`history-${historyRoute.deviceId}-${historyRoute.coordinates.length}`}
               coordinates={historyRoute.coordinates} 
             />
           </>
         )}
+        {playbackPosition && <MapPlaybackMarker position={playbackPosition} />}
         {!historyRoute && <MapDefaultCamera />}
         <MapSelectedDevice />
         <PoiMap />

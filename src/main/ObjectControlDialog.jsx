@@ -19,7 +19,7 @@ import TemplatesTab from "./ObjectControlTabs/TemplatesTab";
 const useStyles = makeStyles()((theme) => ({
   dialog: {
     "& .MuiDialog-paper": {
-      width: "1200px",
+      width: "800px",
       maxWidth: "90vw",
       height: "600px",
       maxHeight: "80vh",
@@ -200,7 +200,7 @@ const ObjectControlDialog = ({ open, onClose, preselectedDeviceId }) => {
           )}
 
           {/* Schedule Tab */}
-          {currentTab === 1 && <ScheduleTab classes={classes} />}
+          {currentTab === 1 && <ScheduleTab classes={classes} showNotification={showNotification} />}
 
           {/* Templates Tab */}
           {currentTab === 2 && (

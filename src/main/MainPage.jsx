@@ -36,6 +36,7 @@ import HistoryTab from "./HistoryTab";
 import { map } from "../map/core/MapView";
 import dimensions from "../common/theme/dimensions";
 import ObjectControlDialog from "./ObjectControlDialog";
+import HistoryControls from "./HistoryControls";
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -236,6 +237,7 @@ const MainPage = () => {
   const [syncing, setSyncing] = useState(false);
   const [historyRoute, setHistoryRoute] = useState(null);
   const [historyTrigger, setHistoryTrigger] = useState(null); // { deviceId, period }
+  const [routeToggles, setRouteToggles] = useState({ route: true, stops: true, events: true });
 
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
 
@@ -249,19 +251,60 @@ const MainPage = () => {
     setObjectControlOpen(true);
   }, []);
 
-  // Handle graph point click - pan map to position
+  // Auto-select device when history route is loaded so DeviceInfoPanel shows
+  useEffect(() => {
+    if (historyRoute && historyRoute.deviceId) {
+      const deviceId = parseInt(historyRoute.deviceId, 10);
+      if (deviceId && deviceId !== selectedDeviceId) {
+        dispatch(devicesActions.selectId(deviceId));
+      }
+    }
+  }, [historyRoute, selectedDeviceId, dispatch]);
+
+  // Playback position state for moving marker on map
+  const [playbackPosition, setPlaybackPosition] = useState(null);
+
+  // Handle graph point click - pan map to position and update playback marker
   const handleGraphPointClick = useCallback(
     (pointData) => {
       if (map && pointData && pointData.latitude && pointData.longitude) {
+        // Update playback marker position
+        setPlaybackPosition({
+          latitude: pointData.latitude,
+          longitude: pointData.longitude,
+          course: pointData.course || 0,
+          speed: pointData.speed || 0,
+          timestamp: pointData.timestamp || null,
+          isPlaying: pointData.isPlaying || false,
+          playSpeed: pointData.playSpeed || 1,
+        });
+
         map.flyTo({
           center: [pointData.longitude, pointData.latitude],
           zoom: Math.max(map.getZoom(), 16),
-          duration: pointData.isPlaying ? 0 : 1000, // No animation during playback
+          duration: pointData.isPlaying ? 0 : 1000,
         });
       }
     },
     [map]
   );
+
+  // Clear playback marker and reset toggles when history route is removed
+  useEffect(() => {
+    if (!historyRoute) {
+      setPlaybackPosition(null);
+      setRouteToggles({ route: true, stops: true, events: true });
+    }
+  }, [historyRoute]);
+
+  const handleRouteToggle = useCallback((key) => {
+    setRouteToggles((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const handleRouteClose = useCallback(() => {
+    setHistoryRoute(null);
+    setPlaybackPosition(null);
+  }, []);
 
   const handleTabChange = useCallback((event, newValue) => {
     setCurrentTab(newValue);
@@ -635,7 +678,16 @@ const MainPage = () => {
               selectedPosition={selectedPosition}
               onEventsClick={onEventsClick}
               historyRoute={historyRoute}
+              playbackPosition={playbackPosition}
+              routeToggles={routeToggles}
             />
+            {historyRoute && (
+              <HistoryControls
+                toggles={routeToggles}
+                onToggle={handleRouteToggle}
+                onClose={handleRouteClose}
+              />
+            )}
           </div>
         </div>
       </div>

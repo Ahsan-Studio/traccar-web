@@ -6,13 +6,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
+  Checkbox,
   IconButton,
-  Typography,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import CheckIcon from "@mui/icons-material/Check";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SettingsIcon from "@mui/icons-material/Settings";
 import { useSelector } from "react-redux";
 import { formatTime } from "../../common/util/formatter";
 import {
@@ -25,12 +27,15 @@ import RemoveDialog from "../../common/components/RemoveDialog";
 const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [selectedCommand, setSelectedCommand] = useState();
+  const [cmdType, setCmdType] = useState("ascii");
   const [commandData, setCommandData] = useState("");
   const [commandHistory, setCommandHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [templates, setTemplates] = useState([]);
   const [removingCommandId, setRemovingCommandId] = useState(null);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [hexError, setHexError] = useState(false);
 
   const devices = useSelector((state) => state.devices.items);
 
@@ -208,124 +213,174 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
     setRemovingCommandId(null);
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedRows.length === 0) return;
+    if (!window.confirm(`Delete ${selectedRows.length} selected history item(s)?`)) return;
+    try {
+      await Promise.all(
+        selectedRows.map((id) =>
+          fetch(`/api/commands/history/${id}`, { method: "DELETE" })
+        )
+      );
+      showNotification("Selected commands deleted", "success");
+      setSelectedRows([]);
+      fetchCommandHistory();
+    } catch (err) {
+      showNotification(`Error: ${err.message}`, "error");
+    }
+  };
+
+  const isValidHex = (val) => /^[0-9a-fA-F\s]*$/.test(val);
+
+  const handleCommandDataChange = (e) => {
+    const val = e.target.value;
+    setCommandData(val);
+    if (cmdType === "hex") {
+      setHexError(val.trim() !== "" && !isValidHex(val));
+    } else {
+      setHexError(false);
+    }
+  };
+
+  const rowStyle = { display: 'flex', alignItems: 'center', marginBottom: 4 };
+  const labelStyle = { fontSize: 11, color: '#444', width: '20%', flexShrink: 0 };
+  const sendBtnStyle = { height: 22, fontSize: 11, backgroundColor: '#f5f5f5', border: '1px solid #dddddd', color: '#444', width: '100%' };
+
   return (
     <div
       className={classes.tabPanel}
       style={{ position: "relative", height: "100%" }}
     >
       <div className={classes.gprsPanel}>
-        <div className={classes.commandRow}>
-          <Typography
-            variant="body2"
-            style={{ fontSize: "11px", minWidth: "60px" }}
-          >
-            Object
-          </Typography>
-          <CustomSelect
-            value={selectedDevice}
-            onChange={(value) => setSelectedDevice(value)}
-            options={[
-              { value: "", label: "Nothing selected" },
-              ...Object.values(devices).map((device) => ({
-                value: device.id.toString(),
-                label: device.name,
-              })),
-            ]}
-            placeholder="Nothing selected"
-            className={classes.selectField}
-          />
-
-          <Typography
-            variant="body2"
-            style={{ fontSize: "11px", minWidth: "80px" }}
-          >
-            Template
-          </Typography>
-          <CustomSelect
-            value={selectedTemplate}
-            onChange={(value) => handleTemplateChange(value)}
-            options={[
-              { value: "", label: "None" },
-              ...templates
-                .filter((t) => t.category === "Default")
-                .map((template) => ({
-                  value: template.type,
-                  label: `Default - ${template.description}`,
+        {/* Row 1: Object + Template */}
+        <div style={rowStyle}>
+          <span style={labelStyle}>Object</span>
+          <div style={{ width: '29%' }}>
+            <CustomSelect
+              value={selectedDevice}
+              onChange={(value) => setSelectedDevice(value)}
+              options={[
+                { value: "", label: "Nothing selected" },
+                ...Object.values(devices).map((device) => ({
+                  value: device.id.toString(),
+                  label: device.name,
                 })),
-              ...templates
-                .filter((t) => t.category === "Custom")
-                .map((template) => ({
-                  value: template.id.toString(),
-                  label: `Custom - ${template.description}`,
-                })),
-            ]}
-            placeholder="Select template"
-            className={classes.selectField}
-          />
+              ]}
+              placeholder="Nothing selected"
+            />
+          </div>
+          <div style={{ width: 8 }} />
+          <span style={labelStyle}>Template</span>
+          <div style={{ flex: 1 }}>
+            <CustomSelect
+              value={selectedTemplate}
+              onChange={(value) => handleTemplateChange(value)}
+              options={[
+                { value: "", label: "Custom" },
+                ...templates
+                  .filter((t) => t.category === "Default")
+                  .map((template) => ({
+                    value: template.type,
+                    label: template.description,
+                  })),
+                ...templates
+                  .filter((t) => t.category === "Custom")
+                  .map((template) => ({
+                    value: template.id.toString(),
+                    label: template.description,
+                  })),
+              ]}
+              placeholder="Custom"
+            />
+          </div>
+        </div>
 
-          <CustomInput
-            value={commandData}
-            onChange={(e) => setCommandData(e.target.value)}
-            placeholder="Enter command data"
-            style={{ flex: 1 }}
-          />
-
-          <CustomButton
-            variant="contained"
-            color="success"
-            onClick={handleSendCommand}
-            disabled={loading || !selectedDevice}
-            style={{ minWidth: "80px", height: "24px" }}
-          >
-            Send
-          </CustomButton>
+        {/* Row 2: Command type + input + Send */}
+        <div style={rowStyle}>
+          <span style={labelStyle}>Command</span>
+          <div style={{ width: '26%', minWidth: 70 }}>
+            <CustomSelect
+              value={cmdType}
+              onChange={(v) => setCmdType(v)}
+              options={[
+                { value: 'ascii', label: 'ASCII' },
+                { value: 'hex', label: 'HEX' },
+              ]}
+            />
+          </div>
+          <div style={{ width: 8 }} />
+          <div style={{ flex: 1 }}>
+            <CustomInput
+              value={commandData}
+              onChange={handleCommandDataChange}
+              placeholder=""
+              style={hexError ? { border: "1px solid #f44336", borderRadius: 3 } : {}}
+            />
+            {hexError && (
+              <div style={{ color: "#f44336", fontSize: 10, marginTop: 2 }}>
+                Invalid HEX input (only 0-9, a-f allowed)
+              </div>
+            )}
+          </div>
+          <div style={{ width: 8 }} />
+          <div style={{ width: '13%', minWidth: 60 }}>
+            <CustomButton
+              onClick={handleSendCommand}
+              disabled={loading || !selectedDevice || hexError}
+              style={sendBtnStyle}
+            >
+              Send
+            </CustomButton>
+          </div>
         </div>
 
         <TableContainer>
           <Table className={classes.table}>
             <TableHead>
               <TableRow>
-                <TableCell>Time</TableCell>
+                <TableCell padding="checkbox" style={{ width: 32 }}>
+                  <Checkbox
+                    size="small"
+                    indeterminate={selectedRows.length > 0 && selectedRows.length < commandHistory.length}
+                    checked={commandHistory.length > 0 && selectedRows.length === commandHistory.length}
+                    onChange={(e) => setSelectedRows(e.target.checked ? commandHistory.map((r) => r.id) : [])}
+                    sx={{ padding: '2px' }}
+                  />
+                </TableCell>
+                <TableCell style={{ width: 32 }} />
+                <TableCell>
+                  <TableSortLabel active direction="desc">
+                    Time
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell>Object</TableCell>
-                <TableCell>Type</TableCell>
+                <TableCell>Name</TableCell>
                 <TableCell>Command</TableCell>
-                <TableCell>Result</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell />
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">
+                  <TableCell colSpan={7} align="center">
                     <CircularProgress size={24} />
                   </TableCell>
                 </TableRow>
               ) : commandHistory.length > 0 ? (
                 commandHistory.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      {item.sentTime ? formatTime(item.sentTime) : "-"}
-                    </TableCell>
-                    <TableCell>{getDeviceName(item.deviceId)}</TableCell>
-                    <TableCell>{item.type}</TableCell>
-                    <TableCell>{item.attributes?.data || "-"}</TableCell>
-                    <TableCell>
-                      {item.result ? (
-                        <Typography
-                          variant="body2"
-                          style={{ fontSize: "11px" }}
-                        >
-                          {item.result}
-                        </Typography>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <CheckIcon
-                        className={classes.statusSuccess}
-                        fontSize="small"
+                  <TableRow
+                    key={item.id}
+                    selected={selectedRows.includes(item.id)}
+                    hover
+                  >
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        size="small"
+                        checked={selectedRows.includes(item.id)}
+                        onChange={(e) => setSelectedRows((prev) =>
+                          e.target.checked ? [...prev, item.id] : prev.filter((id) => id !== item.id)
+                        )}
+                        sx={{ padding: '2px' }}
                       />
                     </TableCell>
                     <TableCell>
@@ -334,15 +389,20 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
                         className={classes.iconButton}
                         onClick={() => handleDeleteCommand(item.id)}
                       >
-                        <DeleteIcon fontSize="small" />
+                        <DeleteIcon sx={{ fontSize: 14 }} />
                       </IconButton>
                     </TableCell>
+                    <TableCell>{item.sentTime ? formatTime(item.sentTime) : "-"}</TableCell>
+                    <TableCell>{getDeviceName(item.deviceId)}</TableCell>
+                    <TableCell>{item.type}</TableCell>
+                    <TableCell>{item.attributes?.data || "-"}</TableCell>
+                    <TableCell style={{ color: '#4caf50' }}>{item.result || 'sent'}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className={classes.emptyState}>
-                    No commands sent yet. Select a device and send a command.
+                  <TableCell colSpan={7} className={classes.emptyState}>
+                    No commands sent yet.
                   </TableCell>
                 </TableRow>
               )}
@@ -351,22 +411,41 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
         </TableContainer>
       </div>
 
-      <IconButton
-        onClick={fetchCommandHistory}
-        disabled={loading || !selectedDevice}
-        style={{
-          position: "absolute",
-          bottom: 16,
-          left: 16,
-          backgroundColor: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: "4px",
-          zIndex: 10,
-        }}
-        size="small"
-      >
-        <RefreshIcon />
-      </IconButton>
+      {selectedRows.length > 0 && (
+        <div style={{ padding: '4px 0' }}>
+          <Tooltip title={`Delete ${selectedRows.length} selected`}>
+            <IconButton
+              size="small"
+              onClick={handleDeleteSelected}
+              style={{ backgroundColor: '#fff3f3', border: '1px solid #f44336', borderRadius: '4px', marginBottom: 4 }}
+            >
+              <DeleteIcon sx={{ fontSize: 14, color: '#f44336' }} />
+            </IconButton>
+          </Tooltip>
+          <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>{selectedRows.length} selected</span>
+        </div>
+      )}
+
+      <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 4, zIndex: 10 }}>
+        <Tooltip title="Refresh">
+          <IconButton
+            onClick={fetchCommandHistory}
+            disabled={loading || !selectedDevice}
+            style={{ backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}
+            size="small"
+          >
+            <RefreshIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Settings">
+          <IconButton
+            style={{ backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}
+            size="small"
+          >
+            <SettingsIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+      </div>
 
       <RemoveDialog
         open={!!removingCommandId}

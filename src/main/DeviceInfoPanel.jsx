@@ -1,5 +1,5 @@
 import {
- useState, useEffect, useRef, useCallback 
+ useState, useEffect, useRef, useCallback, useMemo 
 } from 'react';
 import {
   Box,
@@ -71,6 +71,7 @@ import {
 import { devicesActions } from '../store';
 import usePositionAttributes from '../common/attributes/usePositionAttributes';
 import fetchOrThrow from '../common/util/fetchOrThrow';
+import { map } from '../map/core/MapView';
 
 const useStyles = makeStyles()(() => ({
   root: {
@@ -217,6 +218,13 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
   // Graph zoom/pan state
   const [xAxisDomain, setXAxisDomain] = useState(['dataMin', 'dataMax']);
   const [currentGraphInfo, setCurrentGraphInfo] = useState(null);
+
+  // Messages tab state
+  const [messagesData, setMessagesData] = useState([]);
+  const [messagesPage, setMessagesPage] = useState(0);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [expandedRow, setExpandedRow] = useState(null);
+  const messagesPageSize = 50;
 
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const devices = useSelector((state) => state.devices.items);
@@ -391,73 +399,176 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
     }
   }, [device, positionAttributes, speedUnit, altitudeUnit, distanceUnit, volumeUnit]);
 
+  // Downsample array using LTTB (Largest Triangle Three Buckets) simplified
+  const downsampleData = useCallback((data, maxPoints, valueKey) => {
+    if (data.length <= maxPoints) return data;
+    
+    const sampled = [data[0]]; // Always keep first
+    const bucketSize = (data.length - 2) / (maxPoints - 2);
+    
+    for (let i = 1; i < maxPoints - 1; i += 1) {
+      const start = Math.floor((i - 1) * bucketSize) + 1;
+      const end = Math.min(Math.floor(i * bucketSize) + 1, data.length - 1);
+      
+      // Pick the point with max absolute value in this bucket (preserves peaks)
+      let maxVal = -Infinity;
+      let maxIdx = start;
+      for (let j = start; j < end; j += 1) {
+        const val = Math.abs(data[j][valueKey] || 0);
+        if (val > maxVal) {
+          maxVal = val;
+          maxIdx = j;
+        }
+      }
+      sampled.push(data[maxIdx]);
+    }
+    
+    sampled.push(data[data.length - 1]); // Always keep last
+    return sampled;
+  }, []);
+
   // Load data from history route when available
   useEffect(() => {
     if (historyRoute && historyRoute.positions && historyRoute.positions.length > 0) {
       setLoadingGraph(true);
       
-      const keySet = new Set();
-      const keyList = [];
-      
-      const formattedPositions = historyRoute.positions.map((pos) => {
-        const data = { ...pos, ...pos.attributes };
-        const formatted = {};
-        formatted.fixTime = dayjs(pos.fixTime).valueOf();
-        formatted.deviceTime = dayjs(pos.deviceTime).valueOf();
-        formatted.serverTime = dayjs(pos.serverTime).valueOf();
+      // Use requestAnimationFrame to avoid blocking UI
+      requestAnimationFrame(() => {
+        const keySet = new Set();
+        const keyList = [];
+        const positions = historyRoute.positions;
         
-        Object.keys(data)
-          .filter((key) => !['id', 'deviceId'].includes(key))
-          .forEach((key) => {
-            const value = data[key];
-            if (typeof value === 'number') {
-              keySet.add(key);
-              const definition = positionAttributes[key] || {};
-              switch (definition.dataType) {
-                case 'speed':
-                  formatted[key] = speedFromKnots(value, speedUnit);
-                  break;
-                case 'altitude':
-                  formatted[key] = altitudeFromMeters(value, altitudeUnit);
-                  break;
-                case 'distance':
-                  formatted[key] = distanceFromMeters(value, distanceUnit);
-                  break;
-                case 'volume':
-                  formatted[key] = volumeFromLiters(value, volumeUnit);
-                  break;
-                case 'hours':
-                  formatted[key] = value / 1000;
-                  break;
-                default:
-                  formatted[key] = value;
-                  break;
+        // Only process essential keys for graph (speed, altitude, etc)
+        // Skip spreading all attributes for each position — only extract numeric ones
+        const formattedPositions = new Array(positions.length);
+        for (let i = 0; i < positions.length; i += 1) {
+          const pos = positions[i];
+          const formatted = {
+            fixTime: dayjs(pos.fixTime).valueOf(),
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+          };
+          
+          // Core position fields
+          const numericFields = { speed: pos.speed, altitude: pos.altitude, course: pos.course };
+          // Merge numeric attributes
+          if (pos.attributes) {
+            const attrs = pos.attributes;
+            const attrKeys = Object.keys(attrs);
+            for (let k = 0; k < attrKeys.length; k += 1) {
+              const key = attrKeys[k];
+              if (typeof attrs[key] === 'number') {
+                numericFields[key] = attrs[key];
               }
             }
-          });
-        return formatted;
-      });
-      
-      Object.keys(positionAttributes).forEach((key) => {
-        if (keySet.has(key)) {
-          keyList.push(key);
-          keySet.delete(key);
+          }
+          
+          const fieldKeys = Object.keys(numericFields);
+          for (let k = 0; k < fieldKeys.length; k += 1) {
+            const key = fieldKeys[k];
+            const value = numericFields[key];
+            if (value == null) continue;
+            keySet.add(key);
+            const definition = positionAttributes[key] || {};
+            switch (definition.dataType) {
+              case 'speed':
+                formatted[key] = speedFromKnots(value, speedUnit);
+                break;
+              case 'altitude':
+                formatted[key] = altitudeFromMeters(value, altitudeUnit);
+                break;
+              case 'distance':
+                formatted[key] = distanceFromMeters(value, distanceUnit);
+                break;
+              case 'volume':
+                formatted[key] = volumeFromLiters(value, volumeUnit);
+                break;
+              case 'hours':
+                formatted[key] = value / 1000;
+                break;
+              default:
+                formatted[key] = value;
+                break;
+            }
+          }
+          formattedPositions[i] = formatted;
         }
+        
+        Object.keys(positionAttributes).forEach((key) => {
+          if (keySet.has(key)) {
+            keyList.push(key);
+            keySet.delete(key);
+          }
+        });
+        
+        const allTypes = [...keyList, ...keySet];
+        setGraphTypes(allTypes);
+        
+        // Downsample for chart rendering — keep max 2000 points for smooth chart
+        const graphData = downsampleData(formattedPositions, 2000, 'speed');
+        setGraphItems(graphData);
+        setHasLoadedGraph(true);
+        setLoadingGraph(false);
+        
+        // Auto-switch to Graph tab when history route loads
+        setTab(1);
+        // Reset playback to start
+        setPlayIndex(0);
+        setIsPlaying(false);
+        setXAxisDomain(['dataMin', 'dataMax']);
       });
-      
-      const allTypes = [...keyList, ...keySet];
-      setGraphTypes(allTypes);
-      setGraphItems(formattedPositions);
-      setHasLoadedGraph(true);
-      setLoadingGraph(false);
     }
-  }, [historyRoute, positionAttributes, speedUnit, altitudeUnit, distanceUnit, volumeUnit]);
+  }, [historyRoute, positionAttributes, speedUnit, altitudeUnit, distanceUnit, volumeUnit, downsampleData]);
 
   useEffect(() => {
     if (tab === 1 && !hasLoadedGraph && device && !historyRoute) {
       loadGraphData();
     }
   }, [tab, device, hasLoadedGraph, loadGraphData, historyRoute]);
+
+  // Load messages data when Messages tab is selected
+  useEffect(() => {
+    if (tab === 2) {
+      if (historyRoute && historyRoute.positions && historyRoute.positions.length > 0) {
+        // Use history route positions as messages
+        setMessagesData(historyRoute.positions);
+        setMessagesPage(0);
+      } else if (device && messagesData.length === 0) {
+        // Load last 24h positions for messages
+        const loadMessages = async () => {
+          setMessagesLoading(true);
+          try {
+            const to = dayjs();
+            const from = to.subtract(24, 'hour');
+            const query = new URLSearchParams({
+              deviceId: device.id,
+              from: from.toISOString(),
+              to: to.toISOString(),
+            });
+            const response = await fetchOrThrow(`/api/reports/route?${query.toString()}`, {
+              headers: { Accept: 'application/json' },
+            });
+            const positions = await response.json();
+            setMessagesData(positions);
+            setMessagesPage(0);
+          } catch (error) {
+            console.error('Error loading messages:', error);
+          } finally {
+            setMessagesLoading(false);
+          }
+        };
+        loadMessages();
+      }
+    }
+  }, [tab, historyRoute, device]);
+
+  // Update messages when history route changes
+  useEffect(() => {
+    if (historyRoute && historyRoute.positions) {
+      setMessagesData(historyRoute.positions);
+      setMessagesPage(0);
+    }
+  }, [historyRoute]);
 
   // Playback logic
   useEffect(() => {
@@ -484,13 +595,16 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
         onGraphPointClick({
           latitude: point.latitude,
           longitude: point.longitude,
+          course: point.course || 0,
+          speed: point.speed || 0,
           index: playIndex,
           timestamp: point.fixTime,
           isPlaying,
+          playSpeed,
         });
       }
     }
-  }, [playIndex, graphItems, onGraphPointClick, isPlaying]);
+  }, [playIndex, graphItems, onGraphPointClick, isPlaying, playSpeed]);
 
   const handlePlay = useCallback(() => {
     if (graphItems.length === 0) return;
@@ -528,6 +642,8 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
           onGraphPointClick({
             latitude: point.latitude,
             longitude: point.longitude,
+            course: point.course || 0,
+            speed: point.speed || 0,
             index,
             timestamp: point.fixTime,
             isPlaying: false,
@@ -1198,6 +1314,7 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
                             dataKey={type}
                             stroke={colors[index % colors.length]}
                             dot={false}
+                            isAnimationActive={false}
                             name={positionAttributes[type]?.name || type}
                           />
                         );
@@ -1211,10 +1328,168 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
         )}
 
         {tab === 2 && (
-          <Box className={classes.content}>
-            <Typography variant="body2" color="textSecondary" align="center">
-              Messages - Coming soon
-            </Typography>
+          <Box className={classes.content} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {messagesLoading ? (
+              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <CircularProgress />
+              </Box>
+            ) : messagesData.length === 0 ? (
+              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                <Typography variant="body2" color="textSecondary">
+                  No messages available. Load history or wait for tracking data.
+                </Typography>
+              </Box>
+            ) : (
+              <>
+                {/* Messages Table */}
+                <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                  <table style={{ 
+                    width: '100%', 
+                    borderCollapse: 'collapse', 
+                    fontSize: '11px',
+                    fontFamily: 'inherit',
+                  }}>
+                    <thead>
+                      <tr style={{ 
+                        backgroundColor: '#f5f5f5', 
+                        position: 'sticky', 
+                        top: 0, 
+                        zIndex: 1 
+                      }}>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap' }}>#</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap' }}>Time (Device)</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap' }}>Time (Server)</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>Lat</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>Lng</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>Alt</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>Course</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap' }}>Speed</th>
+                        <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap' }}>Attrs</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {messagesData
+                        .slice(messagesPage * messagesPageSize, (messagesPage + 1) * messagesPageSize)
+                        .map((pos, idx) => {
+                          const globalIdx = messagesPage * messagesPageSize + idx;
+                          const isExpanded = expandedRow === globalIdx;
+                          const attrs = pos.attributes || {};
+                          const attrKeys = Object.keys(attrs).filter((k) => !['fixTime', 'deviceTime', 'serverTime'].includes(k));
+                          
+                          return [
+                            <tr 
+                              key={`row-${globalIdx}`}
+                              style={{ 
+                                backgroundColor: globalIdx % 2 === 0 ? '#fff' : '#f9f9f9',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => {
+                                setExpandedRow(isExpanded ? null : globalIdx);
+                                // Pan map to this position
+                                if (pos.latitude && pos.longitude && map) {
+                                  map.flyTo({
+                                    center: [pos.longitude, pos.latitude],
+                                    zoom: Math.max(map.getZoom(), 16),
+                                    duration: 1000,
+                                  });
+                                }
+                              }}
+                            >
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', color: '#888' }}>{globalIdx + 1}</td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', whiteSpace: 'nowrap' }}>
+                                {pos.fixTime ? dayjs(pos.fixTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                              </td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', whiteSpace: 'nowrap' }}>
+                                {pos.serverTime ? dayjs(pos.serverTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                              </td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', textAlign: 'right' }}>
+                                {pos.latitude?.toFixed(6) || '-'}
+                              </td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', textAlign: 'right' }}>
+                                {pos.longitude?.toFixed(6) || '-'}
+                              </td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', textAlign: 'right' }}>
+                                {pos.altitude != null ? `${altitudeFromMeters(pos.altitude, altitudeUnit).toFixed(0)}` : '-'}
+                              </td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', textAlign: 'right' }}>
+                                {pos.course != null ? `${pos.course.toFixed(0)}°` : '-'}
+                              </td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', textAlign: 'right' }}>
+                                {pos.speed != null ? `${speedFromKnots(pos.speed, speedUnit).toFixed(1)}` : '-'}
+                              </td>
+                              <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee' }}>
+                                {attrKeys.length > 0 ? (
+                                  <span style={{ color: '#1976d2', fontSize: '10px' }}>
+                                    {isExpanded ? '▼' : '▶'} {attrKeys.length}
+                                  </span>
+                                ) : '-'}
+                              </td>
+                            </tr>,
+                            isExpanded && attrKeys.length > 0 && (
+                              <tr key={`attrs-${globalIdx}`} style={{ backgroundColor: '#f0f4ff' }}>
+                                <td colSpan={9} style={{ padding: '4px 8px 4px 32px', borderBottom: '1px solid #ddd' }}>
+                                  <div style={{ 
+                                    display: 'grid', 
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+                                    gap: '2px 16px',
+                                    fontSize: '10px',
+                                  }}>
+                                    {attrKeys.map((key) => (
+                                      <div key={key} style={{ display: 'flex', gap: '4px' }}>
+                                        <span style={{ color: '#666', fontWeight: 500 }}>{key}:</span>
+                                        <span style={{ color: '#333' }}>
+                                          {typeof attrs[key] === 'boolean' ? (attrs[key] ? 'true' : 'false') : String(attrs[key])}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            ),
+                          ];
+                        })}
+                    </tbody>
+                  </table>
+                </Box>
+
+                {/* Pagination Bar */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  px: 2, 
+                  py: 0.5,
+                  borderTop: '1px solid #e0e0e0',
+                  backgroundColor: '#f5f5f5',
+                  minHeight: '28px',
+                }}>
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#666' }}>
+                    {messagesData.length} messages
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setMessagesPage((p) => Math.max(0, p - 1))}
+                      disabled={messagesPage === 0}
+                      sx={{ width: 24, height: 24 }}
+                    >
+                      <ChevronLeftIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <Typography variant="caption" sx={{ fontSize: '0.7rem', minWidth: '60px', textAlign: 'center' }}>
+                      {messagesPage + 1} / {Math.max(1, Math.ceil(messagesData.length / messagesPageSize))}
+                    </Typography>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setMessagesPage((p) => Math.min(Math.ceil(messagesData.length / messagesPageSize) - 1, p + 1))}
+                      disabled={messagesPage >= Math.ceil(messagesData.length / messagesPageSize) - 1}
+                      sx={{ width: 24, height: 24 }}
+                    >
+                      <ChevronRightIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              </>
+            )}
           </Box>
         )}
       </Box>

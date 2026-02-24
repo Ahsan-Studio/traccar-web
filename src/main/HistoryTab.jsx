@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import dayjs from 'dayjs';
 import './HistoryTab.css';
@@ -128,66 +128,63 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
       alert('Please select an object');
       return;
     }
-    
+
     setLoading(true);
     try {
-      // Build date-time strings in ISO format
       const fromDateTime = dayjs(`${dateFrom} ${hourFrom}:${minuteFrom}`).toISOString();
       const toDateTime = dayjs(`${dateTo} ${hourTo}:${minuteTo}`).toISOString();
-      
-      // Fetch combined data (route, events, positions, stops)
+
       const query = new URLSearchParams({
         deviceId: selectedDevice,
         from: fromDateTime,
         to: toDateTime,
       });
-      
-      const response = await fetchOrThrow(`/api/reports/combined?${query.toString()}`, {
+
+      // Fetch positions (route)
+      const posResponse = await fetchOrThrow(`/api/reports/route?${query.toString()}`, {
         headers: { Accept: 'application/json' },
       });
-      const combinedData = await response.json();
-      
-      // Combined API returns array of device data
-      if (combinedData.length > 0) {
-        const deviceData = combinedData[0];
-        
-        // Use positions array which contains full position objects with all details
-        // route array only contains [longitude, latitude] coordinates for map display
-        setRouteData(deviceData.positions || []);
-        
-        // Pass route coordinates to parent for map display
-        if (onRouteChange && deviceData.route && deviceData.route.length > 0) {
+      const positions = await posResponse.json();
+      setRouteData(positions);
+
+      if (onRouteChange) {
+        if (positions.length > 0) {
+          // For map coordinates, simplify if too many points to improve rendering
+          let coordinates;
+          if (positions.length > 10000) {
+            // Keep every Nth point for the route line (GeoJSON handles large arrays but rendering is smoother)
+            const step = Math.ceil(positions.length / 10000);
+            coordinates = [];
+            for (let i = 0; i < positions.length; i += step) {
+              coordinates.push([positions[i].longitude, positions[i].latitude]);
+            }
+            // Always include last point
+            const last = positions[positions.length - 1];
+            if (coordinates[coordinates.length - 1][0] !== last.longitude
+                || coordinates[coordinates.length - 1][1] !== last.latitude) {
+              coordinates.push([last.longitude, last.latitude]);
+            }
+          } else {
+            coordinates = positions.map((p) => [p.longitude, p.latitude]);
+          }
+          
           onRouteChange({
-            coordinates: deviceData.route, // Array of [longitude, latitude]
+            coordinates,
             deviceId: selectedDevice,
-            positions: deviceData.positions || [],
+            positions,
           });
-        }
-        
-        // Set events data if available
-        if (deviceData.events && deviceData.events.length > 0) {
-          // Store events for later use
-          console.log('Events:', deviceData.events);
-        }
-      } else {
-        setRouteData([]);
-        if (onRouteChange) {
+        } else {
           onRouteChange(null);
         }
       }
-      
-      // Still fetch stops separately as combined may not include them
-      const stopsQuery = new URLSearchParams({
-        deviceId: selectedDevice,
-        from: fromDateTime,
-        to: toDateTime,
-      });
-      
-      const stopsResponse = await fetchOrThrow(`/api/reports/stops?${stopsQuery.toString()}`, {
+
+      // Fetch stops and filter by selected minimum stop duration
+      const stopsResponse = await fetchOrThrow(`/api/reports/stops?${query.toString()}`, {
         headers: { Accept: 'application/json' },
       });
-      const stopsData = await stopsResponse.json();
-      setStops(stopsData);
+      const allStops = await stopsResponse.json();
+      const minMs = parseInt(stopDuration, 10) * 60 * 1000;
+      setStops(allStops.filter((s) => (s.duration || 0) >= minMs));
     } catch (error) {
       console.error('Error loading route:', error);
       alert('Failed to load route data');
@@ -217,9 +214,19 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
     }
   }, [shouldAutoLoad, selectedDevice, dateFrom, dateTo, hourFrom, minuteFrom, hourTo, minuteTo]);
 
-  const handleImportExport = () => {
-    // TODO: Implement import/export logic
-    console.log('Import/Export');
+  const handleExport = () => {
+    if (!selectedDevice) {
+      alert('Please select an object first');
+      return;
+    }
+    const fromDateTime = dayjs(`${dateFrom} ${hourFrom}:${minuteFrom}`).toISOString();
+    const toDateTime = dayjs(`${dateTo} ${hourTo}:${minuteTo}`).toISOString();
+    const query = new URLSearchParams({
+      deviceId: selectedDevice,
+      from: fromDateTime,
+      to: toDateTime,
+    });
+    window.location.assign(`/api/reports/route/xlsx?${query.toString()}`);
   };
 
   // Helper function to determine row type and icon
@@ -251,6 +258,80 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
     // Default: moving (lane icon)
     return { type: 'moving', label: 'Moving' };
   };
+
+  // Collapse consecutive same-type positions into segments for performance
+  // Instead of rendering 30k rows, collapse into ~100-500 segments
+  const routeSegments = useMemo(() => {
+    if (routeData.length === 0) return [];
+    if (routeData.length <= 500) {
+      // Small dataset — show all positions as-is
+      return routeData.map((pos, idx) => ({
+        position: pos,
+        originalIndex: idx,
+        segmentType: null, // use getRowType
+      }));
+    }
+    
+    // Large dataset — collapse consecutive moving/parking into segments
+    const segments = [];
+    let i = 0;
+    
+    while (i < routeData.length) {
+      const pos = routeData[i];
+      const rowType = getRowType(pos, i, routeData);
+      
+      // Always show start, stop, event positions individually
+      if (rowType.type === 'start' || rowType.type === 'stop' || rowType.type === 'event') {
+        segments.push({
+          position: pos,
+          originalIndex: i,
+          segmentType: null,
+        });
+        i += 1;
+        continue;
+      }
+      
+      // Collapse consecutive parking/moving
+      const segStart = i;
+      const currentType = rowType.type;
+      while (i < routeData.length - 1) {
+        const nextType = getRowType(routeData[i + 1], i + 1, routeData);
+        if (nextType.type !== currentType) break;
+        i += 1;
+      }
+      const segEnd = i;
+      
+      if (segStart === segEnd) {
+        // Single position
+        segments.push({
+          position: pos,
+          originalIndex: segStart,
+          segmentType: null,
+        });
+      } else {
+        // Collapsed segment — show first position with duration info
+        const startTime = dayjs(routeData[segStart].fixTime);
+        const endTime = dayjs(routeData[segEnd].fixTime);
+        const durationMin = endTime.diff(startTime, 'minute');
+        const hours = Math.floor(durationMin / 60);
+        const mins = durationMin % 60;
+        const durationStr = hours > 0 ? `${hours} h ${mins} min` : `${mins} min`;
+        const count = segEnd - segStart + 1;
+        
+        segments.push({
+          position: pos,
+          originalIndex: segStart,
+          segmentType: currentType,
+          segmentInfo: `${durationStr} (${count} points)`,
+          segmentEndIndex: segEnd,
+        });
+      }
+      
+      i += 1;
+    }
+    
+    return segments;
+  }, [routeData]);
   
   // Helper function to format information column
   const getInformation = (position, index, allPositions) => {
@@ -343,8 +424,8 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
   // Generate hour options (00-23)
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
   
-  // Generate minute options (00, 15, 30, 45)
-  const minutes = ['00', '15', '30', '45'];
+  // Generate minute options (00–59)
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 
   return (
     <div className="history-tab-container">
@@ -481,7 +562,7 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
           </CustomButton>
           <CustomButton
             variant="outlined"
-            onClick={handleImportExport}
+            onClick={handleExport}
             style={{ width: '134px' }}
           >
             Import/Export
@@ -495,6 +576,11 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
           <div className="history-loading">Loading route data...</div>
         ) : routeData.length > 0 ? (
           <div className="history-table-container">
+            {routeData.length > 500 && (
+              <div style={{ padding: '4px 8px', fontSize: '11px', color: '#666', backgroundColor: '#f5f5f5', borderBottom: '1px solid #e0e0e0' }}>
+                {routeData.length.toLocaleString()} positions — grouped into {routeSegments.length} segments
+              </div>
+            )}
             <table className="history-table">
               <thead>
                 <tr>
@@ -504,13 +590,16 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
                 </tr>
               </thead>
               <tbody>
-                {routeData.map((position, index) => {
-                  const rowType = getRowType(position, index, routeData);
-                  const information = getInformation(position, index, routeData);
+                {routeSegments.map((segment) => {
+                  const { position, originalIndex, segmentType, segmentInfo } = segment;
+                  const rowType = segmentType 
+                    ? { type: segmentType, label: segmentType === 'parking' ? 'Parking' : 'Moving' }
+                    : getRowType(position, originalIndex, routeData);
+                  const information = segmentInfo || getInformation(position, originalIndex, routeData);
                   
                   return (
                     <tr 
-                      key={position.id || index}
+                      key={position.id || originalIndex}
                       className={selectedPosition?.id === position.id ? 'selected' : ''}
                       onClick={() => {
                         setSelectedPosition(position);
@@ -526,7 +615,7 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
                       onMouseEnter={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         setPopupPosition({ x: rect.right + 10, y: rect.top });
-                        setHoveredRow(index);
+                        setHoveredRow(originalIndex);
                       }}
                       onMouseLeave={() => {
                         setHoveredRow(null);
@@ -544,7 +633,7 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
             </table>
             
             {/* Hover Popup */}
-            {hoveredRow !== null && (
+            {hoveredRow !== null && routeData[hoveredRow] && (
               <div 
                 className="history-popup"
                 style={{

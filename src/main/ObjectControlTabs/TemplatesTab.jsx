@@ -21,11 +21,14 @@ const TemplatesTab = ({ classes, showNotification }) => {
   const [loading, setLoading] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [selectedRows, setSelectedRows] = useState([]);
   const [templateForm, setTemplateForm] = useState({
     description: "",
     type: "custom",
     textChannel: false,
     data: "",
+    protocol: "",
+    encoding: "ascii",
   });
 
   // Fetch saved templates
@@ -58,6 +61,8 @@ const TemplatesTab = ({ classes, showNotification }) => {
       type: "custom",
       textChannel: false,
       data: "",
+      protocol: "",
+      encoding: "ascii",
     });
     setTemplateDialogOpen(true);
   };
@@ -69,6 +74,8 @@ const TemplatesTab = ({ classes, showNotification }) => {
       type: template.type || "custom",
       textChannel: template.textChannel || false,
       data: template.attributes?.data || "",
+      protocol: template.attributes?.protocol || "",
+      encoding: template.attributes?.encoding || "ascii",
     });
     setTemplateDialogOpen(true);
   };
@@ -81,6 +88,8 @@ const TemplatesTab = ({ classes, showNotification }) => {
       type: "custom",
       textChannel: false,
       data: "",
+      protocol: "",
+      encoding: "ascii",
     });
   };
 
@@ -103,6 +112,8 @@ const TemplatesTab = ({ classes, showNotification }) => {
         textChannel: templateForm.textChannel,
         attributes: {
           data: templateForm.data,
+          encoding: templateForm.encoding || "ascii",
+          ...(templateForm.protocol ? { protocol: templateForm.protocol } : {}),
         },
       };
 
@@ -147,6 +158,21 @@ const TemplatesTab = ({ classes, showNotification }) => {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedRows.length === 0) return;
+    if (!window.confirm(`Delete ${selectedRows.length} selected template(s)?`)) return;
+    try {
+      await Promise.all(
+        selectedRows.map((id) => fetch(`/api/commands/${id}`, { method: "DELETE" }))
+      );
+      showNotification("Selected templates deleted", "success");
+      setSelectedRows([]);
+      fetchTemplates();
+    } catch (err) {
+      showNotification(`Error: ${err.message}`, "error");
+    }
+  };
+
   const handleDeleteTemplate = async (id) => {
     if (!window.confirm("Are you sure you want to delete this template?")) {
       return;
@@ -178,8 +204,12 @@ const TemplatesTab = ({ classes, showNotification }) => {
         <Table className={classes.table}>
           <TableHead>
             <TableRow>
-              <TableCell>
-                <CustomCheckbox />
+              <TableCell padding="checkbox">
+                <CustomCheckbox
+                  checked={templates.length > 0 && selectedRows.length === templates.length}
+                  indeterminate={selectedRows.length > 0 && selectedRows.length < templates.length}
+                  onChange={(e) => setSelectedRows(e.target.checked ? templates.map((t) => t.id) : [])}
+                />
               </TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Protocol</TableCell>
@@ -199,11 +229,16 @@ const TemplatesTab = ({ classes, showNotification }) => {
             ) : templates.length > 0 ? (
               templates.map((template) => (
                 <TableRow key={template.id}>
-                  <TableCell>
-                    <CustomCheckbox />
+                  <TableCell padding="checkbox">
+                    <CustomCheckbox
+                      checked={selectedRows.includes(template.id)}
+                      onChange={(e) => setSelectedRows((prev) =>
+                        e.target.checked ? [...prev, template.id] : prev.filter((id) => id !== template.id)
+                      )}
+                    />
                   </TableCell>
                   <TableCell>{template.description}</TableCell>
-                  <TableCell>-</TableCell>
+                  <TableCell>{template.attributes?.protocol || "-"}</TableCell>
                   <TableCell>{template.textChannel ? "SMS" : "GPRS"}</TableCell>
                   <TableCell>{template.type}</TableCell>
                   <TableCell>{template.attributes?.data || "-"}</TableCell>
@@ -237,7 +272,7 @@ const TemplatesTab = ({ classes, showNotification }) => {
           </TableBody>
         </Table>
       </TableContainer>
-      <Box mt={2}>
+      <Box mt={2} display="flex" gap={1}>
         <CustomButton
           variant="contained"
           color="primary"
@@ -248,6 +283,17 @@ const TemplatesTab = ({ classes, showNotification }) => {
         >
           Add Template
         </CustomButton>
+        {selectedRows.length > 0 && (
+          <CustomButton
+            variant="outlined"
+            size="small"
+            icon={<DeleteIcon />}
+            iconPosition="left"
+            onClick={handleDeleteSelected}
+          >
+            Delete Selected ({selectedRows.length})
+          </CustomButton>
+        )}
       </Box>
 
       {/* Template Form Dialog */}

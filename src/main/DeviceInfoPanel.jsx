@@ -193,7 +193,7 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
   const [tab, setTab] = useState(0);
   const [panelHeight, setPanelHeight] = useState(() => {
     const saved = localStorage.getItem('deviceInfoPanelHeight');
-    return saved ? parseInt(saved, 10) : 280; // Default 280px
+    return saved ? parseInt(saved, 10) : 183; // Default 183px (minimum height)
   });
   const [isResizing, setIsResizing] = useState(false);
   const [gridColumns, setGridColumns] = useState(1);

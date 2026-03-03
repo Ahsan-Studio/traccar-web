@@ -346,6 +346,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
               itemSize={33}
               overscanCount={3}
               outerElementType={OuterElement}
+              itemData={positions}
             >
               {renderRow}
             </FixedSizeList>

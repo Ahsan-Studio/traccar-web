@@ -339,19 +339,17 @@ const DeviceRow = ({
             title={
               !position
                 ? t('deviceStatusUnknown')
-                : !positionValid
-                  ? t('deviceStatusOffline')
-                  : positionOutdated
-                    ? t('deviceStatusOffline')
-                    : t('deviceStatusOnline')
+                : positionOutdated || !positionValid
+                  ? 'GSM Connected (No GPS Fix)'
+                  : t('deviceStatusOnline')
             }
           >
             <Box
               component="img"
               src={
-                !position || positionOutdated
+                !position
                   ? '/img/theme/connection-no.svg'
-                  : !positionValid
+                  : positionOutdated || !positionValid
                     ? '/img/theme/connection-gsm.svg'
                     : '/img/theme/connection-gsm-gps.svg'
               }
@@ -585,17 +583,21 @@ const DeviceRow = ({
         </Box>
       </ListItemButton>
 
-      <EditDeviceDialog
-        open={editDialogOpen}
-        onClose={handleCloseEditDialog}
-        device={item}
-      />
+      {editDialogOpen && (
+        <EditDeviceDialog
+          open={editDialogOpen}
+          onClose={handleCloseEditDialog}
+          device={item}
+        />
+      )}
 
-      <FollowDialog
-        open={followDialogOpen}
-        onClose={handleCloseFollowDialog}
-        device={item}
-      />
+      {followDialogOpen && (
+        <FollowDialog
+          open={followDialogOpen}
+          onClose={handleCloseFollowDialog}
+          device={item}
+        />
+      )}
     </div>
   );
 };

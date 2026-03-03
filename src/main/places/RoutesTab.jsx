@@ -1,4 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import {
+  useState, useMemo, useEffect, useRef, useCallback,
+} from 'react';
+import { useDispatch } from 'react-redux';
 import {
   Box,
   TextField,
@@ -8,22 +11,23 @@ import {
   Select,
   MenuItem,
   Typography,
-} from "@mui/material";
-import FirstPageIcon from "@mui/icons-material/FirstPage";
-import LastPageIcon from "@mui/icons-material/LastPage";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { makeStyles } from "tss-react/mui";
-import fetchOrThrow from "../../common/util/fetchOrThrow";
-import RemoveDialog from "../../common/components/RemoveDialog";
-import RouteDialog from "./RouteDialog";
-import PlaceGroupsDialog from "./PlaceGroupsDialog";
+} from '@mui/material';
+import FirstPageIcon from '@mui/icons-material/FirstPage';
+import LastPageIcon from '@mui/icons-material/LastPage';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { makeStyles } from 'tss-react/mui';
+import fetchOrThrow from '../../common/util/fetchOrThrow';
+import { geofencesActions } from '../../store';
+import RemoveDialog from '../../common/components/RemoveDialog';
+import RouteDialog from './RouteDialog';
+import PlaceGroupsDialog from './PlaceGroupsDialog';
 
 const useStyles = makeStyles()(() => ({
   container: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100%",
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
   },
   toolbar: {
     display: 'flex',
@@ -57,9 +61,20 @@ const useStyles = makeStyles()(() => ({
     width: '14px',
     height: '14px',
   },
+  tableHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    height: '28px',
+    backgroundColor: '#f5f5f5',
+    borderBottom: '1px solid #e0e0e0',
+    flexShrink: 0,
+    fontSize: '11px',
+    fontWeight: 500,
+    color: '#444',
+  },
   tableWrapper: {
     flex: 1,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   pagination: {
     display: 'flex',
@@ -108,10 +123,12 @@ const useStyles = makeStyles()(() => ({
 
 const RoutesTab = ({ onFocusLocation, onCountChange }) => {
   const { classes } = useStyles();
+  const dispatch = useDispatch();
+  const fileInputRef = useRef(null);
   const [items, setItems] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [visibleItems, setVisibleItems] = useState([]); // Track which routes are visible on map
-  const [search, setSearch] = useState("");
+  const [visibleItems, setVisibleItems] = useState([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -124,242 +141,221 @@ const RoutesTab = ({ onFocusLocation, onCountChange }) => {
   const [pageSize, setPageSize] = useState(50);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Fetch routes and groups from API
+  // Refresh Redux geofences store
+  const refreshGeofencesStore = useCallback(async () => {
+    try {
+      const [markersRes, routesRes, zonesRes] = await Promise.all([
+        fetchOrThrow('/api/markers', { headers: { Accept: 'application/json' } }),
+        fetchOrThrow('/api/routes', { headers: { Accept: 'application/json' } }),
+        fetchOrThrow('/api/zones', { headers: { Accept: 'application/json' } }),
+      ]);
+      const markers = await markersRes.json();
+      const routes = await routesRes.json();
+      const zones = await zonesRes.json();
+      dispatch(geofencesActions.refresh([...markers, ...routes, ...zones]));
+    } catch (error) {
+      console.error('Failed to refresh geofences store:', error);
+    }
+  }, [dispatch]);
+
+  // Fetch routes with pagination
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
-        
-        // Fetch routes with pagination
         const params = new URLSearchParams();
         params.append('page', currentPage.toString());
         params.append('pageSize', pageSize.toString());
-        
-        const routesResponse = await fetchOrThrow(`/api/routes?${params.toString()}`, { 
-          headers: { Accept: "application/json" } 
+        const response = await fetchOrThrow(`/api/routes?${params.toString()}`, {
+          headers: { Accept: 'application/json' },
         });
-        const routesData = await routesResponse.json();
-        
+        const data = await response.json();
         if (!cancelled) {
-          // Handle both array response and paginated response
-          const routes = Array.isArray(routesData) ? routesData : (routesData.data || []);
-          
-          setItems(routes);
-          // Update total pages if pagination info is available
-          if (routesData.totalPages) {
-            setTotalPages(routesData.totalPages);
-          } else if (routesData.total) {
-            setTotalPages(Math.ceil(routesData.total / pageSize));
-          } else {
-            setTotalPages(1);
-          }
-          // By default, show all routes
-          setVisibleItems(routes.map(r => r.id));
-          
-          // Update count for tab label
-          if (onCountChange) {
-            const totalCount = routesData.total || routes.length;
-            onCountChange(totalCount);
-          }
+          const list = Array.isArray(data) ? data : (data.data || []);
+          setItems(list);
+          if (data.totalPages) setTotalPages(data.totalPages);
+          else if (data.total) setTotalPages(Math.ceil(data.total / pageSize));
+          else setTotalPages(1);
+          setVisibleItems(list.map((r) => r.id));
+          if (onCountChange) onCountChange(data.total || list.length);
         }
       } catch (e) {
-        if (!cancelled) {
-          setItems([]);
-          setVisibleItems([]);
-        }
-        console.error("Error fetching routes:", e);
+        if (!cancelled) { setItems([]); setVisibleItems([]); }
+        console.error('Error fetching routes:', e);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [refreshVersion, currentPage, pageSize, onCountChange]);
 
-  // Fetch groups separately (only once on mount or when refreshVersion changes)
+  // Fetch groups
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const groupsResponse = await fetchOrThrow('/api/geofence-groups', { 
-          headers: { Accept: "application/json" } 
-        });
-        const groupsData = await groupsResponse.json();
-        
-        if (!cancelled) {
-          const groupsList = Array.isArray(groupsData) ? groupsData : [];
-          setGroups(groupsList);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setGroups([]);
-        }
-        console.error("Error fetching groups:", e);
+        const response = await fetchOrThrow('/api/geofence-groups', { headers: { Accept: 'application/json' } });
+        const data = await response.json();
+        if (!cancelled) setGroups(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setGroups([]);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [refreshVersion]);
 
-  // Toggle group expand/collapse
   const toggleGroup = (groupId) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId]
-    }));
+    setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  // Toggle group visibility
-  const handleGroupVisibilityToggle = (routeIds, event) => {
+  const handleGroupVisibilityToggle = (ids, event) => {
     if (event) event.stopPropagation();
-    // Check if all routes in group are visible
-    const allVisible = routeIds.every(id => visibleItems.includes(id));
-    // Toggle: if all visible, hide all; otherwise show all
-    if (allVisible) {
-      setVisibleItems(prev => prev.filter(id => !routeIds.includes(id)));
-    } else {
-      setVisibleItems(prev => [...new Set([...prev, ...routeIds])]);
-    }
+    const allVis = ids.every((id) => visibleItems.includes(id));
+    if (allVis) setVisibleItems((prev) => prev.filter((id) => !ids.includes(id)));
+    else setVisibleItems((prev) => [...new Set([...prev, ...ids])]);
   };
 
-  // Group routes by groupId
+  const handleToggleAllVisibility = () => {
+    const allIds = items.map((r) => r.id);
+    const allVis = allIds.length > 0 && allIds.every((id) => visibleItems.includes(id));
+    setVisibleItems(allVis ? [] : allIds);
+  };
+
   const groupedRoutes = useMemo(() => {
     const q = search.toLowerCase();
-    const filteredRoutes = items.filter((it) => 
-      (it.name || "").toLowerCase().includes(q)
-    );
-
+    const filtered = items.filter((it) => (it.name || '').toLowerCase().includes(q));
     const routeGroups = {};
     const ungrouped = [];
-
-    filteredRoutes.forEach(route => {
+    filtered.forEach((route) => {
       if (route.groupId) {
         if (!routeGroups[route.groupId]) {
-          const group = groups.find(g => g.id === route.groupId);
-          routeGroups[route.groupId] = {
-            id: route.groupId,
-            name: group?.name || `Group ${route.groupId}`,
-            routes: []
-          };
+          const group = groups.find((g) => g.id === route.groupId);
+          routeGroups[route.groupId] = { name: group?.name || `Group ${route.groupId}`, routes: [] };
         }
         routeGroups[route.groupId].routes.push(route);
       } else {
         ungrouped.push(route);
       }
     });
-
-    // Create final array with headers and routes
     const result = [];
-    
-    // Add ungrouped section
     if (ungrouped.length > 0) {
-      const groupId = 'ungrouped';
-      const isExpanded = expandedGroups[groupId] !== false; // Default expanded
-      
-      result.push({ 
-        type: 'header', 
-        groupId,
-        content: `Tidak digrup`,
-        count: ungrouped.length,
-        isExpanded,
-        routeIds: ungrouped.map(r => r.id),
+      const gId = 'ungrouped';
+      const expanded = expandedGroups[gId] !== false;
+      result.push({
+        type: 'header', groupId: gId, content: 'Tidak digrup', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((r) => r.id),
       });
-      
-      if (isExpanded) {
-        ungrouped.forEach(route => {
-          result.push({ type: 'route', content: route });
-        });
-      }
+      if (expanded) ungrouped.forEach((r) => result.push({ type: 'item', content: r }));
     }
-
-    // Add grouped sections
-    Object.entries(routeGroups).forEach(([groupId, group]) => {
-      const isExpanded = expandedGroups[groupId] !== false; // Default expanded
-      
-      result.push({ 
-        type: 'header', 
-        groupId,
-        content: group.name,
-        count: group.routes.length,
-        isExpanded,
-        routeIds: group.routes.map(r => r.id),
+    Object.entries(routeGroups).forEach(([gId, group]) => {
+      const expanded = expandedGroups[gId] !== false;
+      result.push({
+        type: 'header', groupId: gId, content: group.name, count: group.routes.length, isExpanded: expanded, itemIds: group.routes.map((r) => r.id),
       });
-      
-      if (isExpanded) {
-        group.routes.forEach(route => {
-          result.push({ type: 'route', content: route });
-        });
-      }
+      if (expanded) group.routes.forEach((r) => result.push({ type: 'item', content: r }));
     });
-
     return result;
   }, [items, groups, search, expandedGroups]);
 
-  // Toggle visibility (using checkbox)
   const handleToggleVisibility = (id) => {
-    setVisibleItems((prev) => 
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setVisibleItems((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  // Handle row click - focus map on route
   const handleRowClick = (row) => {
     if (row.area && onFocusLocation) {
-      // Parse LINESTRING geometry: LINESTRING (lat1 lng1, lat2 lng2, ...)
       const match = row.area.match(/LINESTRING\s*\(\s*([^)]+)\)/);
       if (match) {
-        const coords = match[1].split(',').map(coord => {
+        const coords = match[1].split(',').map((coord) => {
           const [lat, lng] = coord.trim().split(/\s+/).map(parseFloat);
           return { lat, lng };
         });
-        // Focus on first point of route
-        if (coords.length > 0) {
-          onFocusLocation(coords[0], row);
-        }
+        if (coords.length > 0) onFocusLocation(coords[0], row);
       }
     }
   };
 
-  const onAdd = () => {
-    setEditing(null);
-    setDialogOpen(true);
-  };
+  const onAdd = () => { setEditing(null); setDialogOpen(true); };
+  const onEdit = (row) => { setEditing(row); setDialogOpen(true); };
+  const onDelete = (row) => { setRemoving(row); setRemoveOpen(true); };
+  const onRefresh = () => { setRefreshVersion((v) => v + 1); };
 
-  const onEdit = (row) => {
-    setEditing(row);
-    setDialogOpen(true);
-  };
+  // Export routes as JSON
+  const handleExport = useCallback(() => {
+    const exportData = items.map((item) => Object.fromEntries(Object.entries(item).filter(([key]) => key !== 'id')));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `routes_export_${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }, [items]);
 
-  const onDelete = (row) => {
-    setRemoving(row);
-    setRemoveOpen(true);
-  };
-
-  const onRefresh = () => {
-    setRefreshVersion((v) => v + 1);
-  };
-
-  const handleDialogClose = (saved) => {
-    setDialogOpen(false);
-    setEditing(null);
-    if (saved) {
+  // Import routes from JSON file
+  const handleImport = useCallback(async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const importItems = Array.isArray(data) ? data : [data];
+      setLoading(true);
+      let successCount = 0;
+      for (const item of importItems) {
+        try {
+          await fetchOrThrow('/api/routes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item),
+          });
+          successCount += 1;
+        } catch (e) {
+          console.error('Failed to import route:', item.name, e);
+        }
+      }
+      alert(`Berhasil import ${successCount} dari ${importItems.length} route`);
       setRefreshVersion((v) => v + 1);
+      await refreshGeofencesStore();
+    } catch (e) {
+      alert('Gagal membaca file import. Pastikan format JSON valid.');
+      console.error('Import error:', e);
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  }, [refreshGeofencesStore]);
+
+  // Delete all routes
+  const handleDeleteAll = useCallback(async () => {
+    if (items.length === 0) return;
+    if (!window.confirm(`Hapus semua ${items.length} route? Tindakan ini tidak dapat dibatalkan.`)) return;
+    try {
+      setLoading(true);
+      await Promise.all(items.map((item) => fetchOrThrow(`/api/routes/${item.id}`, { method: 'DELETE' }).catch(() => null)));
+      setRefreshVersion((v) => v + 1);
+      await refreshGeofencesStore();
+    } catch (e) {
+      console.error('Error deleting all routes:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [items, refreshGeofencesStore]);
+
+  const handleDialogClose = async (saved) => {
+    setDialogOpen(false); setEditing(null);
+    if (saved) { setRefreshVersion((v) => v + 1); await refreshGeofencesStore(); }
   };
 
   const handleGroupsDialogClose = (saved) => {
     setGroupsDialogOpen(false);
-    if (saved) {
-      setRefreshVersion((v) => v + 1);
-    }
+    if (saved) setRefreshVersion((v) => v + 1);
   };
+
+  const allVisible = items.length > 0 && items.every((r) => visibleItems.includes(r.id));
+  const someVisible = items.some((r) => visibleItems.includes(r.id));
 
   return (
     <Box className={classes.container}>
-      {/* Toolbar with search and action buttons */}
+      {/* Toolbar: Search + 6 buttons */}
       <Box className={classes.toolbar}>
         <TextField
           className={classes.searchField}
@@ -370,204 +366,135 @@ const RoutesTab = ({ onFocusLocation, onCountChange }) => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <img 
-                  src="/img/theme/search.svg" 
-                  alt="Search" 
-                  className={classes.buttonIcon}
-                />
+                <img src="/img/theme/search.svg" alt="Search" className={classes.buttonIcon} />
               </InputAdornment>
             ),
           }}
         />
-        <IconButton 
-          className={classes.actionButton}
-          onClick={onRefresh}
-          title="Refresh"
-        >
-          <img 
-            src="/img/theme/refresh-color.svg" 
-            alt="Refresh" 
-            className={classes.buttonIcon}
-          />
+        {/* 1. Reload */}
+        <IconButton className={classes.actionButton} onClick={onRefresh} title="Reload">
+          <img src="/img/theme/refresh-color.svg" alt="Reload" className={classes.buttonIcon} />
         </IconButton>
-        <IconButton 
-          className={classes.actionButton}
-          onClick={onAdd}
-          title="Add New"
-        >
-          <img 
-            src="/img/theme/marker-add.svg" 
-            alt="Add" 
-            className={classes.buttonIcon}
-          />
+        {/* 2. Add Route */}
+        <IconButton className={classes.actionButton} onClick={onAdd} title="Add Route">
+          <img src="/img/theme/route-add.svg" alt="Add" className={classes.buttonIcon} />
         </IconButton>
-        <IconButton 
-          className={classes.actionButton}
-          onClick={() => setGroupsDialogOpen(true)}
-          title="Manage Groups"
-        >
-          <img 
-            src="/img/theme/groups.svg" 
-            alt="Groups" 
-            className={classes.buttonIcon}
-          />
+        {/* 3. Groups */}
+        <IconButton className={classes.actionButton} onClick={() => setGroupsDialogOpen(true)} title="Groups">
+          <img src="/img/theme/groups.svg" alt="Groups" className={classes.buttonIcon} />
         </IconButton>
-        <IconButton 
-          className={classes.actionButton}
-          onClick={() => {
-            if (visibleItems.length > 0 && window.confirm(`Delete ${visibleItems.length} selected item(s)?`)) {
-              console.log('Delete selected:', visibleItems);
-            }
-          }}
-          title="Delete Selected"
-          disabled={visibleItems.length === 0}
-        >
-          <img 
-            src="/img/theme/remove2.svg" 
-            alt="Delete" 
-            className={classes.buttonIcon}
-            style={{ opacity: visibleItems.length === 0 ? 0.5 : 1 }}
-          />
+        {/* 4. Import */}
+        <IconButton className={classes.actionButton} onClick={() => fileInputRef.current?.click()} title="Import">
+          <img src="/img/theme/import.svg" alt="Import" className={classes.buttonIcon} />
+        </IconButton>
+        {/* 5. Export */}
+        <IconButton className={classes.actionButton} onClick={handleExport} title="Export" disabled={items.length === 0}>
+          <img src="/img/theme/export.svg" alt="Export" className={classes.buttonIcon} style={{ opacity: items.length === 0 ? 0.5 : 1 }} />
+        </IconButton>
+        {/* 6. Delete All */}
+        <IconButton className={classes.actionButton} onClick={handleDeleteAll} title="Delete All Routes" disabled={items.length === 0}>
+          <img src="/img/theme/remove2.svg" alt="Delete All" className={classes.buttonIcon} style={{ opacity: items.length === 0 ? 0.5 : 1 }} />
         </IconButton>
       </Box>
 
-      {/* Table */}
+      {/* Hidden file input for import */}
+      <input type="file" ref={fileInputRef} accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+
+      {/* Table Header: Eye icon + Name */}
+      <Box className={classes.tableHeader}>
+        <Box sx={{ width: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <IconButton size="small" onClick={handleToggleAllVisibility} sx={{ padding: '2px' }} title="Show/Hide All">
+            <img
+              src={allVisible ? '/img/theme/eye.svg' : '/img/theme/eye-crossed.svg'}
+              alt="Toggle All"
+              style={{ width: 14, height: 14, opacity: someVisible && !allVisible ? 0.5 : 1 }}
+            />
+          </IconButton>
+        </Box>
+        <Box sx={{ flex: 1, paddingLeft: '8px' }}>Name</Box>
+      </Box>
+
+      {/* Table Body */}
       <Box className={classes.tableWrapper}>
-        {/* Custom list with group headers */}
         <Box sx={{ height: '100%', overflow: 'auto', backgroundColor: 'white' }}>
           {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              Loading...
-            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>Loading...</Box>
           ) : groupedRoutes.length === 0 ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, color: '#666' }}>
-              No routes found
-            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4, color: '#666' }}>No routes found</Box>
           ) : (
             groupedRoutes.map((item) => {
               if (item.type === 'header') {
-                // Group header
-                const allVisible = item.routeIds.every(id => visibleItems.includes(id));
-                const someVisible = item.routeIds.some(id => visibleItems.includes(id));
-                
+                const gAllVis = item.itemIds.every((id) => visibleItems.includes(id));
+                const gSomeVis = item.itemIds.some((id) => visibleItems.includes(id));
                 return (
                   <Box
                     key={`header-${item.groupId}`}
                     sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      height: '33px',
-                      backgroundColor: '#f5f5f5',
-                      borderTop: '1px solid #e0e0e0',
-                      borderBottom: '1px solid #e0e0e0',
-                      fontSize: '11px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      '&:hover': {
-                        backgroundColor: '#ebebeb',
-                      }
+                      display: 'flex', alignItems: 'center', height: '33px', backgroundColor: '#f5f5f5',
+                      borderTop: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0', fontSize: '11px',
+                      fontWeight: 500, cursor: 'pointer', userSelect: 'none', '&:hover': { backgroundColor: '#ebebeb' },
                     }}
                   >
-                    {/* Checkbox for group visibility */}
                     <Box sx={{ width: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <Checkbox
-                        size="small"
-                        checked={allVisible}
-                        indeterminate={!allVisible && someVisible}
-                        onClick={(e) => handleGroupVisibilityToggle(item.routeIds, e)}
+                        size="small" checked={gAllVis} indeterminate={!gAllVis && gSomeVis}
+                        onClick={(e) => handleGroupVisibilityToggle(item.itemIds, e)}
                         sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
                       />
                     </Box>
-                    {/* Group name */}
-                    <Box 
-                      sx={{ flex: 1, paddingLeft: '8px' }}
-                      onClick={() => toggleGroup(item.groupId)}
-                    >
+                    <Box sx={{ flex: 1, paddingLeft: '8px' }} onClick={() => toggleGroup(item.groupId)}>
                       <span style={{ color: '#222', fontWeight: 500 }}>
-                        {item.content} <span style={{ color: '#888' }}>({item.count})</span>
+                        {item.content}
+                        {' '}
+                        <span style={{ color: '#888' }}>
+                          (
+                          {item.count}
+                          )
+                        </span>
                       </span>
                     </Box>
-                    {/* Expand/collapse button */}
                     <Box sx={{ width: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => toggleGroup(item.groupId)}
-                        sx={{ padding: '2px' }}
-                      >
-                        {item.isExpanded ? (
-                          <span style={{ fontSize: 18, fontWeight: 'bold' }}>-</span>
-                        ) : (
-                          <span style={{ fontSize: 18, fontWeight: 'bold' }}>+</span>
-                        )}
-                      </IconButton>
-                    </Box>
-                  </Box>
-                );
-              } else {
-                // Route row
-                const route = item.content;
-                const isVisible = visibleItems.includes(route.id);
-                
-                return (
-                  <Box
-                    key={`route-${route.id}`}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      height: '33px',
-                      borderBottom: '1px solid #e0e0e0',
-                      fontSize: '11px',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: '#fafafa',
-                      }
-                    }}
-                  >
-                    {/* Checkbox for route visibility */}
-                    <Box sx={{ width: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <Checkbox
-                        size="small"
-                        checked={isVisible}
-                        onChange={() => handleToggleVisibility(route.id)}
-                        sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
-                      />
-                    </Box>
-                    {/* Route name - clickable to focus on map */}
-                    <Box 
-                      sx={{ 
-                        flex: 1, 
-                        paddingLeft: '8px',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          textDecoration: 'underline',
-                          color: '#2b82d4'
-                        }
-                      }}
-                      onClick={() => handleRowClick(route)}
-                    >
-                      {route.name}
-                    </Box>
-                    {/* Action buttons */}
-                    <Box sx={{ display: 'flex', gap: '4px', paddingRight: '8px' }}>
-                      <IconButton
-                        size="small"
-                        onClick={() => onEdit(route)}
-                        sx={{ padding: '2px' }}
-                      >
-                        <img src="/img/theme/edit.svg" alt="Edit" style={{ width: 12, height: 12 }} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => onDelete(route)}
-                        sx={{ padding: '2px' }}
-                      >
-                        <img src="/img/theme/remove3.svg" alt="Delete" style={{ width: 12, height: 12 }} />
+                      <IconButton size="small" onClick={() => toggleGroup(item.groupId)} sx={{ padding: '2px' }}>
+                        <span style={{ fontSize: 18, fontWeight: 'bold' }}>{item.isExpanded ? '-' : '+'}</span>
                       </IconButton>
                     </Box>
                   </Box>
                 );
               }
+              const route = item.content;
+              const isVisible = visibleItems.includes(route.id);
+              return (
+                <Box
+                  key={`item-${route.id}`}
+                  sx={{
+                    display: 'flex', alignItems: 'center', height: '33px', borderBottom: '1px solid #e0e0e0',
+                    fontSize: '11px', cursor: 'pointer', '&:hover': { backgroundColor: '#fafafa' },
+                  }}
+                >
+                  <Box sx={{ width: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Checkbox
+                      size="small" checked={isVisible} onChange={() => handleToggleVisibility(route.id)}
+                      sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
+                    />
+                  </Box>
+                  <Box
+                    sx={{
+                      flex: 1, paddingLeft: '8px', '&:hover': { textDecoration: 'underline', color: '#2b82d4' },
+                    }}
+                    onClick={() => handleRowClick(route)}
+                  >
+                    {route.name}
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: '4px', paddingRight: '8px' }}>
+                    <IconButton size="small" onClick={() => onEdit(route)} sx={{ padding: '2px' }}>
+                      <img src="/img/theme/edit.svg" alt="Edit" style={{ width: 12, height: 12 }} />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => onDelete(route)} sx={{ padding: '2px' }}>
+                      <img src="/img/theme/remove3.svg" alt="Delete" style={{ width: 12, height: 12 }} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              );
             })
           )}
         </Box>
@@ -576,48 +503,32 @@ const RoutesTab = ({ onFocusLocation, onCountChange }) => {
       {/* Pagination Footer */}
       <Box className={classes.pagination}>
         <Box className={classes.paginationControls}>
-          <IconButton 
-            className={classes.paginationButton}
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1 || loading}
-          >
+          <IconButton className={classes.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || loading}>
             <FirstPageIcon />
           </IconButton>
-          <IconButton 
-            className={classes.paginationButton}
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1 || loading}
-          >
+          <IconButton className={classes.paginationButton} onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1 || loading}>
             <ChevronLeftIcon />
           </IconButton>
-          
           <Typography className={classes.pageInfo}>
-            Page {currentPage} of {totalPages || 1}
+            Page
+            {' '}
+            {currentPage}
+            {' '}
+            of
+            {' '}
+            {totalPages || 1}
           </Typography>
-          
-          <IconButton 
-            className={classes.paginationButton}
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage >= totalPages || loading}
-          >
+          <IconButton className={classes.paginationButton} onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage >= totalPages || loading}>
             <ChevronRightIcon />
           </IconButton>
-          <IconButton 
-            className={classes.paginationButton}
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage >= totalPages || loading}
-          >
+          <IconButton className={classes.paginationButton} onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages || loading}>
             <LastPageIcon />
           </IconButton>
         </Box>
-        
         <Select
           className={classes.pageSizeSelect}
           value={pageSize}
-          onChange={(e) => {
-            setPageSize(Number(e.target.value));
-            setCurrentPage(1);
-          }}
+          onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
           disabled={loading}
         >
           <MenuItem value={25}>25</MenuItem>
@@ -628,23 +539,13 @@ const RoutesTab = ({ onFocusLocation, onCountChange }) => {
         </Select>
       </Box>
 
-      <RouteDialog
-        open={dialogOpen}
-        onClose={handleDialogClose}
-        route={editing}
-      />
-      <PlaceGroupsDialog
-        open={groupsDialogOpen}
-        onClose={handleGroupsDialogClose}
-      />
+      <RouteDialog open={dialogOpen} onClose={handleDialogClose} route={editing} />
+      <PlaceGroupsDialog open={groupsDialogOpen} onClose={handleGroupsDialogClose} />
       <RemoveDialog
-        open={removeOpen}
-        endpoint="routes"
-        itemId={removing?.id}
-        onResult={(ok) => {
-          setRemoveOpen(false);
-          setRemoving(null);
-          if (ok) setRefreshVersion((v) => v + 1);
+        open={removeOpen} endpoint="routes" itemId={removing?.id}
+        onResult={async (ok) => {
+          setRemoveOpen(false); setRemoving(null);
+          if (ok) { setRefreshVersion((v) => v + 1); await refreshGeofencesStore(); }
         }}
       />
     </Box>

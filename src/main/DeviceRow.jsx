@@ -72,8 +72,6 @@ const DeviceRow = ({
 
   const item = data[index];
   const position = useSelector((state) => state.session.positions[item.id]);
-  const positionOutdated = position?.outdated;
-  const positionValid = position?.valid;
 
   const isVisible = visibility[item.id] !== false; // default true
   const isFocused = focused[item.id] === true; // default false

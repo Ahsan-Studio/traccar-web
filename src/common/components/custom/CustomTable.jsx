@@ -24,7 +24,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import FolderIcon from "@mui/icons-material/Folder";
 import { CustomCheckbox } from "./index";
 
-const useStyles = makeStyles()((theme) => ({
+const useStyles = makeStyles()(() => ({
   container: {
     display: "flex",
     flexDirection: "column",

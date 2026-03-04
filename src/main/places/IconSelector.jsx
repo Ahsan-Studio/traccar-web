@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, Tabs, Tab } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Tabs,
+  Tab
+} from '@mui/material';
 
 const IconSelector = ({ value, onChange }) => {
   const [selectedIcon, setSelectedIcon] = useState(value || 'pin-1.svg');

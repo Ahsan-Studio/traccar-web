@@ -60,13 +60,8 @@ const MapGeofence = () => {
           ['has', 'icon'],
         ],
         layout: {
-          'icon-image': [
-            'case',
-            ['has', 'icon'],
-            ['get', 'icon'],
-            'default-green' // Fallback icon
-          ],
-          'icon-size': 0.25, // Reduced untuk ukuran lebih kecil dan elegant
+          'icon-image': ['get', 'icon'],
+          'icon-size': 0.25,
           'icon-allow-overlap': true,
           'icon-anchor': 'bottom',
         },
@@ -116,27 +111,24 @@ const MapGeofence = () => {
         .filter((geofence) => !geofence.attributes.hide)
         .map((geofence) => geofenceToFeature(theme, geofence));
       
-      console.log('[MapGeofence] Total geofences:', Object.values(geofences).length);
-      console.log('[MapGeofence] Visible features:', features.length);
-      console.log('[MapGeofence] Features:', features.map(f => ({
-        name: f.properties.name,
-        type: f.geometry.type,
-        hasIcon: !!f.properties.icon,
-        icon: f.properties.icon
-      })));
-      
-      // Load any missing icons dynamically
-      features.forEach(async (feature) => {
-        if (feature.properties.icon && !map.hasImage(feature.properties.icon)) {
-          console.log(`[MapGeofence] Loading missing icon: ${feature.properties.icon}`);
-          await loadMarkerIcon(feature.properties.icon);
-        }
-      });
-      
-      map.getSource(id)?.setData({
-        type: 'FeatureCollection',
-        features,
-      });
+      // Load any missing icons first, then set data
+      const iconLoadPromises = features
+        .filter((feature) => feature.properties.icon && !map.hasImage(feature.properties.icon))
+        .map((feature) => loadMarkerIcon(feature.properties.icon));
+
+      if (iconLoadPromises.length > 0) {
+        Promise.allSettled(iconLoadPromises).then(() => {
+          map.getSource(id)?.setData({
+            type: 'FeatureCollection',
+            features,
+          });
+        });
+      } else {
+        map.getSource(id)?.setData({
+          type: 'FeatureCollection',
+          features,
+        });
+      }
     }
   }, [mapGeofences, geofences, theme, id]);
 

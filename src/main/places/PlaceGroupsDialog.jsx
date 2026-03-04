@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   Box,
   IconButton,
@@ -13,43 +12,54 @@ import fetchOrThrow from "../../common/util/fetchOrThrow";
 import RemoveDialog from "../../common/components/RemoveDialog";
 import PlaceGroupDialog from "./PlaceGroupDialog";
 
-const useStyles = makeStyles()((theme) => ({
+const useStyles = makeStyles()(() => ({
   dialog: {
     "& .MuiDialog-paper": {
-      width: "700px",
+      width: "550px",
       maxWidth: "90vw",
-      height: "600px",
+      height: "450px",
       maxHeight: "90vh",
+      overflow: "visible",
+      borderRadius: "4px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
     },
   },
-  dialogTitle: {
+  titleBar: {
     backgroundColor: "#2b82d4",
     color: "white",
-    padding: "12px 16px",
-    fontSize: "16px",
+    padding: "8px 12px",
+    fontSize: "13px",
     fontWeight: 500,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+    lineHeight: "18px",
+    position: "relative",
   },
   closeButton: {
+    position: "absolute",
+    right: "-8px",
+    top: "-8px",
+    width: "20px",
+    height: "20px",
+    padding: 0,
+    backgroundColor: "#e74c3c",
     color: "white",
-    padding: "4px",
+    border: "2px solid white",
+    borderRadius: "50%",
+    zIndex: 1,
     "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      backgroundColor: "#c0392b",
+    },
+    "& .MuiSvgIcon-root": {
+      fontSize: "12px",
     },
   },
   dialogContent: {
     padding: 0,
-    height: "calc(100% - 50px)",
+    height: "calc(100% - 34px)",
     display: "flex",
     flexDirection: "column",
-  },
-  toolbar: {
-    padding: theme.spacing(2),
-    display: "flex",
-    gap: theme.spacing(1),
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    "&.MuiDialogContent-root": {
+      padding: 0,
+    },
   },
   tableContainer: {
     flex: 1,
@@ -233,16 +243,15 @@ const PlaceGroupsDialog = ({ open, onClose }) => {
         className={classes.dialog}
         maxWidth={false}
       >
-        <DialogTitle className={classes.dialogTitle}>
+        {/* Red circle close button - V1 style */}
+        <IconButton onClick={() => onClose(false)} className={classes.closeButton} size="small">
+          <CloseIcon />
+        </IconButton>
+
+        {/* Title bar */}
+        <Box className={classes.titleBar}>
           Groups
-          <IconButton 
-            onClick={() => onClose(false)} 
-            className={classes.closeButton} 
-            size="small"
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
+        </Box>
 
         <DialogContent className={classes.dialogContent}>
           <Box className={classes.tableContainer}>

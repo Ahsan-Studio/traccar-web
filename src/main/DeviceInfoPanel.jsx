@@ -1,5 +1,5 @@
 import {
- useState, useEffect, useRef, useCallback
+ useState, useEffect, useRef, useCallback, useMemo
 } from 'react';
 import {
   Box,
@@ -37,6 +37,7 @@ import {
 import dayjs from 'dayjs';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import SimCardIcon from '@mui/icons-material/SimCard';
 import SpeedIcon from '@mui/icons-material/Speed';
@@ -184,7 +185,7 @@ const useStyles = makeStyles()(() => ({
   },
 }));
 
-const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
+const DeviceInfoPanel = ({ historyRoute, onGraphPointClick, sidebarTab }) => {
   const { classes } = useStyles();
   const theme = useTheme();
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -225,6 +226,8 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const messagesPageSize = 50;
+  const [selectedMessages, setSelectedMessages] = useState(new Set());
+  const [deletingMessages, setDeletingMessages] = useState(false);
 
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const devices = useSelector((state) => state.devices.items);
@@ -570,6 +573,64 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
     }
   }, [historyRoute]);
 
+  // Handle message selection toggle
+  const handleMessageSelect = useCallback((posId, e) => {
+    e.stopPropagation();
+    setSelectedMessages((prev) => {
+      const next = new Set(prev);
+      if (next.has(posId)) {
+        next.delete(posId);
+      } else {
+        next.add(posId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Handle select all on current page
+  const handleSelectAllMessages = useCallback((e) => {
+    e.stopPropagation();
+    const pagePositions = messagesData.slice(
+      messagesPage * messagesPageSize,
+      (messagesPage + 1) * messagesPageSize,
+    );
+    const pageIds = pagePositions.map((p) => p.id).filter(Boolean);
+    const allSelected = pageIds.every((id) => selectedMessages.has(id));
+
+    setSelectedMessages((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }, [messagesData, messagesPage, messagesPageSize, selectedMessages]);
+
+  // Handle delete selected messages
+  const handleDeleteMessages = useCallback(async () => {
+    if (selectedMessages.size === 0) return;
+
+    const confirmed = window.confirm(`Delete ${selectedMessages.size} selected message(s)?`);
+    if (!confirmed) return;
+
+    setDeletingMessages(true);
+    try {
+      const deletePromises = [...selectedMessages].map((posId) => fetch(`/api/positions/${posId}`, { method: 'DELETE' }));
+      await Promise.all(deletePromises);
+
+      // Remove deleted messages from data
+      setMessagesData((prev) => prev.filter((p) => !selectedMessages.has(p.id)));
+      setSelectedMessages(new Set());
+    } catch (error) {
+      console.error('Error deleting messages:', error);
+      alert('Failed to delete some messages');
+    } finally {
+      setDeletingMessages(false);
+    }
+  }, [selectedMessages]);
+
   // Playback logic
   useEffect(() => {
     if (isPlaying && playIndex < graphItems.length - 1) {
@@ -844,6 +905,94 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
     return nearestGeofence;
   };
 
+  // Compute route data list items for context-aware Data tab
+  const routeDataListItems = useMemo(() => {
+    if (!historyRoute?.positions || historyRoute.positions.length < 2) return null;
+
+    const positions = historyRoute.positions;
+    let totalDistance = 0;
+    let topSpeed = 0;
+    let speedSum = 0;
+    let speedCount = 0;
+    let moveDurationMs = 0;
+    let stopDurationMs = 0;
+
+    const firstOdo = positions[0]?.attributes?.totalDistance || positions[0]?.attributes?.odometer || 0;
+    const lastOdo = positions[positions.length - 1]?.attributes?.totalDistance || positions[positions.length - 1]?.attributes?.odometer || 0;
+    if (lastOdo > firstOdo) {
+      totalDistance = lastOdo - firstOdo;
+    } else {
+      for (let i = 1; i < positions.length; i += 1) {
+        const prev = positions[i - 1];
+        const curr = positions[i];
+        const R = 6371000;
+        const dLat = ((curr.latitude - prev.latitude) * Math.PI) / 180;
+        const dLon = ((curr.longitude - prev.longitude) * Math.PI) / 180;
+        const a = Math.sin(dLat / 2) ** 2
+          + Math.cos((prev.latitude * Math.PI) / 180)
+          * Math.cos((curr.latitude * Math.PI) / 180)
+          * Math.sin(dLon / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        totalDistance += R * c;
+      }
+    }
+
+    for (let i = 0; i < positions.length; i += 1) {
+      const pos = positions[i];
+      const spd = pos.speed || 0;
+      if (spd > topSpeed) topSpeed = spd;
+      if (spd > 0) {
+        speedSum += spd;
+        speedCount += 1;
+      }
+      if (i < positions.length - 1) {
+        const dt = dayjs(positions[i + 1].fixTime).diff(dayjs(pos.fixTime), 'millisecond');
+        if (spd >= 1) moveDurationMs += dt;
+        else stopDurationMs += dt;
+      }
+    }
+
+    const avgSpeed = speedCount > 0 ? speedSum / speedCount : 0;
+    const fmtTime = (ms) => {
+      const s = Math.floor(ms / 1000);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return `${h}h ${m}m ${sec}s`;
+      if (m > 0) return `${m}m ${sec}s`;
+      return `${sec}s`;
+    };
+
+    let fuelUsed = null;
+    const firstFuel = positions[0]?.attributes?.fuel;
+    const lastFuel = positions[positions.length - 1]?.attributes?.fuel;
+    if (firstFuel != null && lastFuel != null && firstFuel > lastFuel) {
+      fuelUsed = `${(firstFuel - lastFuel).toFixed(2)} L`;
+    }
+
+    let engineHours = null;
+    const firstEng = positions[0]?.attributes?.hours;
+    const lastEng = positions[positions.length - 1]?.attributes?.hours;
+    if (firstEng != null && lastEng != null && lastEng > firstEng) {
+      engineHours = `${((lastEng - firstEng) / 3600000).toFixed(1)} h`;
+    }
+
+    const items = [
+      { icon: <TimelineIcon className={classes.fieldIcon} />, label: 'Route length', value: `${distanceFromMeters(totalDistance, distanceUnit).toFixed(2)} ${distanceUnit}` },
+      { icon: <AccessTimeIcon className={classes.fieldIcon} />, label: 'Total duration', value: fmtTime(moveDurationMs + stopDurationMs) },
+      { icon: <DirectionsCarIcon className={classes.fieldIcon} />, label: 'Move duration', value: fmtTime(moveDurationMs) },
+      { icon: <PinDropIcon className={classes.fieldIcon} />, label: 'Stop duration', value: fmtTime(stopDurationMs) },
+      { icon: <SpeedIcon className={classes.fieldIcon} />, label: 'Top speed', value: `${speedFromKnots(topSpeed, speedUnit).toFixed(1)} ${speedUnit}` },
+      { icon: <SpeedIcon className={classes.fieldIcon} />, label: 'Avg speed', value: `${speedFromKnots(avgSpeed, speedUnit).toFixed(1)} ${speedUnit}` },
+      { icon: <InfoIcon className={classes.fieldIcon} />, label: 'Positions', value: positions.length.toLocaleString() },
+    ];
+
+    if (fuelUsed) items.push({ icon: <InfoIcon className={classes.fieldIcon} />, label: 'Fuel used', value: fuelUsed });
+    if (engineHours) items.push({ icon: <PowerIcon className={classes.fieldIcon} />, label: 'Engine hours', value: engineHours });
+
+    return items;
+  }, [historyRoute, distanceUnit, speedUnit, classes.fieldIcon]);
+
   // Get icon for each field type
   const getFieldIcon = (item) => {
     const iconMap = {
@@ -1031,24 +1180,46 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
 
         {tab === 0 && (
           <Box className={classes.content}>
-            <Box 
-              className={classes.dataGrid}
-              style={{
-                gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
-                gridTemplateRows: `repeat(${gridRows}, auto)`,
-              }}
-            >
-              {dataListItems.map((item) => (
-                <Box 
-                  key={item} 
-                  className={classes.field}
-                >
-                  {getFieldIcon(item)}
-                  <Typography className={classes.label}>{getLabel(item)}</Typography>
-                  <Typography className={classes.value}>{formatValue(item)}</Typography>
-                </Box>
-              ))}
-            </Box>
+            {/* Context label when showing route data */}
+            {(sidebarTab === 3 || historyRoute) && routeDataListItems ? (
+              <Box 
+                className={classes.dataGrid}
+                style={{
+                  gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
+                  gridTemplateRows: `repeat(${Math.ceil(routeDataListItems.length / gridColumns)}, auto)`,
+                }}
+              >
+                {routeDataListItems.map((item) => (
+                  <Box 
+                    key={item.label} 
+                    className={classes.field}
+                  >
+                    {item.icon}
+                    <Typography className={classes.label}>{item.label}</Typography>
+                    <Typography className={classes.value}>{item.value}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Box 
+                className={classes.dataGrid}
+                style={{
+                  gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
+                  gridTemplateRows: `repeat(${gridRows}, auto)`,
+                }}
+              >
+                {dataListItems.map((item) => (
+                  <Box 
+                    key={item} 
+                    className={classes.field}
+                  >
+                    {getFieldIcon(item)}
+                    <Typography className={classes.label}>{getLabel(item)}</Typography>
+                    <Typography className={classes.value}>{formatValue(item)}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Box>
         )}
 
@@ -1356,6 +1527,21 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
                         top: 0, 
                         zIndex: 1 
                       }}>
+                        <th style={{ padding: '4px 4px', borderBottom: '1px solid #ddd', textAlign: 'center', fontWeight: 600, width: '24px' }}>
+                          <input
+                            type="checkbox"
+                            onChange={handleSelectAllMessages}
+                            checked={(() => {
+                              const pagePositions = messagesData.slice(
+                                messagesPage * messagesPageSize,
+                                (messagesPage + 1) * messagesPageSize,
+                              );
+                              const pageIds = pagePositions.map((p) => p.id).filter(Boolean);
+                              return pageIds.length > 0 && pageIds.every((id) => selectedMessages.has(id));
+                            })()}
+                            style={{ cursor: 'pointer', width: '12px', height: '12px' }}
+                          />
+                        </th>
                         <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap' }}>#</th>
                         <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap' }}>Time (Device)</th>
                         <th style={{ padding: '4px 8px', borderBottom: '1px solid #ddd', textAlign: 'left', fontWeight: 600, whiteSpace: 'nowrap' }}>Time (Server)</th>
@@ -1380,7 +1566,7 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
                             <tr 
                               key={`row-${globalIdx}`}
                               style={{ 
-                                backgroundColor: globalIdx % 2 === 0 ? '#fff' : '#f9f9f9',
+                                backgroundColor: selectedMessages.has(pos.id) ? '#e3f2fd' : (globalIdx % 2 === 0 ? '#fff' : '#f9f9f9'),
                                 cursor: 'pointer',
                               }}
                               onClick={() => {
@@ -1395,6 +1581,15 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
                                 }
                               }}
                             >
+                              <td style={{ padding: '3px 4px', borderBottom: '1px solid #eee', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedMessages.has(pos.id)}
+                                  onChange={(e) => handleMessageSelect(pos.id, e)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{ cursor: 'pointer', width: '12px', height: '12px' }}
+                                />
+                              </td>
                               <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', color: '#888' }}>{globalIdx + 1}</td>
                               <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', whiteSpace: 'nowrap' }}>
                                 {pos.fixTime ? dayjs(pos.fixTime).format('YYYY-MM-DD HH:mm:ss') : '-'}
@@ -1427,7 +1622,7 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
                             </tr>,
                             isExpanded && attrKeys.length > 0 && (
                               <tr key={`attrs-${globalIdx}`} style={{ backgroundColor: '#f0f4ff' }}>
-                                <td colSpan={9} style={{ padding: '4px 8px 4px 32px', borderBottom: '1px solid #ddd' }}>
+                                <td colSpan={10} style={{ padding: '4px 8px 4px 32px', borderBottom: '1px solid #ddd' }}>
                                   <div style={{ 
                                     display: 'grid', 
                                     gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
@@ -1463,9 +1658,36 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick }) => {
                   backgroundColor: '#f5f5f5',
                   minHeight: '28px',
                 }}>
-                  <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#666' }}>
-                    {messagesData.length} messages
-                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#666' }}>
+                      {messagesData.length} messages
+                    </Typography>
+                    {selectedMessages.size > 0 && (
+                      <IconButton
+                        size="small"
+                        onClick={handleDeleteMessages}
+                        disabled={deletingMessages}
+                        title={`Delete ${selectedMessages.size} selected`}
+                        sx={{
+                          width: 22,
+                          height: 22,
+                          color: '#d32f2f',
+                          '&:hover': { backgroundColor: '#ffebee' },
+                        }}
+                      >
+                        {deletingMessages ? (
+                          <CircularProgress size={12} sx={{ color: '#d32f2f' }} />
+                        ) : (
+                          <DeleteIcon sx={{ fontSize: 14 }} />
+                        )}
+                      </IconButton>
+                    )}
+                    {selectedMessages.size > 0 && (
+                      <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#d32f2f' }}>
+                        {selectedMessages.size} selected
+                      </Typography>
+                    )}
+                  </Stack>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <IconButton 
                       size="small" 

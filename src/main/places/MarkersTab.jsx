@@ -33,30 +33,36 @@ const useStyles = makeStyles()(() => ({
   },
   toolbar: {
     display: 'flex',
-    gap: '5px',
-    padding: '10px',
+    gap: '4px',
+    padding: '6px 10px',
     backgroundColor: 'white',
     borderBottom: '1px solid #e0e0e0',
     flexShrink: 0,
+    alignItems: 'center',
   },
   searchField: {
     flex: 1,
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#f5f5f5',
-      height: '28px',
+      height: '26px',
       fontSize: '11px',
       '& fieldset': {
-        border: 'none',
+        border: '1px solid #f5f5f5',
+      },
+      '&:hover fieldset': {
+        border: '1px solid #e0e0e0',
       },
     },
   },
   actionButton: {
     width: '28px',
     height: '28px',
+    padding: '6px',
     backgroundColor: '#f5f5f5',
     borderRadius: 0,
+    border: '1px solid #f5f5f5',
     '&:hover': {
-      backgroundColor: '#e0e0e0',
+      backgroundColor: '#ffffff',
     },
   },
   buttonIcon: {
@@ -66,7 +72,7 @@ const useStyles = makeStyles()(() => ({
   tableHeader: {
     display: 'flex',
     alignItems: 'center',
-    height: '28px',
+    height: '26px',
     backgroundColor: '#f5f5f5',
     borderBottom: '1px solid #e0e0e0',
     flexShrink: 0,
@@ -82,7 +88,8 @@ const useStyles = makeStyles()(() => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '8px 10px',
+    padding: '0 10px',
+    height: '28px',
     backgroundColor: 'white',
     borderTop: '1px solid #e0e0e0',
     flexShrink: 0,
@@ -90,12 +97,12 @@ const useStyles = makeStyles()(() => ({
   paginationControls: {
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
+    gap: '2px',
   },
   paginationButton: {
-    width: '24px',
-    height: '24px',
-    minWidth: '24px',
+    width: '22px',
+    height: '22px',
+    minWidth: '22px',
     padding: 0,
     '& .MuiSvgIcon-root': {
       fontSize: '16px',
@@ -108,13 +115,13 @@ const useStyles = makeStyles()(() => ({
   pageInfo: {
     fontSize: '11px',
     color: '#666666',
-    padding: '0 8px',
+    padding: '0 6px',
   },
   pageSizeSelect: {
     fontSize: '11px',
-    height: '24px',
+    height: '22px',
     '& .MuiSelect-select': {
-      padding: '2px 24px 2px 8px',
+      padding: '2px 22px 2px 6px',
       fontSize: '11px',
     },
     '& .MuiOutlinedInput-notchedOutline': {
@@ -220,14 +227,18 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   const handleGroupVisibilityToggle = (ids, event) => {
     if (event) event.stopPropagation();
     const allVis = ids.every((id) => visibleItems.includes(id));
+    const nowVisible = !allVis;
     if (allVis) setVisibleItems((prev) => prev.filter((id) => !ids.includes(id)));
     else setVisibleItems((prev) => [...new Set([...prev, ...ids])]);
+    dispatch(geofencesActions.setVisibility({ ids, visible: nowVisible }));
   };
 
   const handleToggleAllVisibility = () => {
     const allIds = items.map((m) => m.id);
     const allVis = allIds.length > 0 && allIds.every((id) => visibleItems.includes(id));
+    const nowVisible = !allVis;
     setVisibleItems(allVis ? [] : allIds);
+    dispatch(geofencesActions.setVisibility({ ids: allIds, visible: nowVisible }));
   };
 
   const groupedMarkers = useMemo(() => {
@@ -266,7 +277,9 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   }, [items, groups, search, expandedGroups]);
 
   const handleToggleVisibility = (id) => {
+    const nowVisible = !visibleItems.includes(id);
     setVisibleItems((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    dispatch(geofencesActions.setVisibility({ ids: [id], visible: nowVisible }));
   };
 
   const handleRowClick = (row) => {
@@ -406,9 +419,9 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
       {/* Hidden file input for import */}
       <input type="file" ref={fileInputRef} accept=".json" style={{ display: 'none' }} onChange={handleImport} />
 
-      {/* Table Header: Eye icon + Name */}
+      {/* Table Header */}
       <Box className={classes.tableHeader}>
-        <Box sx={{ width: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Box sx={{ width: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <IconButton size="small" onClick={handleToggleAllVisibility} sx={{ padding: '2px' }} title="Show/Hide All">
             <img
               src={allVisible ? '/img/theme/eye.svg' : '/img/theme/eye-crossed.svg'}
@@ -417,7 +430,7 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
             />
           </IconButton>
         </Box>
-        <Box sx={{ flex: 1, paddingLeft: '8px' }}>Name</Box>
+        <Box sx={{ flex: 1, paddingLeft: '4px' }}>Name</Box>
       </Box>
 
       {/* Table Body */}
@@ -436,20 +449,21 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
                   <Box
                     key={`header-${item.groupId}`}
                     sx={{
-                      display: 'flex', alignItems: 'center', height: '33px', backgroundColor: '#f5f5f5',
+                      display: 'flex', alignItems: 'center', height: '28px', backgroundColor: '#f5f5f5',
                       borderTop: '1px solid #e0e0e0', borderBottom: '1px solid #e0e0e0', fontSize: '11px',
-                      fontWeight: 500, cursor: 'pointer', userSelect: 'none', '&:hover': { backgroundColor: '#ebebeb' },
+                      fontWeight: 'normal', cursor: 'pointer', userSelect: 'none',
+                      '&:hover': { backgroundColor: '#ebebeb' },
                     }}
                   >
-                    <Box sx={{ width: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Box sx={{ width: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <Checkbox
                         size="small" checked={gAllVis} indeterminate={!gAllVis && gSomeVis}
                         onClick={(e) => handleGroupVisibilityToggle(item.itemIds, e)}
                         sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
                       />
                     </Box>
-                    <Box sx={{ flex: 1, paddingLeft: '8px' }} onClick={() => toggleGroup(item.groupId)}>
-                      <span style={{ color: '#222', fontWeight: 500 }}>
+                    <Box sx={{ flex: 1, paddingLeft: '4px', whiteSpace: 'pre', overflow: 'hidden' }} onClick={() => toggleGroup(item.groupId)}>
+                      <span style={{ color: '#222', fontWeight: 'normal' }}>
                         {item.content}
                         {' '}
                         <span style={{ color: '#888' }}>
@@ -459,9 +473,9 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
                         </span>
                       </span>
                     </Box>
-                    <Box sx={{ width: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Box sx={{ width: '26px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <IconButton size="small" onClick={() => toggleGroup(item.groupId)} sx={{ padding: '2px' }}>
-                        <span style={{ fontSize: 18, fontWeight: 'bold' }}>{item.isExpanded ? '-' : '+'}</span>
+                        <span style={{ fontSize: 16, fontWeight: 'bold', color: '#666' }}>{item.isExpanded ? '−' : '+'}</span>
                       </IconButton>
                     </Box>
                   </Box>
@@ -473,11 +487,13 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
                 <Box
                   key={`item-${marker.id}`}
                   sx={{
-                    display: 'flex', alignItems: 'center', height: '33px', borderBottom: '1px solid #e0e0e0',
-                    fontSize: '11px', cursor: 'pointer', '&:hover': { backgroundColor: '#fafafa' },
+                    display: 'flex', alignItems: 'center', height: '28px',
+                    borderBottom: '1px solid #e0e0e0',
+                    fontSize: '11px', cursor: 'pointer',
+                    '&:hover': { backgroundColor: '#fafafa' },
                   }}
                 >
-                  <Box sx={{ width: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <Box sx={{ width: '36px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                     <Checkbox
                       size="small" checked={isVisible} onChange={() => handleToggleVisibility(marker.id)}
                       sx={{ padding: '2px', '& svg': { fontSize: 14 } }}
@@ -485,13 +501,14 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
                   </Box>
                   <Box
                     sx={{
-                      flex: 1, paddingLeft: '8px', '&:hover': { textDecoration: 'underline', color: '#2b82d4' },
+                      flex: 1, paddingLeft: '4px', whiteSpace: 'pre', overflow: 'hidden',
+                      '&:hover': { textDecoration: 'underline', color: '#2b82d4' },
                     }}
                     onClick={() => handleRowClick(marker)}
                   >
                     {marker.name}
                   </Box>
-                  <Box sx={{ display: 'flex', gap: '4px', paddingRight: '8px' }}>
+                  <Box sx={{ display: 'flex', gap: '3px', paddingRight: '6px' }}>
                     <IconButton size="small" onClick={() => onEdit(marker)} sx={{ padding: '2px' }}>
                       <img src="/img/theme/edit.svg" alt="Edit" style={{ width: 12, height: 12 }} />
                     </IconButton>
@@ -549,7 +566,7 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
       <MapMarkerPreview enabled={dialogOpen} location={pickedLocation} icon={selectedIcon} />
       <MarkerDialog
         open={dialogOpen} onClose={handleDialogClose} marker={editing}
-        mapCenter={{ lat: -6.2088, lng: 106.8456 }} pickedLocation={pickedLocation} onIconSelect={handleIconSelect}
+        pickedLocation={pickedLocation} onIconSelect={handleIconSelect}
       />
       <PlaceGroupsDialog open={groupsDialogOpen} onClose={handleGroupsDialogClose} />
       <RemoveDialog

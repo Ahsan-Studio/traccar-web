@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
 } from "react";
 import {
   Tabs,
@@ -39,9 +40,20 @@ import RoutesTab from "./places/RoutesTab";
 import ZonesTab from "./places/ZonesTab";
 import HistoryTab from "./HistoryTab";
 import { map } from "../map/core/MapView";
-import dimensions from "../common/theme/dimensions";
 import ObjectControlDialog from "./ObjectControlDialog";
 import HistoryControls from "./HistoryControls";
+import InfoDialog from "./InfoDialog";
+import DashboardDialog from "./DashboardDialog";
+import ShowPointDialog from "./ShowPointDialog";
+import AddressSearchDialog from "./AddressSearchDialog";
+import ReportsDialog from "./ReportsDialog";
+import TasksDialog from "./TasksDialog";
+import LogbookDialog from "./LogbookDialog";
+import DTCDialog from "./DTCDialog";
+import MaintenanceDialog from "./MaintenanceDialog";
+import ExpensesDialog from "./ExpensesDialog";
+import GalleryDialog from "./GalleryDialog";
+import ChatDialog from "./ChatDialog";
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -239,10 +251,24 @@ const MainPage = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [objectControlOpen, setObjectControlOpen] = useState(false);
   const [objectControlDeviceId, setObjectControlDeviceId] = useState(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [showPointOpen, setShowPointOpen] = useState(false);
+  const [addressSearchOpen, setAddressSearchOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [logbookOpen, setLogbookOpen] = useState(false);
+  const [dtcOpen, setDtcOpen] = useState(false);
+  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
+  const [expensesOpen, setExpensesOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [historyRoute, setHistoryRoute] = useState(null);
   const [historyTrigger, setHistoryTrigger] = useState(null); // { deviceId, period }
-  const [routeToggles, setRouteToggles] = useState({ route: true, stops: true, events: true });
+  const [routeToggles, setRouteToggles] = useState({ route: true, stops: true, events: true, arrows: false, dataPoints: false, snap: false });
+  const [snappedCoordinates, setSnappedCoordinates] = useState(null);
+  const snapCacheRef = useRef(null); // Cache snapped result per route
 
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
 
@@ -298,9 +324,82 @@ const MainPage = () => {
   useEffect(() => {
     if (!historyRoute) {
       setPlaybackPosition(null);
-      setRouteToggles({ route: true, stops: true, events: true });
+      setSnappedCoordinates(null);
+      snapCacheRef.current = null;
+      setRouteToggles({ route: true, stops: true, events: true, arrows: false, dataPoints: false, snap: false });
     }
   }, [historyRoute]);
+
+  // Snap to roads using OSRM match API
+  useEffect(() => {
+    if (!routeToggles.snap || !historyRoute?.coordinates) {
+      setSnappedCoordinates(null);
+      return;
+    }
+
+    // Check cache
+    const cacheKey = `${historyRoute.deviceId}-${historyRoute.coordinates.length}`;
+    if (snapCacheRef.current?.key === cacheKey) {
+      setSnappedCoordinates(snapCacheRef.current.coords);
+      return;
+    }
+
+    const fetchSnapped = async () => {
+      try {
+        const coords = historyRoute.coordinates;
+        // OSRM limit is ~100 coordinates per request, so chunk them
+        const chunkSize = 80;
+        const allSnapped = [];
+
+        for (let i = 0; i < coords.length; i += chunkSize) {
+          const chunk = coords.slice(i, Math.min(i + chunkSize, coords.length));
+          // If we have overlap from previous chunk, add the last point for continuity
+          if (i > 0 && allSnapped.length > 0) {
+            // Remove duplicate junction point
+          }
+          const coordStr = chunk.map((c) => `${c[0]},${c[1]}`).join(';');
+          const radiuses = chunk.map(() => '25').join(';');
+          const url = `https://router.project-osrm.org/match/v1/driving/${coordStr}?overview=full&geometries=geojson&radiuses=${radiuses}`;
+
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (data.code === 'Ok' && data.matchings) {
+            data.matchings.forEach((matching) => {
+              const matchCoords = matching.geometry.coordinates;
+              // Avoid duplicate first point if we already have data
+              const startIdx = allSnapped.length > 0 ? 1 : 0;
+              for (let j = startIdx; j < matchCoords.length; j += 1) {
+                allSnapped.push(matchCoords[j]);
+              }
+            });
+          } else {
+            // If OSRM fails for this chunk, use original coordinates
+            chunk.forEach((c) => allSnapped.push(c));
+          }
+        }
+
+        if (allSnapped.length > 0) {
+          snapCacheRef.current = { key: cacheKey, coords: allSnapped };
+          setSnappedCoordinates(allSnapped);
+        }
+      } catch (error) {
+        console.error('Snap to roads failed:', error);
+        setSnappedCoordinates(null);
+      }
+    };
+
+    fetchSnapped();
+  }, [routeToggles.snap, historyRoute]);
+
+  // Compute effective history route (with or without snap)
+  const effectiveHistoryRoute = useMemo(() => {
+    if (!historyRoute) return null;
+    if (snappedCoordinates && routeToggles.snap) {
+      return { ...historyRoute, coordinates: snappedCoordinates };
+    }
+    return historyRoute;
+  }, [historyRoute, snappedCoordinates, routeToggles.snap]);
 
   const handleRouteToggle = useCallback((key) => {
     setRouteToggles((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -332,22 +431,25 @@ const MainPage = () => {
   const handleFocusLocation = useCallback(
     (location) => {
       if (map && location) {
-        // Calculate horizontal offset to compensate for drawer width on desktop
-        const drawerWidth = desktop
-          ? parseInt(dimensions.drawerWidthDesktop, 10)
-          : 0;
-        const spacing = desktop ? parseInt(theme.spacing(1.5), 10) : 0;
-        const horizontalOffset = desktop ? -((drawerWidth + spacing) / 2) : 0;
-
-        map.easeTo({
-          center: [location.lng, location.lat],
-          zoom: Math.max(map.getZoom(), 15), // Zoom to at least level 15
-          offset: [horizontalOffset, -dimensions.popupMapOffset / 2],
-          duration: 1000, // Smooth animation
-        });
+        if (location.bounds) {
+          // bounds = [[swLng, swLat], [neLng, neLat]]
+          map.fitBounds(location.bounds, {
+            padding: {
+              left: 350, top: 56, right: 20, bottom: 20,
+            },
+            duration: 1000,
+            maxZoom: 17,
+          });
+        } else {
+          map.easeTo({
+            center: [location.lng, location.lat],
+            zoom: Math.max(map.getZoom(), 15),
+            duration: 1000,
+          });
+        }
       }
     },
-    [desktop, theme]
+    []
   );
 
   // Fetch counts for Places tabs when Places tab is active
@@ -417,7 +519,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setInfoOpen(true)}>
             <img
               src="/img/top-nav/info.svg"
               border="0"
@@ -434,21 +536,21 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setDashboardOpen(true)}>
             <img
               src="/img/top-nav/dashboard.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setShowPointOpen(true)}>
             <img
               src="/img/top-nav/marker.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setAddressSearchOpen(true)}>
             <img
               src="/img/top-nav/search.svg"
               border="0"
@@ -462,37 +564,44 @@ const MainPage = () => {
             className={classes.divider}
           />
 
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setReportsOpen(true)}>
             <img
               src="/img/top-nav/report.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setTasksOpen(true)}>
             <img
               src="/img/top-nav/tasks.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setLogbookOpen(true)}>
             <img
               src="/img/top-nav/logbook.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setDtcOpen(true)}>
             <img
               src="/img/top-nav/dtc.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton}>
+          <IconButton className={classes.navButton} onClick={() => setMaintenanceOpen(true)}>
             <img
               src="/img/top-nav/maintenance.svg"
+              border="0"
+              style={{ width: "16px", height: "16px" }}
+            />
+          </IconButton>
+          <IconButton className={classes.navButton} onClick={() => setExpensesOpen(true)}>
+            <img
+              src="/img/top-nav/expenses.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
@@ -508,21 +617,23 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          <IconButton className={classes.navButton} onClick={() => setGalleryOpen(true)}>
+            <img
+              src="/img/top-nav/gallery.svg"
+              border="0"
+              style={{ width: "16px", height: "16px" }}
+            />
+          </IconButton>
+          <IconButton className={classes.navButton} onClick={() => setChatOpen(true)}>
+            <img
+              src="/img/top-nav/chat.svg"
+              border="0"
+              style={{ width: "16px", height: "16px" }}
+            />
+          </IconButton>
 
           {/* Right section */}
           <div className={classes.rightSection}>
-            {/* <IconButton className={classes.navButton}>
-              <img src="/img/top-nav/language.svg" border="0" style={{ width: '16px', height: '16px' }} />
-            </IconButton> */}
-            {/* <IconButton className={classes.navButton}>
-              <img src="/img/top-nav/cogs-white.svg" border="0" style={{ width: '16px', height: '16px' }} />
-            </IconButton> */}
-            {/* <IconButton className={classes.navButton}>
-              <img src="/img/top-nav/user.svg" border="0" style={{ width: '16px', height: '16px' }} />
-            </IconButton> */}
-            {/* <IconButton className={classes.navButton}>
-              <img src="/img/top-nav/mobile.svg" border="0" style={{ width: '16px', height: '16px' }} />
-            </IconButton> */}
             <Divider
               orientation="vertical"
               flexItem
@@ -682,7 +793,7 @@ const MainPage = () => {
               filteredPositions={filteredPositions}
               selectedPosition={selectedPosition}
               onEventsClick={onEventsClick}
-              historyRoute={historyRoute}
+              historyRoute={effectiveHistoryRoute}
               playbackPosition={playbackPosition}
               routeToggles={routeToggles}
             />
@@ -715,11 +826,24 @@ const MainPage = () => {
         }}
         preselectedDeviceId={objectControlDeviceId}
       />
+      <InfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
+      <DashboardDialog open={dashboardOpen} onClose={() => setDashboardOpen(false)} />
+      <ShowPointDialog open={showPointOpen} onClose={() => setShowPointOpen(false)} />
+      <AddressSearchDialog open={addressSearchOpen} onClose={() => setAddressSearchOpen(false)} />
+      <ReportsDialog open={reportsOpen} onClose={() => setReportsOpen(false)} />
+      <TasksDialog open={tasksOpen} onClose={() => setTasksOpen(false)} />
+      <LogbookDialog open={logbookOpen} onClose={() => setLogbookOpen(false)} />
+      <DTCDialog open={dtcOpen} onClose={() => setDtcOpen(false)} />
+      <MaintenanceDialog open={maintenanceOpen} onClose={() => setMaintenanceOpen(false)} />
+      <ExpensesDialog open={expensesOpen} onClose={() => setExpensesOpen(false)} />
+      <GalleryDialog open={galleryOpen} onClose={() => setGalleryOpen(false)} />
+      <ChatDialog open={chatOpen} onClose={() => setChatOpen(false)} />
       {selectedDeviceId && (
         <DeviceInfoPanel
           deviceId={selectedDeviceId}
           historyRoute={historyRoute}
           onGraphPointClick={handleGraphPointClick}
+          sidebarTab={currentTab}
         />
       )}
     </div>

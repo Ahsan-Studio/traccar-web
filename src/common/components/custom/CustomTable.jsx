@@ -26,42 +26,47 @@ import { CustomCheckbox } from "./index";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
-    padding: "15px",
     display: "flex",
     flexDirection: "column",
     height: "100%",
   },
   toolbar: {
     display: 'flex',
-    gap: '5px',
-    padding: '10px',
+    gap: '4px',
+    padding: '6px 10px',
     backgroundColor: 'white',
     borderBottom: '1px solid #e0e0e0',
     flexShrink: 0,
+    alignItems: 'center',
   },
   searchField: {
     flex: 1,
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#f5f5f5',
-      height: '28px',
+      height: '26px',
       fontSize: '11px',
       '& fieldset': {
-        border: 'none',
+        border: '1px solid #f5f5f5',
+      },
+      '&:hover fieldset': {
+        border: '1px solid #e0e0e0',
       },
     },
   },
   actionButton: {
     width: '28px',
     height: '28px',
+    padding: '6px',
     backgroundColor: '#f5f5f5',
     borderRadius: 0,
+    border: '1px solid #f5f5f5',
     '&:hover': {
-      backgroundColor: '#e0e0e0',
+      backgroundColor: '#ffffff',
     },
   },
   buttonIcon: {
-    width: '16px',
-    height: '16px',
+    width: '14px',
+    height: '14px',
   },
   tableContainer: {
     flex: 1,
@@ -71,42 +76,42 @@ const useStyles = makeStyles()((theme) => ({
   tableHeader: {
     backgroundColor: "#f5f5f5",
     "& .MuiTableRow-root": {
-      height: '24px',
+      height: '26px',
     },
     "& .MuiTableCell-root": {
       fontSize: 11,
       fontWeight: 500,
-      height: '24px',
-      padding: '0px 12px',
-      borderBottom: `1px solid #ddd`,
+      height: '26px',
+      padding: '0px 8px',
+      borderBottom: '1px solid #e0e0e0',
       borderLeft: 0,
       borderRight: 0,
-      color: "#333",
+      color: "#444",
     },
   },
   tableRow: {
     backgroundColor: "#fff",
-    maxHeight: '22px',
-    height: '22px',
-    cursor: 'pointer', // Add pointer cursor for clickable rows
+    maxHeight: '28px',
+    height: '28px',
+    cursor: 'pointer',
     "&:hover": {
       backgroundColor: "#fafafa",
     },
     "& .MuiTableCell-root": {
       fontSize: 11,
-      padding: "0px 12px",
-      height: '22px',
-      maxHeight: '22px',
-      borderBottom: `1px solid #ddd`,
+      padding: "0px 8px",
+      height: '28px',
+      maxHeight: '28px',
+      borderBottom: '1px solid #f5f5f5',
       borderLeft: 0,
       borderRight: 0,
-      color: "#333",
-      lineHeight: '22px',
+      color: "#444",
+      lineHeight: '28px',
     },
   },
   checkboxCell: {
-    width: 40,
-    padding: "4px 8px 0px 8px !important",
+    width: 36,
+    padding: "4px 6px 0px 6px !important",
     verticalAlign: "middle !important",
     textAlign: "center",
   },
@@ -115,18 +120,22 @@ const useStyles = makeStyles()((theme) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: theme.spacing(1, 1),
-    backgroundColor: '#fff',
-    borderTop: `1px solid ${theme.palette.divider}`,
+    height: '28px',
+    padding: '0 10px',
+    backgroundColor: '#f5f5f5',
+    borderTop: '1px solid #e0e0e0',
   },
   footerLeft: {
     display: "flex",
-    gap: theme.spacing(1),
+    gap: '2px',
+    alignItems: 'center',
   },
   footerButton: {
-    padding: 4,
+    width: '22px',
+    height: '22px',
+    padding: '2px',
     "& .MuiSvgIcon-root": {
-      fontSize: 16,
+      fontSize: 14,
       color: "#4a90e2",
     },
   },
@@ -394,10 +403,10 @@ const CustomTable = ({
                       </TableCell>
                     );
                   })}
-                  <TableCell className={classes.actionCell}>
-                    <IconButton size="small" className={classes.actionButton} onClick={() => onEdit(row)}><EditIcon /></IconButton>
+                  <TableCell className={classes.actionCell} sx={{ whiteSpace: 'nowrap', width: '60px', textAlign: 'right', paddingRight: '4px !important' }}>
+                    <IconButton size="small" onClick={() => onEdit(row)} sx={{ padding: '2px' }}><EditIcon sx={{ fontSize: 14 }} /></IconButton>
                     {customActions && customActions(row)}
-                    <IconButton size="small" className={classes.actionButton} onClick={() => onDelete(row)}><DeleteIcon /></IconButton>
+                    <IconButton size="small" onClick={() => onDelete(row)} sx={{ padding: '2px' }}><DeleteIcon sx={{ fontSize: 14 }} /></IconButton>
                   </TableCell>
                 </TableRow>
               ))

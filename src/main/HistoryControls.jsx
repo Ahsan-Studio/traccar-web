@@ -53,6 +53,9 @@ const HistoryControls = ({ toggles, onToggle, onClose }) => {
 
   const buttons = [
     { key: 'route', icon: '/img/theme/route-route.svg', title: 'Show/Hide Route' },
+    { key: 'arrows', icon: '/img/theme/route-arrow.svg', title: 'Show/Hide Arrows' },
+    { key: 'dataPoints', icon: '/img/theme/route-data-point.svg', title: 'Show/Hide Data Points' },
+    { key: 'snap', icon: '/img/theme/route-snap.svg', title: 'Snap to Roads' },
     { key: 'stops', icon: '/img/theme/route-stop.svg', title: 'Show/Hide Stops' },
     { key: 'events', icon: '/img/theme/route-event.svg', title: 'Show/Hide Events' },
   ];

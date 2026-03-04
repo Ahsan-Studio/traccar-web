@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Box,
   IconButton,
   Typography,
@@ -22,7 +20,7 @@ import {
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 import MapZoneDrawer from "./MapZoneDrawer";
 
-const useStyles = makeStyles()((theme) => ({
+const useStyles = makeStyles()(() => ({
   dialog: {
     pointerEvents: "none",
     "& .MuiDialog-container": {
@@ -30,78 +28,98 @@ const useStyles = makeStyles()((theme) => ({
     },
     "& .MuiDialog-paper": {
       pointerEvents: "auto",
-      width: "360px",
+      width: "330px",
       maxWidth: "90vw",
       position: "fixed",
       left: "20px",
       top: "80px",
       margin: 0,
+      overflow: "visible",
+      borderRadius: "4px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
     },
   },
-  dialogTitle: {
+  titleBar: {
     backgroundColor: "#2b82d4",
     color: "white",
-    padding: "12px 16px",
-    fontSize: "16px",
+    padding: "8px 12px",
+    fontSize: "13px",
     fontWeight: 500,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+    lineHeight: "18px",
+    position: "relative",
   },
   closeButton: {
+    position: "absolute",
+    right: "-8px",
+    top: "-8px",
+    width: "20px",
+    height: "20px",
+    padding: 0,
+    backgroundColor: "#e74c3c",
     color: "white",
-    padding: "4px",
+    border: "2px solid white",
+    borderRadius: "50%",
+    zIndex: 1,
     "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      backgroundColor: "#c0392b",
+    },
+    "& .MuiSvgIcon-root": {
+      fontSize: "12px",
     },
   },
-  dialogContent: {
-    padding: theme.spacing(2),
+  content: {
+    padding: "10px 12px 6px 12px",
     backgroundColor: "white",
-    maxHeight: "calc(100vh - 200px)",
-    overflowY: "auto",
+    "&.MuiDialogContent-root": {
+      padding: "10px 12px 6px 12px",
+    },
   },
   formRow: {
     display: "flex",
     alignItems: "center",
-    marginBottom: theme.spacing(1.5),
+    marginBottom: "3px",
+    width: "100%",
+    lineHeight: "12px",
   },
   label: {
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 400,
     color: "#333",
-    width: "110px",
+    width: "40%",
     flexShrink: 0,
+    lineHeight: "24px",
   },
   inputWrapper: {
-    flex: 1,
+    width: "60%",
   },
   select: {
     width: "100%",
-    fontSize: "13px",
+    fontSize: "11px",
+    "& .MuiOutlinedInput-input": {
+      padding: "4px 8px",
+      fontSize: "11px",
+    },
     "& .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#ddd",
+      borderColor: "#ccc",
     },
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#aaa",
-    },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#2b82d4",
+    "& .MuiSelect-icon": {
+      right: "4px",
     },
   },
   colorInput: {
-    width: "120px",
-    height: "36px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
+    width: "55px",
+    height: "24px",
+    border: "1px solid #ccc",
+    borderRadius: "2px",
     cursor: "pointer",
+    padding: "1px",
   },
-  dialogActions: {
-    padding: theme.spacing(2),
+  actions: {
+    display: "flex",
     justifyContent: "center",
-    gap: theme.spacing(1),
-    borderTop: `1px solid ${theme.palette.divider}`,
-    backgroundColor: "#f5f5f5",
+    gap: "6px",
+    padding: "8px 12px 10px 12px",
+    backgroundColor: "white",
   },
 }));
 
@@ -113,7 +131,7 @@ const ZoneDialog = ({ open, onClose, zone }) => {
     color: "#FF0000",
     visible: true,
     nameVisible: true,
-    measureArea: false,
+    measureArea: "off",
     area: null, // Store drawn zone area
   });
   const [groups, setGroups] = useState([{ id: 0, name: 'Ungrouped' }]);
@@ -153,9 +171,10 @@ const ZoneDialog = ({ open, onClose, zone }) => {
         color: zone.attributes?.color || "#FF0000",
         visible: zone.attributes?.visible !== false,
         nameVisible: zone.attributes?.nameVisible !== false,
-        measureArea: zone.attributes?.measureArea || false,
+        measureArea: zone.attributes?.measureArea || "off",
         area: zone.area || null,
       });
+      setDrawingEnabled(true); // Enable drawing for editing too
     } else {
       // Create mode - reset form and enable drawing
       setFormData({
@@ -164,7 +183,7 @@ const ZoneDialog = ({ open, onClose, zone }) => {
         color: "#FF0000",
         visible: true,
         nameVisible: true,
-        measureArea: false,
+        measureArea: "off",
         area: null,
       });
       setDrawingEnabled(true); // Enable drawing for new zones
@@ -237,7 +256,6 @@ const ZoneDialog = ({ open, onClose, zone }) => {
 
       const payload = {
         name: formData.name,
-        groupId: formData.groupId === 0 ? null : formData.groupId, // Use null for ungrouped
         area: areaToSave, // Use the area we got (either from formData or current drawing)
         attributes: {
           type: "zone",
@@ -247,6 +265,11 @@ const ZoneDialog = ({ open, onClose, zone }) => {
           measureArea: formData.measureArea,
         },
       };
+
+      // Only include groupId if a real group is selected (fixes null groupId API bug)
+      if (formData.groupId && formData.groupId !== 0) {
+        payload.groupId = formData.groupId;
+      }
 
       // Add ID for update
       if (zone?.id) {
@@ -289,122 +312,141 @@ const ZoneDialog = ({ open, onClose, zone }) => {
         onZoneChange={handleZoneDrawn}
         color={formData.color}
         onDrawReady={(fn) => { getCurrentFeaturesRef.current = fn; }}
+        initialArea={zone?.area}
       />
-      <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false} hideBackdrop={true} disableEnforceFocus={true}>
-        <DialogTitle className={classes.dialogTitle}>
+      <Dialog
+        open={open}
+        onClose={(event, reason) => {
+          if (reason === 'backdropClick' || reason === 'escapeKeyDown') return;
+          onClose(false);
+        }}
+        className={classes.dialog}
+        style={{ pointerEvents: 'none' }}
+        maxWidth={false}
+        hideBackdrop
+        disableEnforceFocus
+        disableAutoFocus
+        disableEscapeKeyDown
+        container={() => document.getElementById('root')}
+      >
+        {/* Red circle close button - V1 style */}
+        <IconButton onClick={handleCancel} className={classes.closeButton} size="small">
+          <CloseIcon />
+        </IconButton>
+
+        {/* Title bar */}
+        <Box className={classes.titleBar}>
           Zone properties
-          <IconButton onClick={onClose} className={classes.closeButton} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
+        </Box>
 
-        <DialogContent className={classes.dialogContent}>
-          {!zone && (
-            <Box sx={{ mb: 1.5, p: 1, backgroundColor: '#e3f2fd', borderRadius: '4px', fontSize: '11px' }}>
-              <Typography variant="caption" sx={{ color: '#1565c0', display: 'block', fontWeight: 500 }}>
-                🖱️ Draw Zone: Click points on map
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#1565c0', display: 'block', fontSize: '10px' }}>
-                • Double-click last point to finish<br/>
-                • Or click first point again to close<br/>
-                • Press Enter to finish
-              </Typography>
-            </Box>
-          )}
+        <DialogContent className={classes.content}>
+          {/* Name */}
           <Box className={classes.formRow}>
-          <Typography className={classes.label}>Name</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomInput
-              value={formData.name}
-              onChange={handleInputChange("name")}
-              placeholder="New zone 1"
-            />
+            <Typography className={classes.label}>Name</Typography>
+            <Box className={classes.inputWrapper}>
+              <CustomInput
+                value={formData.name}
+                onChange={handleInputChange("name")}
+                placeholder="New zone 1"
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Group</Typography>
-          <Box className={classes.inputWrapper}>
-            <Select
-              value={formData.groupId}
-              onChange={(e) => setFormData((prev) => ({ ...prev, groupId: e.target.value }))}
-              className={classes.select}
-              size="small"
-              displayEmpty
-            >
-              {(groups || []).map((group) => (
-                <MenuItem key={`group-${group.id}`} value={group.id}>
-                  {group.name || 'Unknown'}
-                </MenuItem>
-              ))}
-            </Select>
+          {/* Group */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Group</Typography>
+            <Box className={classes.inputWrapper}>
+              <Select
+                value={formData.groupId}
+                onChange={(e) => setFormData((prev) => ({ ...prev, groupId: e.target.value }))}
+                className={classes.select}
+                size="small"
+                displayEmpty
+              >
+                {(groups || []).map((group) => (
+                  <MenuItem key={`group-${group.id}`} value={group.id} sx={{ fontSize: '11px' }}>
+                    {group.name || 'Unknown'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Color</Typography>
-          <Box className={classes.inputWrapper}>
-            <input
-              type="color"
-              value={formData.color}
-              onChange={(e) => setFormData((prev) => ({ ...prev, color: e.target.value }))}
-              className={classes.colorInput}
-            />
+          {/* Color */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Color</Typography>
+            <Box className={classes.inputWrapper}>
+              <input
+                type="color"
+                value={formData.color}
+                onChange={(e) => setFormData((prev) => ({ ...prev, color: e.target.value }))}
+                className={classes.colorInput}
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Zone visible</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomCheckbox
-              checked={formData.visible}
-              onChange={handleCheckboxChange("visible")}
-            />
+          {/* Zone visible */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Zone visible</Typography>
+            <Box className={classes.inputWrapper}>
+              <CustomCheckbox
+                checked={formData.visible}
+                onChange={handleCheckboxChange("visible")}
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Name visible</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomCheckbox
-              checked={formData.nameVisible}
-              onChange={handleCheckboxChange("nameVisible")}
-            />
+          {/* Name visible */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Name visible</Typography>
+            <Box className={classes.inputWrapper}>
+              <CustomCheckbox
+                checked={formData.nameVisible}
+                onChange={handleCheckboxChange("nameVisible")}
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Measure area</Typography>
-          <Box className={classes.inputWrapper}>
-            <Select
-              value={formData.measureArea ? "on" : "off"}
-              onChange={(e) => setFormData((prev) => ({ ...prev, measureArea: e.target.value === "on" }))}
-              className={classes.select}
-              size="small"
-            >
-              <MenuItem value="off">Off</MenuItem>
-              <MenuItem value="on">On</MenuItem>
-            </Select>
+          {/* Measure area - V1 has 7 options */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Measure area</Typography>
+            <Box className={classes.inputWrapper}>
+              <Select
+                value={formData.measureArea}
+                onChange={(e) => setFormData((prev) => ({ ...prev, measureArea: e.target.value }))}
+                className={classes.select}
+                size="small"
+              >
+                <MenuItem value="off" sx={{ fontSize: '11px' }}>Off</MenuItem>
+                <MenuItem value="acres" sx={{ fontSize: '11px' }}>Acres</MenuItem>
+                <MenuItem value="hectares" sx={{ fontSize: '11px' }}>Hectares</MenuItem>
+                <MenuItem value="sqm" sx={{ fontSize: '11px' }}>Square meters</MenuItem>
+                <MenuItem value="sqkm" sx={{ fontSize: '11px' }}>Square kilometers</MenuItem>
+                <MenuItem value="sqft" sx={{ fontSize: '11px' }}>Square feet</MenuItem>
+                <MenuItem value="sqmi" sx={{ fontSize: '11px' }}>Square miles</MenuItem>
+              </Select>
+            </Box>
           </Box>
-        </Box>
-      </DialogContent>
+        </DialogContent>
 
-      <DialogActions className={classes.dialogActions}>
-        <CustomButton
-          onClick={handleSave}
-          variant="primary"
-          icon={<SaveIcon style={{ fontSize: 14 }} />}
-        >
-          Save
-        </CustomButton>
-        <CustomButton
-          onClick={handleCancel}
-          variant="secondary"
-          icon={<CancelIcon style={{ fontSize: 14 }} />}
-        >
-          Cancel
-        </CustomButton>
-      </DialogActions>
+        {/* Save / Cancel buttons */}
+        <Box className={classes.actions}>
+          <CustomButton
+            onClick={handleSave}
+            variant="primary"
+            icon={<SaveIcon style={{ fontSize: 13 }} />}
+            disabled={!formData.name || !formData.area}
+          >
+            Save
+          </CustomButton>
+          <CustomButton
+            onClick={handleCancel}
+            variant="secondary"
+            icon={<CancelIcon style={{ fontSize: 13 }} />}
+          >
+            Cancel
+          </CustomButton>
+        </Box>
       </Dialog>
     </>
   );

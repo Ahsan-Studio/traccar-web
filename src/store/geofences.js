@@ -13,6 +13,16 @@ const { reducer, actions } = createSlice({
     update(state, action) {
       action.payload.forEach((item) => state.items[item.id] = item);
     },
+    setVisibility(state, action) {
+      // action.payload = { ids: number[], visible: boolean }
+      const { ids, visible } = action.payload;
+      ids.forEach((id) => {
+        if (state.items[id]) {
+          if (!state.items[id].attributes) state.items[id].attributes = {};
+          state.items[id].attributes.hide = !visible;
+        }
+      });
+    },
   },
 });
 

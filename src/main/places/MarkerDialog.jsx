@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Box,
   IconButton,
   Typography,
@@ -22,129 +20,138 @@ import {
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 import IconSelector from "./IconSelector";
 
-const useStyles = makeStyles()((theme) => ({
+const useStyles = makeStyles()(() => ({
   dialog: {
-    // Container tidak block pointer events - CRITICAL!
     pointerEvents: "none",
     "& .MuiDialog-container": {
       pointerEvents: "none",
     },
     "& .MuiDialog-paper": {
-      pointerEvents: "auto", // Paper menerima pointer events
-      width: "360px",
+      pointerEvents: "auto",
+      width: "330px",
       maxWidth: "90vw",
       position: "fixed",
       left: "20px",
       top: "80px",
       margin: 0,
+      overflow: "visible",
+      borderRadius: "4px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
     },
   },
-  dialogTitle: {
+  titleBar: {
     backgroundColor: "#2b82d4",
     color: "white",
-    padding: "12px 16px",
-    fontSize: "16px",
+    padding: "8px 12px",
+    fontSize: "13px",
     fontWeight: 500,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+    lineHeight: "18px",
+    position: "relative",
   },
   closeButton: {
+    position: "absolute",
+    right: "-8px",
+    top: "-8px",
+    width: "20px",
+    height: "20px",
+    padding: 0,
+    backgroundColor: "#e74c3c",
     color: "white",
-    padding: "4px",
+    border: "2px solid white",
+    borderRadius: "50%",
+    zIndex: 1,
     "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      backgroundColor: "#c0392b",
+    },
+    "& .MuiSvgIcon-root": {
+      fontSize: "12px",
     },
   },
-  dialogContent: {
-    padding: theme.spacing(2),
+  content: {
+    padding: "10px 12px 6px 12px",
     backgroundColor: "white",
+    "&.MuiDialogContent-root": {
+      padding: "10px 12px 6px 12px",
+    },
   },
   formRow: {
     display: "flex",
     alignItems: "center",
-    marginBottom: theme.spacing(1.5),
+    marginBottom: "3px",
+    width: "100%",
+    lineHeight: "12px",
+  },
+  formRowTop: {
+    display: "flex",
+    alignItems: "flex-start",
+    marginBottom: "3px",
+    width: "100%",
+    lineHeight: "12px",
   },
   label: {
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 400,
     color: "#333",
-    width: "100px",
+    width: "40%",
     flexShrink: 0,
+    lineHeight: "24px",
   },
   inputWrapper: {
-    flex: 1,
+    width: "60%",
   },
   select: {
     width: "100%",
-    fontSize: "12px",
+    fontSize: "11px",
     "& .MuiOutlinedInput-input": {
-      padding: "6px 10px",
+      padding: "4px 8px",
+      fontSize: "11px",
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#ccc",
+    },
+    "& .MuiSelect-icon": {
+      right: "4px",
     },
   },
   textField: {
     width: "100%",
-    "& .MuiOutlinedInput-input": {
-      padding: "6px 10px",
-      fontSize: "12px",
-    },
-  },
-  tabs: {
-    minHeight: "32px",
-    marginBottom: theme.spacing(1),
-    "& .MuiTab-root": {
-      minHeight: "32px",
+    "& .MuiOutlinedInput-root": {
       fontSize: "11px",
-      textTransform: "none",
-      padding: "6px 12px",
+    },
+    "& .MuiOutlinedInput-input": {
+      padding: "4px 5px",
+      fontSize: "11px",
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#ccc",
     },
   },
-  iconGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(6, 1fr)",
-    gap: theme.spacing(0.5),
-    maxHeight: "280px",
-    overflowY: "auto",
-    padding: theme.spacing(1),
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    backgroundColor: "#fafafa",
+  textArea: {
+    width: "100%",
+    "& .MuiOutlinedInput-root": {
+      fontSize: "11px",
+      padding: "5px",
+    },
+    "& .MuiOutlinedInput-input": {
+      fontSize: "11px",
+      padding: 0,
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#ccc",
+    },
   },
-  iconButton: {
-    width: "48px",
-    height: "48px",
+  actions: {
     display: "flex",
-    alignItems: "center",
     justifyContent: "center",
-    cursor: "pointer",
-    border: "2px solid transparent",
-    borderRadius: "4px",
-    padding: "4px",
-    transition: "all 0.2s",
-    "&:hover": {
-      backgroundColor: "#e3f2fd",
-      borderColor: "#2196F3",
-    },
-    "&.selected": {
-      backgroundColor: "#e3f2fd",
-      borderColor: "#2196F3",
-    },
-  },
-  iconImage: {
-    width: "36px",
-    height: "36px",
-    objectFit: "contain",
-  },
-  dialogActions: {
-    padding: theme.spacing(2),
-    justifyContent: "center",
-    gap: theme.spacing(1),
-    borderTop: `1px solid ${theme.palette.divider}`,
+    gap: "6px",
+    padding: "8px 12px 10px 12px",
+    backgroundColor: "white",
   },
 }));
 
-const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIconSelect }) => {
+const MarkerDialog = ({ open, onClose, marker, pickedLocation, onIconSelect }) => {
   const { classes } = useStyles();
+  const initializedRef = useRef(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -153,6 +160,7 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
     visible: true,
     latitude: "",
     longitude: "",
+    radius: "500",
   });
   const [groups, setGroups] = useState([{ id: 0, name: 'Ungrouped' }]);
 
@@ -181,6 +189,14 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
   }, [open]);
 
   useEffect(() => {
+    if (!open) {
+      initializedRef.current = false;
+      return;
+    }
+    // Only initialize form once when dialog opens
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     if (marker) {
       // Edit mode - parse existing marker data
       const areaMatch = marker.area?.match(/CIRCLE\s*\(\s*([0-9.-]+)\s+([0-9.-]+)\s*,\s*([0-9.]+)\s*\)/);
@@ -189,24 +205,26 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
         name: String(marker.name || ""),
         description: String(marker.description || ""),
         groupId: Number(marker.groupId) || 0,
-        icon: String(marker.attributes?.icon || "default-green.svg"),
+        icon: String(marker.attributes?.icon || "pin-1.svg"),
         visible: marker.attributes?.visible !== false,
         latitude: areaMatch ? String(areaMatch[1]) : "",
         longitude: areaMatch ? String(areaMatch[2]) : "",
+        radius: areaMatch ? String(areaMatch[3]) : "500",
       });
     } else {
-      // Create mode - use map center if available
+      // Create mode
       setFormData({
         name: "",
         description: "",
         groupId: 0,
-        icon: "default-green.svg",
+        icon: "pin-1.svg",
         visible: true,
-        latitude: mapCenter?.lat ? String(mapCenter.lat) : "",
-        longitude: mapCenter?.lng ? String(mapCenter.lng) : "",
+        latitude: "",
+        longitude: "",
+        radius: "500",
       });
     }
-  }, [marker, mapCenter, open]);
+  }, [marker, open]);
 
   // Update lat/long when map is clicked
   useEffect(() => {
@@ -241,28 +259,14 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
         return;
       }
 
-      // Validate groupId exists (if not 0/Ungrouped)
-      if (formData.groupId && formData.groupId !== 0) {
-        try {
-          const groupResponse = await fetchOrThrow(`/api/geofence-groups/${formData.groupId}`);
-          if (!groupResponse.ok) {
-            alert("Selected group does not exist. Please select a valid group or use 'Ungrouped'.");
-            return;
-          }
-        } catch (err) {
-          console.error("Group validation error:", err);
-          alert("Selected group does not exist. Using 'Ungrouped' instead.");
-          formData.groupId = 0; // Fallback to Ungrouped
-        }
-      }
-
-      // Construct CIRCLE geometry with default radius 500m
-      const area = `CIRCLE (${formData.latitude} ${formData.longitude}, 500)`;
+      // Construct CIRCLE geometry with user-specified radius
+      const radius = parseFloat(formData.radius) || 500;
+      const area = `CIRCLE (${formData.latitude} ${formData.longitude}, ${radius})`;
 
       const payload = {
         name: formData.name,
         description: formData.description || "",
-        groupId: formData.groupId === 0 ? null : formData.groupId, // Use null for ungrouped
+        groupId: formData.groupId || 0,
         area: area,
         attributes: {
           type: "marker",
@@ -305,64 +309,66 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={(event, reason) => {
-        // Only allow close via button, not backdrop or escape
-        if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
-          return;
-        }
+        if (reason === 'backdropClick' || reason === 'escapeKeyDown') return;
         onClose(false);
       }}
       className={classes.dialog}
       style={{ pointerEvents: 'none' }}
       maxWidth={false}
-      hideBackdrop={true}
-      disableEnforceFocus={true}
-      disableAutoFocus={true}
-      disableEscapeKeyDown={true}
-      disablePortal={false}
+      hideBackdrop
+      disableEnforceFocus
+      disableAutoFocus
+      disableEscapeKeyDown
       container={() => document.getElementById('root')}
     >
-      <DialogTitle className={classes.dialogTitle}>
+      {/* Red circle close button - V1 style */}
+      <IconButton onClick={handleCancel} className={classes.closeButton} size="small">
+        <CloseIcon />
+      </IconButton>
+
+      {/* Title bar */}
+      <Box className={classes.titleBar}>
         Marker properties
-        <IconButton onClick={handleCancel} className={classes.closeButton} size="small">
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+      </Box>
 
-      <DialogContent className={classes.dialogContent}>
-
+      <DialogContent className={classes.content}>
+        {/* Name */}
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Name</Typography>
           <Box className={classes.inputWrapper}>
             <TextField
               value={formData.name}
               onChange={handleInputChange("name")}
-              placeholder="New marker 2"
+              placeholder="New marker 1"
               className={classes.textField}
               size="small"
               variant="outlined"
+              inputProps={{ maxLength: 25 }}
             />
           </Box>
         </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Description</Typography>
+        {/* Description */}
+        <Box className={classes.formRowTop}>
+          <Typography className={classes.label} style={{ paddingTop: '5px' }}>Description</Typography>
           <Box className={classes.inputWrapper}>
             <TextField
               value={formData.description}
               onChange={handleInputChange("description")}
-              placeholder=""
-              className={classes.textField}
+              className={classes.textArea}
               size="small"
               variant="outlined"
               multiline
-              rows={2}
+              rows={3}
+              inputProps={{ maxLength: 200 }}
             />
           </Box>
         </Box>
 
+        {/* Group */}
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Group</Typography>
           <Box className={classes.inputWrapper}>
@@ -374,7 +380,7 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
               displayEmpty
             >
               {(groups || []).map((group) => (
-                <MenuItem key={`group-${group.id}`} value={group.id}>
+                <MenuItem key={`group-${group.id}`} value={group.id} sx={{ fontSize: '11px' }}>
                   {group.name || 'Unknown'}
                 </MenuItem>
               ))}
@@ -382,6 +388,7 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
           </Box>
         </Box>
 
+        {/* Marker visible */}
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Marker visible</Typography>
           <Box className={classes.inputWrapper}>
@@ -392,38 +399,50 @@ const MarkerDialog = ({ open, onClose, marker, mapCenter, pickedLocation, onIcon
           </Box>
         </Box>
 
-        {/* Icon Selector Component */}
+        {/* Radius */}
+        <Box className={classes.formRow}>
+          <Typography className={classes.label}>Radius (m)</Typography>
+          <Box className={classes.inputWrapper}>
+            <TextField
+              value={formData.radius}
+              onChange={handleInputChange("radius")}
+              placeholder="500"
+              className={classes.textField}
+              size="small"
+              variant="outlined"
+              type="number"
+              inputProps={{ min: 1, maxLength: 11 }}
+            />
+          </Box>
+        </Box>
+
+        {/* Icon Selector - Default / Custom tabs */}
         <IconSelector
           value={formData.icon}
           onChange={(newIcon) => {
-            setFormData(prev => ({
-              ...prev,
-              icon: newIcon
-            }));
-            // Notify parent for map preview
-            if (onIconSelect) {
-              onIconSelect(newIcon);
-            }
+            setFormData((prev) => ({ ...prev, icon: newIcon }));
+            if (onIconSelect) onIconSelect(newIcon);
           }}
         />
       </DialogContent>
 
-      <DialogActions className={classes.dialogActions}>
+      {/* Save / Cancel buttons */}
+      <Box className={classes.actions}>
         <CustomButton
           onClick={handleSave}
           variant="primary"
-          icon={<SaveIcon style={{ fontSize: 14 }} />}
+          icon={<SaveIcon style={{ fontSize: 13 }} />}
         >
           Save
         </CustomButton>
         <CustomButton
           onClick={handleCancel}
           variant="secondary"
-          icon={<CancelIcon style={{ fontSize: 14 }} />}
+          icon={<CancelIcon style={{ fontSize: 13 }} />}
         >
           Cancel
         </CustomButton>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 };

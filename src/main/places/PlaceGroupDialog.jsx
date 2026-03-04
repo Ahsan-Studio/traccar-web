@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Box,
   IconButton,
   Typography,
@@ -16,62 +14,109 @@ import CancelIcon from "@mui/icons-material/Close";
 import { CustomButton } from "../../common/components/custom";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 
-const useStyles = makeStyles()((theme) => ({
+const useStyles = makeStyles()(() => ({
   dialog: {
     "& .MuiDialog-paper": {
-      width: "400px",
+      width: "330px",
       maxWidth: "90vw",
+      overflow: "visible",
+      borderRadius: "4px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
     },
   },
-  dialogTitle: {
+  titleBar: {
     backgroundColor: "#2b82d4",
     color: "white",
-    padding: "12px 16px",
-    fontSize: "16px",
+    padding: "8px 12px",
+    fontSize: "13px",
     fontWeight: 500,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+    lineHeight: "18px",
+    position: "relative",
   },
   closeButton: {
+    position: "absolute",
+    right: "-8px",
+    top: "-8px",
+    width: "20px",
+    height: "20px",
+    padding: 0,
+    backgroundColor: "#e74c3c",
     color: "white",
-    padding: "4px",
+    border: "2px solid white",
+    borderRadius: "50%",
+    zIndex: 1,
     "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      backgroundColor: "#c0392b",
     },
-  },
-  dialogContent: {
-    padding: theme.spacing(2),
-    backgroundColor: "white",
-  },
-  formRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    marginBottom: theme.spacing(1.5),
-  },
-  label: {
-    fontSize: "12px",
-    fontWeight: 400,
-    color: "#333",
-    width: "100px",
-    flexShrink: 0,
-    paddingTop: "8px",
-  },
-  inputWrapper: {
-    flex: 1,
-  },
-  textField: {
-    width: "100%",
-    "& .MuiOutlinedInput-input": {
-      padding: "6px 10px",
+    "& .MuiSvgIcon-root": {
       fontSize: "12px",
     },
   },
-  dialogActions: {
-    padding: theme.spacing(2),
+  content: {
+    padding: "10px 12px 6px 12px",
+    backgroundColor: "white",
+    "&.MuiDialogContent-root": {
+      padding: "10px 12px 6px 12px",
+    },
+  },
+  formRow: {
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "3px",
+    width: "100%",
+    lineHeight: "12px",
+  },
+  formRowTop: {
+    display: "flex",
+    alignItems: "flex-start",
+    marginBottom: "3px",
+    width: "100%",
+    lineHeight: "12px",
+  },
+  label: {
+    fontSize: "11px",
+    fontWeight: 400,
+    color: "#333",
+    width: "40%",
+    flexShrink: 0,
+    lineHeight: "24px",
+  },
+  inputWrapper: {
+    width: "60%",
+  },
+  textField: {
+    width: "100%",
+    "& .MuiOutlinedInput-root": {
+      fontSize: "11px",
+    },
+    "& .MuiOutlinedInput-input": {
+      padding: "4px 5px",
+      fontSize: "11px",
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#ccc",
+    },
+  },
+  textArea: {
+    width: "100%",
+    "& .MuiOutlinedInput-root": {
+      fontSize: "11px",
+      padding: "5px",
+    },
+    "& .MuiOutlinedInput-input": {
+      fontSize: "11px",
+      padding: 0,
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#ccc",
+    },
+  },
+  actions: {
+    display: "flex",
     justifyContent: "center",
-    gap: theme.spacing(1),
-    borderTop: `1px solid ${theme.palette.divider}`,
+    gap: "6px",
+    padding: "8px 12px 10px 12px",
+    backgroundColor: "white",
   },
 }));
 
@@ -159,14 +204,18 @@ const PlaceGroupDialog = ({ open, onClose, group }) => {
 
   return (
     <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false}>
-      <DialogTitle className={classes.dialogTitle}>
-        {group ? "Edit Group" : "Create Group"}
-        <IconButton onClick={onClose} className={classes.closeButton} size="small">
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+      {/* Red circle close button - V1 style */}
+      <IconButton onClick={handleCancel} className={classes.closeButton} size="small">
+        <CloseIcon />
+      </IconButton>
 
-      <DialogContent className={classes.dialogContent}>
+      {/* Title bar */}
+      <Box className={classes.titleBar}>
+        {group ? "Edit Group" : "Group properties"}
+      </Box>
+
+      <DialogContent className={classes.content}>
+        {/* Name */}
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Name</Typography>
           <Box className={classes.inputWrapper}>
@@ -178,43 +227,47 @@ const PlaceGroupDialog = ({ open, onClose, group }) => {
               size="small"
               variant="outlined"
               autoFocus
+              inputProps={{ maxLength: 25 }}
             />
           </Box>
         </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Description</Typography>
+        {/* Description */}
+        <Box className={classes.formRowTop}>
+          <Typography className={classes.label} style={{ paddingTop: '5px' }}>Description</Typography>
           <Box className={classes.inputWrapper}>
             <TextField
               value={formData.description}
               onChange={handleInputChange("description")}
               placeholder="Enter description (optional)"
-              className={classes.textField}
+              className={classes.textArea}
               size="small"
               variant="outlined"
               multiline
               rows={3}
+              inputProps={{ maxLength: 100 }}
             />
           </Box>
         </Box>
       </DialogContent>
 
-      <DialogActions className={classes.dialogActions}>
+      {/* Save / Cancel buttons */}
+      <Box className={classes.actions}>
         <CustomButton
           onClick={handleSave}
-          startIcon={<SaveIcon />}
-          variant="contained"
+          variant="primary"
+          icon={<SaveIcon style={{ fontSize: 13 }} />}
         >
           Save
         </CustomButton>
         <CustomButton
           onClick={handleCancel}
-          startIcon={<CancelIcon />}
-          variant="outlined"
+          variant="secondary"
+          icon={<CancelIcon style={{ fontSize: 13 }} />}
         >
           Cancel
         </CustomButton>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 };

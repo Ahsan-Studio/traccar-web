@@ -6,7 +6,7 @@ import { CustomButton, CustomInput, CustomSelect } from '../common/components/cu
 import fetchOrThrow from '../common/util/fetchOrThrow';
 import { formatTime } from '../common/util/formatter';
 import { useAttributePreference } from '../common/util/preferences';
-import { speedFromKnots, altitudeFromMeters } from '../common/util/converter';
+import { speedFromKnots, altitudeFromMeters, distanceFromMeters } from '../common/util/converter';
 import { map } from '../map/core/MapView';
 
 const HistoryTab = ({ onRouteChange, historyTrigger }) => {
@@ -14,6 +14,7 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
   
   const speedUnit = useAttributePreference('speedUnit', 'kmh');
   const altitudeUnit = useAttributePreference('altitudeUnit', 'm');
+  const distanceUnit = useAttributePreference('distanceUnit', 'km');
 
   const [selectedDevice, setSelectedDevice] = useState('');
   const [filter, setFilter] = useState('2'); // Default to 'Today'
@@ -332,6 +333,100 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
     
     return segments;
   }, [routeData]);
+
+  // Compute route summary statistics
+  const routeSummary = useMemo(() => {
+    if (routeData.length < 2) return null;
+
+    let totalDistance = 0;
+    let topSpeed = 0;
+    let speedSum = 0;
+    let speedCount = 0;
+    let moveDurationMs = 0;
+    let stopDurationMs = 0;
+    let fuelUsed = null;
+    let engineHours = null;
+
+    const firstOdo = routeData[0]?.attributes?.totalDistance || routeData[0]?.attributes?.odometer || 0;
+    const lastOdo = routeData[routeData.length - 1]?.attributes?.totalDistance || routeData[routeData.length - 1]?.attributes?.odometer || 0;
+    if (lastOdo > firstOdo) {
+      totalDistance = lastOdo - firstOdo;
+    } else {
+      // Calculate from Haversine
+      for (let i = 1; i < routeData.length; i += 1) {
+        const prev = routeData[i - 1];
+        const curr = routeData[i];
+        const R = 6371000;
+        const dLat = ((curr.latitude - prev.latitude) * Math.PI) / 180;
+        const dLon = ((curr.longitude - prev.longitude) * Math.PI) / 180;
+        const a = Math.sin(dLat / 2) ** 2
+          + Math.cos((prev.latitude * Math.PI) / 180)
+          * Math.cos((curr.latitude * Math.PI) / 180)
+          * Math.sin(dLon / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        totalDistance += R * c;
+      }
+    }
+
+    for (let i = 0; i < routeData.length; i += 1) {
+      const pos = routeData[i];
+      const speedKnots = pos.speed || 0;
+      if (speedKnots > topSpeed) topSpeed = speedKnots;
+      if (speedKnots > 0) {
+        speedSum += speedKnots;
+        speedCount += 1;
+      }
+
+      if (i < routeData.length - 1) {
+        const nextPos = routeData[i + 1];
+        const dt = dayjs(nextPos.fixTime).diff(dayjs(pos.fixTime), 'millisecond');
+        if (speedKnots >= 1) {
+          moveDurationMs += dt;
+        } else {
+          stopDurationMs += dt;
+        }
+      }
+    }
+
+    // Fuel consumption from attributes
+    const firstFuel = routeData[0]?.attributes?.fuel;
+    const lastFuel = routeData[routeData.length - 1]?.attributes?.fuel;
+    if (firstFuel != null && lastFuel != null && firstFuel > lastFuel) {
+      fuelUsed = firstFuel - lastFuel;
+    }
+
+    // Engine hours from attributes
+    const firstEng = routeData[0]?.attributes?.hours;
+    const lastEng = routeData[routeData.length - 1]?.attributes?.hours;
+    if (firstEng != null && lastEng != null && lastEng > firstEng) {
+      engineHours = (lastEng - firstEng) / 3600000; // ms to hours
+    }
+
+    const avgSpeed = speedCount > 0 ? speedSum / speedCount : 0;
+    const totalDurationMs = moveDurationMs + stopDurationMs;
+
+    const fmt = (ms) => {
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}h ${m}m ${s}s`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    };
+
+    return {
+      routeLength: `${distanceFromMeters(totalDistance, distanceUnit).toFixed(2)} ${distanceUnit}`,
+      totalDuration: fmt(totalDurationMs),
+      moveDuration: fmt(moveDurationMs),
+      stopDuration: fmt(stopDurationMs),
+      topSpeed: `${speedFromKnots(topSpeed, speedUnit).toFixed(1)} ${speedUnit}`,
+      avgSpeed: `${speedFromKnots(avgSpeed, speedUnit).toFixed(1)} ${speedUnit}`,
+      fuelUsed: fuelUsed != null ? `${fuelUsed.toFixed(2)} L` : null,
+      engineHours: engineHours != null ? `${engineHours.toFixed(1)} h` : null,
+      positions: routeData.length,
+    };
+  }, [routeData, speedUnit, distanceUnit]);
   
   // Helper function to format information column
   const getInformation = (position, index, allPositions) => {
@@ -674,6 +769,55 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Route Summary Data List */}
+            {routeSummary && (
+              <div className="history-route-summary">
+                <h4 style={{ marginLeft: '8px' }}>Route Summary</h4>
+                <div className="history-summary-grid">
+                  <div className="history-summary-item">
+                    <span className="history-summary-label">Route length</span>
+                    <span className="history-summary-value">{routeSummary.routeLength}</span>
+                  </div>
+                  <div className="history-summary-item">
+                    <span className="history-summary-label">Total duration</span>
+                    <span className="history-summary-value">{routeSummary.totalDuration}</span>
+                  </div>
+                  <div className="history-summary-item">
+                    <span className="history-summary-label">Move duration</span>
+                    <span className="history-summary-value">{routeSummary.moveDuration}</span>
+                  </div>
+                  <div className="history-summary-item">
+                    <span className="history-summary-label">Stop duration</span>
+                    <span className="history-summary-value">{routeSummary.stopDuration}</span>
+                  </div>
+                  <div className="history-summary-item">
+                    <span className="history-summary-label">Top speed</span>
+                    <span className="history-summary-value">{routeSummary.topSpeed}</span>
+                  </div>
+                  <div className="history-summary-item">
+                    <span className="history-summary-label">Average speed</span>
+                    <span className="history-summary-value">{routeSummary.avgSpeed}</span>
+                  </div>
+                  {routeSummary.fuelUsed && (
+                    <div className="history-summary-item">
+                      <span className="history-summary-label">Fuel used</span>
+                      <span className="history-summary-value">{routeSummary.fuelUsed}</span>
+                    </div>
+                  )}
+                  {routeSummary.engineHours && (
+                    <div className="history-summary-item">
+                      <span className="history-summary-label">Engine hours</span>
+                      <span className="history-summary-value">{routeSummary.engineHours}</span>
+                    </div>
+                  )}
+                  <div className="history-summary-item">
+                    <span className="history-summary-label">Positions</span>
+                    <span className="history-summary-value">{routeSummary.positions.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>

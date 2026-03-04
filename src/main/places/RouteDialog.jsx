@@ -1,108 +1,138 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Box,
   IconButton,
   Typography,
   MenuItem,
   Select,
+  TextField,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import {
-  CustomInput,
   CustomButton,
   CustomCheckbox,
 } from "../../common/components/custom";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 import MapRouteDrawer from "./MapRouteDrawer";
 
-const useStyles = makeStyles()((theme) => ({
+const useStyles = makeStyles()(() => ({
   dialog: {
-    // Allow map interaction - same as MarkerDialog
     pointerEvents: "none",
     "& .MuiDialog-container": {
       pointerEvents: "none",
     },
     "& .MuiDialog-paper": {
-      pointerEvents: "auto", // Dialog can receive clicks
-      width: "360px",
+      pointerEvents: "auto",
+      width: "330px",
       maxWidth: "90vw",
       position: "fixed",
       left: "20px",
       top: "80px",
       margin: 0,
+      overflow: "visible",
+      borderRadius: "4px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
     },
   },
-  dialogTitle: {
+  titleBar: {
     backgroundColor: "#2b82d4",
     color: "white",
-    padding: "12px 16px",
-    fontSize: "16px",
+    padding: "8px 12px",
+    fontSize: "13px",
     fontWeight: 500,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+    lineHeight: "18px",
+    position: "relative",
   },
   closeButton: {
+    position: "absolute",
+    right: "-8px",
+    top: "-8px",
+    width: "20px",
+    height: "20px",
+    padding: 0,
+    backgroundColor: "#e74c3c",
     color: "white",
-    padding: "4px",
+    border: "2px solid white",
+    borderRadius: "50%",
+    zIndex: 1,
     "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      backgroundColor: "#c0392b",
+    },
+    "& .MuiSvgIcon-root": {
+      fontSize: "12px",
     },
   },
-  dialogContent: {
-    padding: theme.spacing(2),
+  content: {
+    padding: "10px 12px 6px 12px",
     backgroundColor: "white",
-    maxHeight: "calc(100vh - 200px)",
-    overflowY: "auto",
+    "&.MuiDialogContent-root": {
+      padding: "10px 12px 6px 12px",
+    },
   },
   formRow: {
     display: "flex",
     alignItems: "center",
-    marginBottom: theme.spacing(1.5),
+    marginBottom: "3px",
+    width: "100%",
+    lineHeight: "12px",
   },
   label: {
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 400,
     color: "#333",
-    width: "110px",
+    width: "40%",
     flexShrink: 0,
+    lineHeight: "24px",
   },
   inputWrapper: {
-    flex: 1,
+    width: "60%",
   },
   select: {
     width: "100%",
-    fontSize: "13px",
+    fontSize: "11px",
+    "& .MuiOutlinedInput-input": {
+      padding: "4px 8px",
+      fontSize: "11px",
+    },
     "& .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#ddd",
+      borderColor: "#ccc",
     },
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#aaa",
+    "& .MuiSelect-icon": {
+      right: "4px",
     },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#2b82d4",
+  },
+  textField: {
+    width: "100%",
+    "& .MuiOutlinedInput-root": {
+      fontSize: "11px",
+    },
+    "& .MuiOutlinedInput-input": {
+      padding: "4px 5px",
+      fontSize: "11px",
+    },
+    "& .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#ccc",
     },
   },
   colorInput: {
-    width: "120px",
-    height: "36px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
+    width: "55px",
+    height: "24px",
+    border: "1px solid #ccc",
+    borderRadius: "2px",
     cursor: "pointer",
+    padding: "1px",
   },
-  dialogActions: {
-    padding: theme.spacing(2),
+  actions: {
+    display: "flex",
     justifyContent: "center",
-    gap: theme.spacing(1),
-    borderTop: `1px solid ${theme.palette.divider}`,
-    backgroundColor: "#f5f5f5",
+    gap: "6px",
+    padding: "8px 12px 10px 12px",
+    backgroundColor: "white",
   },
 }));
 
@@ -157,6 +187,7 @@ const RouteDialog = ({ open, onClose, route }) => {
         nameVisible: route.attributes?.nameVisible !== false,
         area: route.area || null,
       });
+      setDrawingEnabled(true); // Enable drawing for editing too
     } else {
       // Create mode - reset form and enable drawing
       setFormData({
@@ -238,7 +269,6 @@ const RouteDialog = ({ open, onClose, route }) => {
 
       const payload = {
         name: formData.name,
-        groupId: formData.groupId === 0 ? null : formData.groupId, // Use null for ungrouped
         area: areaToSave, // Use the area we got (either from formData or current drawing)
         attributes: {
           type: "route",
@@ -248,6 +278,11 @@ const RouteDialog = ({ open, onClose, route }) => {
           polylineDistance: parseFloat(formData.polylineDistance) || 100,
         },
       };
+
+      // Only include groupId if a real group is selected (fixes null groupId API bug)
+      if (formData.groupId && formData.groupId !== 0) {
+        payload.groupId = formData.groupId;
+      }
 
       // Add ID for update
       if (route?.id) {
@@ -291,118 +326,141 @@ const RouteDialog = ({ open, onClose, route }) => {
         color={formData.color}
         polylineDistance={parseInt(formData.polylineDistance) || 100}
         onDrawReady={(fn) => { getCurrentFeaturesRef.current = fn; }}
+        initialArea={route?.area}
       />
-      <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false} hideBackdrop={true} disableEnforceFocus={true}>
-        <DialogTitle className={classes.dialogTitle}>
+      <Dialog
+        open={open}
+        onClose={(event, reason) => {
+          if (reason === 'backdropClick' || reason === 'escapeKeyDown') return;
+          onClose(false);
+        }}
+        className={classes.dialog}
+        style={{ pointerEvents: 'none' }}
+        maxWidth={false}
+        hideBackdrop
+        disableEnforceFocus
+        disableAutoFocus
+        disableEscapeKeyDown
+        container={() => document.getElementById('root')}
+      >
+        {/* Red circle close button - V1 style */}
+        <IconButton onClick={handleCancel} className={classes.closeButton} size="small">
+          <CloseIcon />
+        </IconButton>
+
+        {/* Title bar */}
+        <Box className={classes.titleBar}>
           Route properties
-          <IconButton onClick={onClose} className={classes.closeButton} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
+        </Box>
 
-        <DialogContent className={classes.dialogContent}>
-          {!route && (
-            <Box sx={{ mb: 1.5, p: 1, backgroundColor: '#e3f2fd', borderRadius: '4px', fontSize: '11px' }}>
-              <Typography variant="caption" sx={{ color: '#1565c0', display: 'block', fontWeight: 500 }}>
-                🖱️ Draw Route: Click points on map
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#1565c0', display: 'block', fontSize: '10px' }}>
-                • Double-click last point to finish<br/>
-                • Press Enter to finish
-              </Typography>
-            </Box>
-          )}
+        <DialogContent className={classes.content}>
+          {/* Name */}
           <Box className={classes.formRow}>
-          <Typography className={classes.label}>Name</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomInput
-              value={formData.name}
-              onChange={handleInputChange("name")}
-              placeholder="New route 1"
-            />
+            <Typography className={classes.label}>Name</Typography>
+            <Box className={classes.inputWrapper}>
+              <TextField
+                value={formData.name}
+                onChange={handleInputChange("name")}
+                placeholder="New route 1"
+                className={classes.textField}
+                size="small"
+                variant="outlined"
+                inputProps={{ maxLength: 25 }}
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Group</Typography>
-          <Box className={classes.inputWrapper}>
-            <Select
-              value={formData.groupId}
-              onChange={(e) => setFormData((prev) => ({ ...prev, groupId: e.target.value }))}
-              className={classes.select}
-              size="small"
-              displayEmpty
-            >
-              {(groups || []).map((group) => (
-                <MenuItem key={`group-${group.id}`} value={group.id}>
-                  {group.name || 'Unknown'}
-                </MenuItem>
-              ))}
-            </Select>
+          {/* Group */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Group</Typography>
+            <Box className={classes.inputWrapper}>
+              <Select
+                value={formData.groupId}
+                onChange={(e) => setFormData((prev) => ({ ...prev, groupId: e.target.value }))}
+                className={classes.select}
+                size="small"
+                displayEmpty
+              >
+                {(groups || []).map((group) => (
+                  <MenuItem key={`group-${group.id}`} value={group.id} sx={{ fontSize: '11px' }}>
+                    {group.name || 'Unknown'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Corridor Width (m)</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomInput
-              type="number"
-              value={formData.polylineDistance}
-              onChange={handleInputChange("polylineDistance")}
-              placeholder="100"
-            />
+          {/* Color */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Color</Typography>
+            <Box className={classes.inputWrapper}>
+              <input
+                type="color"
+                value={formData.color}
+                onChange={(e) => setFormData((prev) => ({ ...prev, color: e.target.value }))}
+                className={classes.colorInput}
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Color</Typography>
-          <Box className={classes.inputWrapper}>
-            <input
-              type="color"
-              value={formData.color}
-              onChange={(e) => setFormData((prev) => ({ ...prev, color: e.target.value }))}
-              className={classes.colorInput}
-            />
+          {/* Route visible */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Route visible</Typography>
+            <Box className={classes.inputWrapper}>
+              <CustomCheckbox
+                checked={formData.visible}
+                onChange={handleCheckboxChange("visible")}
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Route visible</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomCheckbox
-              checked={formData.visible}
-              onChange={handleCheckboxChange("visible")}
-            />
+          {/* Name visible */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Name visible</Typography>
+            <Box className={classes.inputWrapper}>
+              <CustomCheckbox
+                checked={formData.nameVisible}
+                onChange={handleCheckboxChange("nameVisible")}
+              />
+            </Box>
           </Box>
-        </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>Name visible</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomCheckbox
-              checked={formData.nameVisible}
-              onChange={handleCheckboxChange("nameVisible")}
-            />
+          {/* Deviation / Corridor Width */}
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Deviation (m)</Typography>
+            <Box className={classes.inputWrapper}>
+              <TextField
+                type="number"
+                value={formData.polylineDistance}
+                onChange={handleInputChange("polylineDistance")}
+                placeholder="100"
+                className={classes.textField}
+                size="small"
+                variant="outlined"
+                inputProps={{ min: 0 }}
+              />
+            </Box>
           </Box>
-        </Box>
-      </DialogContent>
+        </DialogContent>
 
-      <DialogActions className={classes.dialogActions}>
-        <CustomButton
-          onClick={handleSave}
-          variant="primary"
-          icon={<SaveIcon style={{ fontSize: 14 }} />}
-        >
-          Save
-        </CustomButton>
-        <CustomButton
-          onClick={handleCancel}
-          variant="secondary"
-          icon={<CancelIcon style={{ fontSize: 14 }} />}
-        >
-          Cancel
-        </CustomButton>
-      </DialogActions>
+        {/* Save / Cancel buttons */}
+        <Box className={classes.actions}>
+          <CustomButton
+            onClick={handleSave}
+            variant="primary"
+            icon={<SaveIcon style={{ fontSize: 13 }} />}
+            disabled={!formData.name || !formData.area}
+          >
+            Save
+          </CustomButton>
+          <CustomButton
+            onClick={handleCancel}
+            variant="secondary"
+            icon={<CancelIcon style={{ fontSize: 13 }} />}
+          >
+            Cancel
+          </CustomButton>
+        </Box>
       </Dialog>
     </>
   );

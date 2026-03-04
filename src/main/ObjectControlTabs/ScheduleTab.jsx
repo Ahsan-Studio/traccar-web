@@ -39,9 +39,10 @@ const ScheduleTab = ({ classes, showNotification }) => {
     }
     let days = [];
     try {
-      days = typeof s.recurringDays === "string"
+      const raw = typeof s.recurringDays === "string"
         ? JSON.parse(s.recurringDays)
-        : (s.recurringDays || []);
+        : s.recurringDays;
+      days = Array.isArray(raw) ? raw : [];
     } catch {
       days = [];
     }

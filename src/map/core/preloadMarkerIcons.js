@@ -1,30 +1,6 @@
 import { map } from './MapView';
 
-// List of default marker icons to preload
-const DEFAULT_MARKER_ICONS = [
-  'default-green',
-  'default-green-add',
-  'default-green-check',
-  'default-green-cross',
-  'default-green-dot',
-  'default-green-exclamation',
-  'default-green-minus',
-  'default-green-question',
-  'default-green-star',
-  'default-green-plus',
-  'default-green-arrow',
-  'default-green-h',
-  'default-green-a',
-  'default-green-0',
-  'default-red',
-  'default-blue',
-  'default-yellow',
-  'default-orange',
-  'default-purple',
-  'default-pink',
-];
-
-// Places marker icons to preload
+// Places marker icons to preload (these exist in /img/markers/places/)
 const PLACES_MARKER_ICONS = [
   'pin-1', 'pin-2', 'pin-3', 'pin-4', 'pin-5',
   'pin-6', 'pin-7', 'pin-8', 'pin-9', 'pin-10',
@@ -43,40 +19,6 @@ const ROUTE_MARKER_ICONS = [
 ];
 
 export const preloadMarkerIcons = async () => {
-  console.log('[preloadMarkerIcons] Starting to load icons...');
-  
-  // Load default markers
-  const defaultPromises = DEFAULT_MARKER_ICONS.map(async (iconName) => {
-    try {
-      const response = await fetch(`/img/markers/${iconName}.svg`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => {
-            if (map.hasImage(iconName)) {
-              map.updateImage(iconName, img);
-            } else {
-              map.addImage(iconName, img, { sdf: false });
-            }
-            console.log(`[preloadMarkerIcons] Loaded default icon: ${iconName}`);
-            URL.revokeObjectURL(imageUrl);
-            resolve();
-          };
-          img.onerror = () => {
-            console.warn(`Failed to load marker icon: ${iconName}`);
-            URL.revokeObjectURL(imageUrl);
-            reject();
-          };
-          img.src = imageUrl;
-        });
-      }
-    } catch (error) {
-      console.warn(`Error loading marker icon ${iconName}:`, error);
-    }
-  });
   
   // Load places markers
   const placesPromises = PLACES_MARKER_ICONS.map(async (iconName) => {
@@ -94,7 +36,6 @@ export const preloadMarkerIcons = async () => {
             } else {
               map.addImage(iconName, img, { sdf: false });
             }
-            console.log(`[preloadMarkerIcons] Loaded places icon: ${iconName}`);
             URL.revokeObjectURL(imageUrl);
             resolve();
           };
@@ -127,7 +68,6 @@ export const preloadMarkerIcons = async () => {
             } else {
               map.addImage(iconName, img, { sdf: false });
             }
-            console.log(`[preloadMarkerIcons] Loaded route icon: ${iconName}`);
             URL.revokeObjectURL(imageUrl);
             resolve();
           };
@@ -144,24 +84,19 @@ export const preloadMarkerIcons = async () => {
     }
   });
 
-  await Promise.allSettled([...defaultPromises, ...placesPromises, ...routePromises]);
-  console.log('[preloadMarkerIcons] Finished loading icons');
+  await Promise.allSettled([...placesPromises, ...routePromises]);
 };
 
 // Function to dynamically load a marker icon if not already loaded
 export const loadMarkerIcon = async (iconName) => {
   if (!iconName || map.hasImage(iconName)) {
-    console.log(`[loadMarkerIcon] Icon ${iconName} already loaded or invalid`);
     return;
   }
-
-  console.log(`[loadMarkerIcon] Loading icon: ${iconName}`);
 
   // Try loading from markers/places folder first, then markers folder
   try {
     let response = await fetch(`/img/markers/places/${iconName}.svg`);
     if (!response.ok) {
-      console.log(`[loadMarkerIcon] Not found in places/, trying markers/`);
       // Fallback to markers folder
       response = await fetch(`/img/markers/${iconName}.svg`);
     }
@@ -175,7 +110,6 @@ export const loadMarkerIcon = async (iconName) => {
         img.onload = () => {
           if (!map.hasImage(iconName)) {
             map.addImage(iconName, img, { sdf: false });
-            console.log(`[loadMarkerIcon] Successfully loaded: ${iconName}`);
           }
           URL.revokeObjectURL(imageUrl);
           resolve();

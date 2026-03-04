@@ -89,13 +89,11 @@ export const geofenceToFeature = (theme, item) => {
       };
       const iconName = item.attributes.icon.replace('.svg', '').replace('.png', '');
       properties.icon = iconName;
-      console.log('[geofenceToFeature] Marker with icon:', item.name, 'Icon:', iconName, 'Coords:', [centerLng, centerLat]);
     } else {
       // Otherwise create circle polygon for boundary
       const options = { steps: 32, units: 'meters' };
       const polygon = circle([centerLng, centerLat], radius, options);
       geometry = polygon.geometry;
-      console.log('[geofenceToFeature] Marker without icon (circle):', item.name);
     }
   } else {
     geometry = reverseCoordinates(parse(item.area));

@@ -22,6 +22,8 @@ import MapRouteCoordinates from '../map/MapRouteCoordinates';
 import MapCamera from '../map/MapCamera';
 import MapRouteMarkers from '../map/MapRouteMarkers';
 import MapPlaybackMarker from '../map/MapPlaybackMarker';
+import MapRouteArrows from '../map/MapRouteArrows';
+import MapRouteDataPoints from '../map/MapRouteDataPoints';
 
 const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRoute, playbackPosition, routeToggles }) => {
   const theme = useTheme();
@@ -64,6 +66,12 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRo
               showStops={routeToggles?.stops !== false}
               showEvents={routeToggles?.events !== false}
             />
+            {routeToggles?.arrows && (
+              <MapRouteArrows coordinates={historyRoute.coordinates} />
+            )}
+            {routeToggles?.dataPoints && (
+              <MapRouteDataPoints positions={historyRoute.positions} />
+            )}
             <MapCamera 
               key={`history-${historyRoute.deviceId}-${historyRoute.coordinates.length}`}
               coordinates={historyRoute.coordinates} 

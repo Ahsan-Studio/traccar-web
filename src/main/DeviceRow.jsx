@@ -337,20 +337,16 @@ const DeviceRow = ({
           )}
           <Tooltip
             title={
-              !position
-                ? t('deviceStatusUnknown')
-                : positionOutdated || !positionValid
-                  ? 'GSM Connected (No GPS Fix)'
+              !position || deviceStatus.type === 'offline'
+                ? t('deviceStatusOffline')
                   : t('deviceStatusOnline')
             }
           >
             <Box
               component="img"
               src={
-                !position
+                !position || deviceStatus.type === 'offline'
                   ? '/img/theme/connection-no.svg'
-                  : positionOutdated || !positionValid
-                    ? '/img/theme/connection-gsm.svg'
                     : '/img/theme/connection-gsm-gps.svg'
               }
               sx={{ width: 16, height: 16 }}

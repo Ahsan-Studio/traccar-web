@@ -4,6 +4,11 @@ import { makeStyles } from 'tss-react/mui';
 import { Box, Typography, Divider } from '@mui/material';
 import dayjs from 'dayjs';
 import { formatSpeed, formatDistance, formatCoordinate } from '../common/util/formatter';
+import {
+  distanceToCircle,
+  distanceToPolygon,
+  formatDistanceValue,
+} from '../common/util/distance';
 import { useAttributePreference } from '../common/util/preferences';
 import { useTranslation } from '../common/components/LocalizationProvider';
 
@@ -64,6 +69,7 @@ const DeviceDataList = () => {
   const devices = useSelector((state) => state.devices.items);
   const positions = useSelector((state) => state.session.positions);
   const user = useSelector((state) => state.session.user);
+  const geofences = useSelector((state) => state.geofences.items);
   
   const device = devices[selectedDeviceId];
   const position = positions[selectedDeviceId];
@@ -75,6 +81,57 @@ const DeviceDataList = () => {
   const speedUnit = useAttributePreference('speedUnit', 'kmh');
   const distanceUnit = useAttributePreference('distanceUnit', 'km');
   const coordinateFormat = useAttributePreference('coordinateFormat', 'decimal');
+
+  // Parse geofence area string to get coordinates
+  const parseGeofenceArea = (area) => {
+    if (!area) return null;
+    if (area.startsWith('CIRCLE')) {
+      const match = area.match(/CIRCLE\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
+      if (match) {
+        return { type: 'circle', latitude: parseFloat(match[1]), longitude: parseFloat(match[2]), radius: parseFloat(match[3]) };
+      }
+    }
+    if (area.startsWith('POLYGON')) {
+      const coordMatch = area.match(/POLYGON\s*\(\((.*?)\)\)/);
+      if (coordMatch) {
+        const coords = coordMatch[1].split(',').map((pair) => {
+          const [lat, lon] = pair.trim().split(/\s+/);
+          return { latitude: parseFloat(lat), longitude: parseFloat(lon) };
+        });
+        return { type: 'polygon', coordinates: coords };
+      }
+    }
+    return null;
+  };
+
+  // Calculate nearest geofence of a specific type
+  const findNearestGeofence = (geofenceType) => {
+    if (!position || !geofences) return null;
+    let nearestGeofence = null;
+    let minDistance = Infinity;
+    Object.values(geofences).forEach((geofence) => {
+      let detectedType = geofence.attributes?.type;
+      if (!detectedType && geofence.area) {
+        if (geofence.area.startsWith('CIRCLE')) detectedType = 'marker';
+        else if (geofence.area.startsWith('POLYGON')) detectedType = 'zone';
+        else if (geofence.area.startsWith('LINESTRING')) detectedType = 'route';
+      }
+      if (detectedType !== geofenceType) return;
+      const parsed = parseGeofenceArea(geofence.area);
+      if (!parsed) return;
+      let distance;
+      if (parsed.type === 'circle') {
+        distance = distanceToCircle(position, parsed);
+      } else if (parsed.type === 'polygon') {
+        distance = distanceToPolygon(position, parsed.coordinates);
+      }
+      if (distance !== undefined && Math.abs(distance) < Math.abs(minDistance)) {
+        minDistance = distance;
+        nearestGeofence = { name: geofence.name, distance };
+      }
+    });
+    return nearestGeofence;
+  };
 
   // Group items by category
   const groupedItems = useMemo(() => {
@@ -165,13 +222,19 @@ const DeviceDataList = () => {
           ? `${position.course.toFixed(0)}°`
           : '-';
       
-      case 'nearest_zone':
-        // TODO: Calculate nearest geofence
-        return '-';
+      case 'nearest_zone': {
+        const nearestZone = findNearestGeofence('zone');
+        if (!nearestZone) return '-';
+        const zoneDistance = formatDistanceValue(Math.abs(nearestZone.distance), distanceUnit);
+        return `${nearestZone.name} (${zoneDistance})`;
+      }
       
-      case 'nearest_marker':
-        // TODO: Calculate nearest marker
-        return '-';
+      case 'nearest_marker': {
+        const nearestMarker = findNearestGeofence('marker');
+        if (!nearestMarker) return '-';
+        const markerDistance = formatDistanceValue(Math.abs(nearestMarker.distance), distanceUnit);
+        return `${nearestMarker.name} (${markerDistance})`;
+      }
       
       default:
         return '-';

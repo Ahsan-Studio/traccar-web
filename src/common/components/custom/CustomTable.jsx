@@ -120,7 +120,7 @@ const useStyles = makeStyles()(() => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    height: '28px',
+    height: '30px',
     padding: '0 10px',
     backgroundColor: '#f5f5f5',
     borderTop: '1px solid #e0e0e0',
@@ -430,7 +430,7 @@ const CustomTable = ({
           </Box>
           <Box className={classes.pagination}>
             <span>Page 1 of 1</span>
-            <span style={{ margin: '0 8px' }}>{'<<'}</span>
+            <span style={{ margin: '0 28px' }}>{'<<'}</span>
             <span>50</span>
           </Box>
         </Box>

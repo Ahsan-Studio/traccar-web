@@ -557,13 +557,6 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-
-          <Divider
-            orientation="vertical"
-            flexItem
-            className={classes.divider}
-          />
-
           <IconButton className={classes.navButton} onClick={() => setReportsOpen(true)}>
             <img
               src="/img/top-nav/report.svg"

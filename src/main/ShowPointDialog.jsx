@@ -13,9 +13,10 @@ const useStyles = makeStyles()(() => ({
   dialogTitle: {
     backgroundColor: '#2a81d4',
     color: 'white',
-    padding: '3px 14px',
+    padding: '6px 14px',
     display: 'flex',
     alignItems: 'center',
+    marginBottom: 5,
     justifyContent: 'space-between',
     '& .MuiTypography-root': { fontSize: '14px', fontWeight: 500 },
   },

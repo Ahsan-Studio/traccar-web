@@ -157,7 +157,7 @@ const NestedTabPanel = ({ children, value, index, ...other }) => (
     hidden={value !== index}
     id={`objects-tabpanel-${index}`}
     aria-labelledby={`objects-tab-${index}`}
-    style={{ maxHeight: "400px", overflow: "auto" }}
+    style={{ maxHeight: "394px", overflow: "auto" }}
     {...other}
   >
     {value === index && <Box sx={{ height: "100%" }}>{children}</Box>}

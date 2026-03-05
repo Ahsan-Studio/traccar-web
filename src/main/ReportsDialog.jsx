@@ -3,37 +3,66 @@ import {
 } from 'react';
 import {
   Dialog, DialogTitle, DialogContent,
-  IconButton, Typography, Box, Button, TextField, Tabs, Tab,
-  FormControl, Select, MenuItem, ListSubheader,
+  IconButton, Typography, Box, Tabs, Tab,
   Table, TableBody, TableHead, TableRow, TableCell, TableContainer,
-  Checkbox, Tooltip, Chip,
   CircularProgress,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
-import AddIcon from '@mui/icons-material/Add';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import FlashOnIcon from '@mui/icons-material/FlashOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import CheckIcon from '@mui/icons-material/Check';
 import SaveIcon from '@mui/icons-material/Save';
 import BuildIcon from '@mui/icons-material/Build';
 import { useSelector } from 'react-redux';
+import {
+  CustomTable, CustomSelect, CustomCheckbox, CustomInput, CustomButton, CustomMultiSelect, BoolIcon,
+} from '../common/components/custom';
 
 /* ─────────── Report type definitions (V1 parity – 4 groups) ─────────── */
 const REPORT_TYPES = [
   // Text Reports
-  { id: 'summary', label: 'General Information', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'general', label: 'General Information', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'general_merged', label: 'General Information (Merged)', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'object_info', label: 'Object Information', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'current_position', label: 'Current Position', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'current_position_off', label: 'Current Position (Offline)', group: 'Text Reports', endpoint: '/api/reports/summary' },
   { id: 'route', label: 'Route Data', group: 'Text Reports', endpoint: '/api/reports/route' },
+  { id: 'route_data_sensors', label: 'Route Data with Sensors', group: 'Text Reports', endpoint: '/api/reports/route' },
   { id: 'trips', label: 'Drives and Stops', group: 'Text Reports', endpoint: '/api/reports/trips' },
+  { id: 'drives_stops_sensors', label: 'Drives and Stops with Sensors', group: 'Text Reports', endpoint: '/api/reports/trips' },
+  { id: 'drives_stops_logic', label: 'Drives and Stops with Logic Sensors', group: 'Text Reports', endpoint: '/api/reports/trips' },
   { id: 'stops', label: 'Stops', group: 'Text Reports', endpoint: '/api/reports/stops' },
+  { id: 'travel_sheet', label: 'Travel Sheet', group: 'Text Reports', endpoint: '/api/reports/trips' },
+  { id: 'travel_sheet_dn', label: 'Travel Sheet (Day/Night)', group: 'Text Reports', endpoint: '/api/reports/trips' },
+  { id: 'mileage_daily', label: 'Mileage Daily', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'overspeed', label: 'Overspeeds', group: 'Text Reports', endpoint: '/api/reports/route' },
+  { id: 'overspeed_count', label: 'Overspeed Count (Merged)', group: 'Text Reports', endpoint: '/api/reports/route' },
+  { id: 'underspeed', label: 'Underspeeds', group: 'Text Reports', endpoint: '/api/reports/route' },
+  { id: 'underspeed_count', label: 'Underspeed Count (Merged)', group: 'Text Reports', endpoint: '/api/reports/route' },
+  { id: 'zone_in_out', label: 'Zone In/Out', group: 'Text Reports', endpoint: '/api/reports/events' },
+  { id: 'zone_in_out_general', label: 'Zone In/Out with General Info', group: 'Text Reports', endpoint: '/api/reports/events' },
   { id: 'events', label: 'Events', group: 'Text Reports', endpoint: '/api/reports/events' },
+  { id: 'service', label: 'Service', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'fuelfillings', label: 'Fuel Fillings', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'fuelthefts', label: 'Fuel Thefts', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'logic_sensors', label: 'Logic Sensors', group: 'Text Reports', endpoint: '/api/reports/route' },
+  { id: 'rag', label: 'Driver Behavior RAG (by Object)', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'rag_driver', label: 'Driver Behavior RAG (by Driver)', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'tasks', label: 'Tasks', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'rilogbook', label: 'RFID and iButton Logbook', group: 'Text Reports', endpoint: '/api/reports/events' },
+  { id: 'dtc', label: 'Diagnostic Trouble Codes', group: 'Text Reports', endpoint: '/api/reports/events' },
+  { id: 'expenses', label: 'Expenses', group: 'Text Reports', endpoint: '/api/reports/summary' },
   // Graphical Reports
   { id: 'speed_graph', label: 'Speed', group: 'Graphical Reports', endpoint: '/api/reports/route' },
+  { id: 'altitude_graph', label: 'Altitude', group: 'Graphical Reports', endpoint: '/api/reports/route' },
+  { id: 'acc_graph', label: 'Ignition', group: 'Graphical Reports', endpoint: '/api/reports/route' },
+  { id: 'fuellevel_graph', label: 'Fuel Level', group: 'Graphical Reports', endpoint: '/api/reports/route' },
+  { id: 'temperature_graph', label: 'Temperature', group: 'Graphical Reports', endpoint: '/api/reports/route' },
+  { id: 'sensor_graph', label: 'Sensor', group: 'Graphical Reports', endpoint: '/api/reports/route' },
   // Map Reports
   { id: 'routes_map', label: 'Routes', group: 'Map Reports', endpoint: '/api/reports/route' },
+  { id: 'routes_stops_map', label: 'Routes with Stops', group: 'Map Reports', endpoint: '/api/reports/route' },
+  { id: 'image_gallery', label: 'Image Gallery', group: 'Map Reports', endpoint: '/api/reports/route' },
 ];
 
 const REPORT_TYPE_MAP = {};
@@ -46,7 +75,7 @@ const FORMAT_OPTIONS = [
 ];
 
 const TIME_FILTERS = [
-  { id: '', label: '' },
+  { id: '', label: '—' },
   { id: 'lastHour', label: 'Last Hour' },
   { id: 'today', label: 'Today' },
   { id: 'yesterday', label: 'Yesterday' },
@@ -70,38 +99,51 @@ const STOP_DURATIONS = [
   { value: '300', label: '> 5 h' },
 ];
 
-/* ─────────── API + localStorage helpers ─────────── */
-const LS_GENERATED_KEY = 'gps_report_generated';
+/* ─────────── Derived select options for custom components ─────────── */
+const TYPE_OPTIONS = REPORT_TYPES.map((rt) => ({ value: rt.id, label: rt.label }));
+const FORMAT_SELECT_OPTIONS = FORMAT_OPTIONS.map((f) => ({ value: f.id, label: f.label }));
+const TIME_FILTER_OPTIONS = TIME_FILTERS.map((f) => ({ value: f.id, label: f.label }));
+const STOP_DURATION_OPTIONS = STOP_DURATIONS.map((s) => ({ value: s.value, label: s.label }));
 
-const fetchReportTemplates = async () => {
+/* ─────────── API helpers (server-side via user-templates) ─────────── */
+const SUBJECT_TEMPLATE = 'report_template';
+const SUBJECT_GENERATED = 'report_generated';
+
+const parseUserTemplate = (t, subject) => ({
+  ...t.attributes,
+  id: t.id,
+  name: t.name,
+  _serverId: t.id,
+  _subject: subject,
+});
+
+const fetchBySubject = async (subject) => {
   try {
     const response = await fetch('/api/user-templates', { headers: { Accept: 'application/json' } });
     if (response.ok) {
       const data = await response.json();
-      // Filter only report templates (subject = 'report_template')
-      return data
-        .filter((t) => t.subject === 'report_template')
-        .map((t) => ({
-          ...t.attributes,
-          id: t.id,
-          name: t.name,
-          _serverId: t.id,
-        }));
+      return data.filter((t) => t.subject === subject).map((t) => parseUserTemplate(t, subject));
     }
   } catch (e) {
-    console.error('Failed to fetch report templates:', e);
+    console.error(`Failed to fetch ${subject}:`, e);
   }
   return [];
 };
 
-const saveReportTemplate = async (tpl) => {
+const fetchReportTemplates = () => fetchBySubject(SUBJECT_TEMPLATE);
+const fetchGeneratedReports = () => fetchBySubject(SUBJECT_GENERATED);
+
+const saveUserTemplate = async (tpl, subject) => {
+  const attrs = { ...tpl };
+  delete attrs._serverId;
+  delete attrs._subject;
   const payload = {
-    name: tpl.name,
-    subject: 'report_template',
-    description: tpl.type || 'summary',
-    attributes: { ...tpl },
+    name: tpl.name || 'Untitled Report',
+    subject,
+    description: tpl.type || 'general',
+    message: tpl.dateTime || tpl.name || subject,
+    attributes: attrs,
   };
-  delete payload.attributes._serverId;
 
   try {
     if (tpl._serverId) {
@@ -113,7 +155,7 @@ const saveReportTemplate = async (tpl) => {
       });
       if (response.ok) {
         const saved = await response.json();
-        return { ...saved.attributes, id: saved.id, name: saved.name, _serverId: saved.id };
+        return parseUserTemplate(saved, subject);
       }
     } else {
       const response = await fetch('/api/user-templates', {
@@ -123,27 +165,43 @@ const saveReportTemplate = async (tpl) => {
       });
       if (response.ok) {
         const saved = await response.json();
-        return { ...saved.attributes, id: saved.id, name: saved.name, _serverId: saved.id };
+        return parseUserTemplate(saved, subject);
       }
     }
   } catch (e) {
-    console.error('Failed to save report template:', e);
+    console.error(`Failed to save ${subject}:`, e);
   }
   return null;
 };
 
-const deleteReportTemplate = async (serverId) => {
+const saveReportTemplate = (tpl) => saveUserTemplate(tpl, SUBJECT_TEMPLATE);
+const saveGeneratedReport = (tpl) => saveUserTemplate(tpl, SUBJECT_GENERATED);
+
+const deleteUserTemplate = async (serverId) => {
   try {
     await fetch(`/api/user-templates/${serverId}`, { method: 'DELETE' });
   } catch (e) {
-    console.error('Failed to delete report template:', e);
+    console.error('Failed to delete user-template:', e);
   }
 };
 
-const loadGenerated = () => {
-  try { return JSON.parse(localStorage.getItem(LS_GENERATED_KEY)) || []; } catch { return []; }
+/** Re-fetch report data from Traccar API using stored params */
+const refetchReportData = async (gen) => {
+  const rt = REPORT_TYPE_MAP[gen.type];
+  if (!rt || !gen.deviceIds?.length || !gen.dateFrom || !gen.dateTo) return [];
+  const from = new Date(gen.dateFrom).toISOString();
+  const to = new Date(gen.dateTo).toISOString();
+  const allData = [];
+  for (const devId of gen.deviceIds) {
+    const url = `${rt.endpoint}?deviceId=${devId}&from=${from}&to=${to}`;
+    const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (resp.ok) {
+      const json = await resp.json();
+      allData.push(...json);
+    }
+  }
+  return allData;
 };
-const saveGenerated = (list) => localStorage.setItem(LS_GENERATED_KEY, JSON.stringify(list));
 
 /* ─────────── date helpers ─────────── */
 const pad = (n) => String(n).padStart(2, '0');
@@ -156,8 +214,8 @@ const fmtShort = (iso) => {
 
 const applyTimeFilter = (filterId) => {
   const now = new Date();
-  let from; let
-    to;
+  let from;
+  let to;
   switch (filterId) {
     case 'lastHour': from = new Date(now - 3600000); to = now; break;
     case 'today': from = new Date(now.getFullYear(), now.getMonth(), now.getDate()); to = now; break;
@@ -173,8 +231,8 @@ const applyTimeFilter = (filterId) => {
   return { from: fmtLocal(from), to: fmtLocal(to) };
 };
 
-/* ─────────── styles ─────────── */
-const useStyles = makeStyles()(() => ({
+/* ─────────── styles (V1 parity + SettingsDialog tab pattern) ─────────── */
+const useStyles = makeStyles()((theme) => ({
   dialogTitle: {
     backgroundColor: '#2a81d4',
     color: 'white',
@@ -190,37 +248,26 @@ const useStyles = makeStyles()(() => ({
     '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
   },
   tabs: {
-    minHeight: 32,
-    '& .MuiTab-root': { minHeight: 32, fontSize: '12px', textTransform: 'none', padding: '4px 16px' },
-    borderBottom: '1px solid #e0e0e0',
-  },
-  tableCell: {
-    fontSize: '11px',
-    padding: '4px 8px',
-    whiteSpace: 'nowrap',
-  },
-  tableHead: {
-    fontSize: '11px',
-    padding: '4px 8px',
-    whiteSpace: 'nowrap',
-    fontWeight: 600,
     backgroundColor: '#f5f5f5',
-  },
-  toolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 8px',
-    borderTop: '1px solid #e0e0e0',
-    backgroundColor: '#fafafa',
-  },
-  toolbarBtn: {
-    padding: '4px',
-    '&:hover': { backgroundColor: '#e0e0e0' },
-  },
-  actionBtn: {
-    padding: '2px',
-    '&:hover': { backgroundColor: '#e3f2fd' },
+    minHeight: '31px !important',
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    '& .MuiTab-root': {
+      marginTop: '6px',
+      minHeight: '25px',
+      textTransform: 'none',
+      fontSize: '12px',
+      fontWeight: 'normal',
+      padding: '6px 16px',
+      color: '#444444',
+      borderRadius: 0,
+      '&.Mui-selected': {
+        backgroundColor: '#ffffff',
+        color: '#444444',
+      },
+    },
+    '& .MuiTabs-indicator': {
+      display: 'none',
+    },
   },
   /* ── Properties dialog ── */
   propRow: {
@@ -242,15 +289,29 @@ const useStyles = makeStyles()(() => ({
     marginBottom: '8px',
     paddingBottom: '2px',
   },
+  /* ── Generated viewer table (V1 parity) ── */
+  viewTableHead: {
+    fontSize: '11px',
+    padding: '4px 8px',
+    whiteSpace: 'nowrap',
+    fontWeight: 600,
+    backgroundColor: '#f5f5f5',
+  },
+  viewTableCell: {
+    fontSize: '11px',
+    padding: '4px 8px',
+    whiteSpace: 'nowrap',
+  },
 }));
 
 /* ═══════════════════════════════════════════════════════════════
    ReportPropertiesDialog  – add / edit a report template (V1)
+   Uses CustomSelect, CustomMultiSelect, CustomCheckbox, CustomInput, CustomButton
    ═══════════════════════════════════════════════════════════════ */
 const emptyTemplate = () => ({
   id: Date.now(),
   name: '',
-  type: 'summary',
+  type: 'general',
   format: 'html',
   deviceIds: [],
   zoneIds: [],
@@ -290,11 +351,11 @@ const ReportPropertiesDialog = ({
     }
   }, [open, template]);
 
-  const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
-  const setCheck = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.checked }));
+  /* helpers – CustomSelect passes value directly, CustomInput passes event */
+  const setVal = (key) => (v) => setForm((prev) => ({ ...prev, [key]: v }));
+  const setEvent = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const handleFilterChange = (e) => {
-    const fid = e.target.value;
+  const handleFilterChange = (fid) => {
     setForm((prev) => {
       const { from, to } = fid ? applyTimeFilter(fid) : { from: prev.dateFrom, to: prev.dateTo };
       return { ...prev, timeFilter: fid, dateFrom: from, dateTo: to };
@@ -304,14 +365,8 @@ const ReportPropertiesDialog = ({
   const handleSave = () => { onSave(form); onClose(); };
   const handleGenerate = () => { onSave(form); onGenerate(form); onClose(); };
 
-  const grouped = useMemo(() => {
-    const g = {};
-    REPORT_TYPES.forEach((rt) => { if (!g[rt.group]) g[rt.group] = []; g[rt.group].push(rt); });
-    return g;
-  }, []);
-
-  const smallSelect = { size: 'small', sx: { fontSize: '12px', '& .MuiSelect-select': { fontSize: '12px', py: '4px' } } };
-  const smallInput = { size: 'small', InputProps: { sx: { fontSize: '12px' } }, InputLabelProps: { sx: { fontSize: '12px' } } };
+  const deviceOptions = useMemo(() => devices.map((d) => ({ value: d.id, label: d.name })), [devices]);
+  const zoneOptions = useMemo(() => geofences.map((g) => ({ value: g.id, label: g.name })), [geofences]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 680, maxHeight: '90vh' } }}>
@@ -320,178 +375,147 @@ const ReportPropertiesDialog = ({
         <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
       </DialogTitle>
       <DialogContent sx={{ p: 0, mt: 1 }}>
-        {/* ── "Report" section header spanning full width ── */}
+        {/* ── "Report" section header ── */}
         <Box sx={{ px: 1.5 }}>
           <div className={classes.propSection}>Report</div>
         </Box>
 
         <Box display="flex">
-          {/* ── Left column (V1: Name, Type, Objects, Zones, Sensors, Data items, Ignore empty) ── */}
+          {/* ── Left column ── */}
           <Box className={classes.propCol}>
             <div className={classes.propRow}>
               <span className="lbl">Name</span>
-              <div className="val"><TextField fullWidth value={form.name} onChange={set('name')} {...smallInput} /></div>
+              <div className="val">
+                <CustomInput value={form.name} onChange={setEvent('name')} placeholder="Report name" style={{ width: '100%' }} />
+              </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Type</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select value={form.type} onChange={set('type')}>
-                    {Object.entries(grouped).map(([group, items]) => [
-                      <ListSubheader key={group} sx={{ fontSize: '11px', lineHeight: '28px', color: '#666' }}>{group}</ListSubheader>,
-                      ...items.map((rt) => <MenuItem key={rt.id} value={rt.id} sx={{ fontSize: '12px', pl: 3 }}>{rt.label}</MenuItem>),
-                    ])}
-                  </Select>
-                </FormControl>
+                <CustomSelect value={form.type} onChange={setVal('type')} options={TYPE_OPTIONS} style={{ width: '100%' }} />
               </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Objects</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select
-                    multiple
-                    value={form.deviceIds}
-                    onChange={(e) => setForm((p) => ({ ...p, deviceIds: e.target.value }))}
-                    renderValue={(sel) => (sel.length ? `${sel.length} selected` : 'Nothing selected')}
-                    displayEmpty
-                  >
-                    {devices.map((d) => (
-                      <MenuItem key={d.id} value={d.id} sx={{ fontSize: '12px' }}>
-                        <Checkbox size="small" checked={form.deviceIds.includes(d.id)} sx={{ p: '2px', mr: 1 }} />
-                        {d.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <CustomMultiSelect
+                  value={form.deviceIds}
+                  onChange={setVal('deviceIds')}
+                  options={deviceOptions}
+                  placeholder="Nothing selected"
+                />
               </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Zones</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select
-                    multiple
-                    value={form.zoneIds}
-                    onChange={(e) => setForm((p) => ({ ...p, zoneIds: e.target.value }))}
-                    renderValue={(sel) => (sel.length ? `${sel.length} selected` : 'Nothing selected')}
-                    displayEmpty
-                  >
-                    {geofences.map((g) => (
-                      <MenuItem key={g.id} value={g.id} sx={{ fontSize: '12px' }}>
-                        <Checkbox size="small" checked={form.zoneIds.includes(g.id)} sx={{ p: '2px', mr: 1 }} />
-                        {g.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <CustomMultiSelect
+                  value={form.zoneIds}
+                  onChange={setVal('zoneIds')}
+                  options={zoneOptions}
+                  placeholder="Nothing selected"
+                />
               </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Sensors</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select
-                    multiple
-                    value={form.sensorIds}
-                    onChange={(e) => setForm((p) => ({ ...p, sensorIds: e.target.value }))}
-                    renderValue={(sel) => (sel.length ? `${sel.length} selected` : 'Nothing selected')}
-                    displayEmpty
-                  >
-                    <MenuItem disabled sx={{ fontSize: '12px', color: '#999' }}>No sensors available</MenuItem>
-                  </Select>
-                </FormControl>
+                <CustomMultiSelect
+                  value={form.sensorIds}
+                  onChange={setVal('sensorIds')}
+                  options={[]}
+                  placeholder="No sensors available"
+                />
               </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Data items</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select
-                    multiple
-                    value={form.dataItems}
-                    onChange={(e) => setForm((p) => ({ ...p, dataItems: e.target.value }))}
-                    renderValue={(sel) => (sel.length ? `${sel.length} selected` : 'All selected')}
-                    displayEmpty
-                  >
-                    <MenuItem disabled sx={{ fontSize: '12px', color: '#999' }}>All items included</MenuItem>
-                  </Select>
-                </FormControl>
+                <CustomMultiSelect
+                  value={form.dataItems}
+                  onChange={setVal('dataItems')}
+                  options={[]}
+                  placeholder="All items included"
+                />
               </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Ignore empty reports</span>
-              <div className="val"><Checkbox size="small" checked={form.ignoreEmpty} onChange={setCheck('ignoreEmpty')} sx={{ p: 0 }} /></div>
+              <div className="val">
+                <CustomCheckbox checked={form.ignoreEmpty} onChange={setVal('ignoreEmpty')} />
+              </div>
             </div>
           </Box>
 
-          {/* ── Right column (V1: Format, Show coordinates, Show addresses, Zones instead, Stops, Speed limit) ── */}
+          {/* ── Right column ── */}
           <Box className={classes.propCol}>
             <div className={classes.propRow}>
               <span className="lbl">Format</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select value={form.format} onChange={set('format')}>
-                    {FORMAT_OPTIONS.map((f) => <MenuItem key={f.id} value={f.id} sx={{ fontSize: '12px' }}>{f.label}</MenuItem>)}
-                  </Select>
-                </FormControl>
+                <CustomSelect value={form.format} onChange={setVal('format')} options={FORMAT_SELECT_OPTIONS} style={{ width: '100%' }} />
               </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Show coordinates</span>
-              <div className="val"><Checkbox size="small" checked={form.showCoordinates} onChange={setCheck('showCoordinates')} sx={{ p: 0 }} /></div>
+              <div className="val">
+                <CustomCheckbox checked={form.showCoordinates} onChange={setVal('showCoordinates')} />
+              </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Show addresses</span>
-              <div className="val"><Checkbox size="small" checked={form.showAddresses} onChange={setCheck('showAddresses')} sx={{ p: 0 }} /></div>
+              <div className="val">
+                <CustomCheckbox checked={form.showAddresses} onChange={setVal('showAddresses')} />
+              </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Zones instead of addresses</span>
-              <div className="val"><Checkbox size="small" checked={form.zonesAddresses} onChange={setCheck('zonesAddresses')} sx={{ p: 0 }} /></div>
+              <div className="val">
+                <CustomCheckbox checked={form.zonesAddresses} onChange={setVal('zonesAddresses')} />
+              </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Stops</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select value={form.stopDuration} onChange={set('stopDuration')}>
-                    {STOP_DURATIONS.map((s) => <MenuItem key={s.value} value={s.value} sx={{ fontSize: '12px' }}>{s.label}</MenuItem>)}
-                  </Select>
-                </FormControl>
+                <CustomSelect value={form.stopDuration} onChange={setVal('stopDuration')} options={STOP_DURATION_OPTIONS} style={{ width: '100%' }} />
               </div>
             </div>
 
             <div className={classes.propRow}>
               <span className="lbl">Speed limit (kph)</span>
-              <div className="val"><TextField fullWidth value={form.speedLimit} onChange={set('speedLimit')} {...smallInput} type="number" /></div>
+              <div className="val">
+                <CustomInput type="number" value={form.speedLimit} onChange={setEvent('speedLimit')} placeholder="0" style={{ width: '100%' }} />
+              </div>
             </div>
           </Box>
         </Box>
 
-        {/* ── Schedule (left) + Time period (right) – side by side like V1 ── */}
+        {/* ── Schedule (left) + Time period (right) – V1 two-column layout ── */}
         <Box display="flex">
           <Box className={classes.propCol}>
             <div className={classes.propSection}>Schedule</div>
             <div className={classes.propRow}>
               <span className="lbl">Daily</span>
-              <div className="val"><Checkbox size="small" checked={form.daily} onChange={setCheck('daily')} sx={{ p: 0 }} /></div>
+              <div className="val"><CustomCheckbox checked={form.daily} onChange={setVal('daily')} /></div>
             </div>
             <div className={classes.propRow}>
               <span className="lbl">Weekly</span>
-              <div className="val"><Checkbox size="small" checked={form.weekly} onChange={setCheck('weekly')} sx={{ p: 0 }} /></div>
+              <div className="val"><CustomCheckbox checked={form.weekly} onChange={setVal('weekly')} /></div>
             </div>
             <div className={classes.propRow}>
               <span className="lbl">Send to e-mail</span>
-              <div className="val"><TextField fullWidth value={form.scheduleEmail} onChange={set('scheduleEmail')} placeholder="E-mail address" {...smallInput} /></div>
+              <div className="val">
+                <CustomInput value={form.scheduleEmail} onChange={setEvent('scheduleEmail')} placeholder="E-mail address" style={{ width: '100%' }} />
+              </div>
             </div>
           </Box>
 
@@ -500,23 +524,19 @@ const ReportPropertiesDialog = ({
             <div className={classes.propRow}>
               <span className="lbl">Filter</span>
               <div className="val">
-                <FormControl fullWidth {...smallSelect}>
-                  <Select value={form.timeFilter} onChange={handleFilterChange}>
-                    {TIME_FILTERS.map((f) => <MenuItem key={f.id} value={f.id} sx={{ fontSize: '12px' }}>{f.label}</MenuItem>)}
-                  </Select>
-                </FormControl>
+                <CustomSelect value={form.timeFilter} onChange={handleFilterChange} options={TIME_FILTER_OPTIONS} style={{ width: '100%' }} />
               </div>
             </div>
             <div className={classes.propRow}>
               <span className="lbl">Time from</span>
               <div className="val">
-                <TextField fullWidth type="datetime-local" value={form.dateFrom} onChange={set('dateFrom')} InputLabelProps={{ shrink: true }} {...smallInput} />
+                <CustomInput type="datetime-local" value={form.dateFrom} onChange={setEvent('dateFrom')} style={{ width: '100%' }} />
               </div>
             </div>
             <div className={classes.propRow}>
               <span className="lbl">Time to</span>
               <div className="val">
-                <TextField fullWidth type="datetime-local" value={form.dateTo} onChange={set('dateTo')} InputLabelProps={{ shrink: true }} {...smallInput} />
+                <CustomInput type="datetime-local" value={form.dateTo} onChange={setEvent('dateTo')} style={{ width: '100%' }} />
               </div>
             </div>
           </Box>
@@ -524,15 +544,15 @@ const ReportPropertiesDialog = ({
 
         {/* ── Buttons (V1: Generate, Save, Cancel) ── */}
         <Box display="flex" justifyContent="center" gap={1} py={1.5} sx={{ borderTop: '1px solid #eee' }}>
-          <Button variant="contained" size="small" startIcon={<BuildIcon />} onClick={handleGenerate} sx={{ textTransform: 'none', fontSize: '12px', backgroundColor: '#2a81d4' }}>
+          <CustomButton variant="contained" color="primary" icon={<BuildIcon style={{ width: 14, height: 14 }} />} onClick={handleGenerate} size="small">
             Generate
-          </Button>
-          <Button variant="contained" size="small" startIcon={<SaveIcon />} onClick={handleSave} sx={{ textTransform: 'none', fontSize: '12px', backgroundColor: '#2a81d4' }}>
+          </CustomButton>
+          <CustomButton variant="contained" color="primary" icon={<SaveIcon style={{ width: 14, height: 14 }} />} onClick={handleSave} size="small">
             Save
-          </Button>
-          <Button variant="outlined" size="small" startIcon={<CloseIcon />} onClick={onClose} sx={{ textTransform: 'none', fontSize: '12px' }}>
+          </CustomButton>
+          <CustomButton variant="outlined" icon={<CloseIcon style={{ width: 14, height: 14 }} />} onClick={onClose} size="small">
             Cancel
-          </Button>
+          </CustomButton>
         </Box>
       </DialogContent>
     </Dialog>
@@ -546,53 +566,84 @@ const formatDateTime = (dt) => { if (!dt) return ''; return new Date(dt).toLocal
 const formatDuration = (ms) => { if (!ms) return ''; const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ${s % 60}s`; };
 const formatDistance = (m) => (m ? `${(m / 1000).toFixed(2)} km` : '0');
 
+/* Column definitions for generated report viewer – mapped by API endpoint type */
+const ROUTE_COLUMNS = [
+  { key: 'fixTime', label: 'Time', format: formatDateTime },
+  { key: 'latitude', label: 'Lat', format: (v) => v?.toFixed(5) },
+  { key: 'longitude', label: 'Lng', format: (v) => v?.toFixed(5) },
+  { key: 'speed', label: 'Speed (km/h)', format: (v) => (v ? (v * 1.852).toFixed(1) : '0') },
+  { key: 'address', label: 'Address' },
+];
+const EVENT_COLUMNS = [
+  { key: 'eventTime', label: 'Time', format: formatDateTime },
+  { key: 'type', label: 'Type' },
+  { key: 'deviceId', label: 'Device ID' },
+];
+const TRIP_COLUMNS = [
+  { key: 'deviceName', label: 'Device' },
+  { key: 'startTime', label: 'Start', format: formatDateTime },
+  { key: 'endTime', label: 'End', format: formatDateTime },
+  { key: 'distance', label: 'Distance', format: formatDistance },
+  { key: 'duration', label: 'Duration', format: formatDuration },
+  { key: 'averageSpeed', label: 'Avg Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
+  { key: 'maxSpeed', label: 'Max Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
+];
+const STOP_COLUMNS = [
+  { key: 'deviceName', label: 'Device' },
+  { key: 'startTime', label: 'Start', format: formatDateTime },
+  { key: 'endTime', label: 'End', format: formatDateTime },
+  { key: 'duration', label: 'Duration', format: formatDuration },
+  { key: 'address', label: 'Address' },
+];
+const SUMMARY_COLUMNS = [
+  { key: 'deviceName', label: 'Device' },
+  { key: 'distance', label: 'Distance', format: formatDistance },
+  { key: 'averageSpeed', label: 'Avg Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
+  { key: 'maxSpeed', label: 'Max Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
+  { key: 'engineHours', label: 'Engine Hours', format: formatDuration },
+  { key: 'spentFuel', label: 'Fuel Used', format: (v) => (v ? `${v.toFixed(2)} L` : '') },
+];
+
 const RESULT_COLUMNS = {
-  route: [
-    { key: 'fixTime', label: 'Time', format: formatDateTime },
-    { key: 'latitude', label: 'Lat', format: (v) => v?.toFixed(5) },
-    { key: 'longitude', label: 'Lng', format: (v) => v?.toFixed(5) },
-    { key: 'speed', label: 'Speed (km/h)', format: (v) => (v ? (v * 1.852).toFixed(1) : '0') },
-    { key: 'address', label: 'Address' },
-  ],
-  events: [
-    { key: 'eventTime', label: 'Time', format: formatDateTime },
-    { key: 'type', label: 'Type' },
-    { key: 'deviceId', label: 'Device ID' },
-  ],
-  trips: [
-    { key: 'deviceName', label: 'Device' },
-    { key: 'startTime', label: 'Start', format: formatDateTime },
-    { key: 'endTime', label: 'End', format: formatDateTime },
-    { key: 'distance', label: 'Distance', format: formatDistance },
-    { key: 'duration', label: 'Duration', format: formatDuration },
-    { key: 'averageSpeed', label: 'Avg Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
-    { key: 'maxSpeed', label: 'Max Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
-  ],
-  stops: [
-    { key: 'deviceName', label: 'Device' },
-    { key: 'startTime', label: 'Start', format: formatDateTime },
-    { key: 'endTime', label: 'End', format: formatDateTime },
-    { key: 'duration', label: 'Duration', format: formatDuration },
-    { key: 'address', label: 'Address' },
-  ],
-  summary: [
-    { key: 'deviceName', label: 'Device' },
-    { key: 'distance', label: 'Distance', format: formatDistance },
-    { key: 'averageSpeed', label: 'Avg Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
-    { key: 'maxSpeed', label: 'Max Speed', format: (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '') },
-    { key: 'engineHours', label: 'Engine Hours', format: formatDuration },
-    { key: 'spentFuel', label: 'Fuel Used', format: (v) => (v ? `${v.toFixed(2)} L` : '') },
-  ],
+  general: SUMMARY_COLUMNS, general_merged: SUMMARY_COLUMNS, object_info: SUMMARY_COLUMNS,
+  current_position: SUMMARY_COLUMNS, current_position_off: SUMMARY_COLUMNS,
+  mileage_daily: SUMMARY_COLUMNS, service: SUMMARY_COLUMNS,
+  fuelfillings: SUMMARY_COLUMNS, fuelthefts: SUMMARY_COLUMNS,
+  rag: SUMMARY_COLUMNS, rag_driver: SUMMARY_COLUMNS, tasks: SUMMARY_COLUMNS, expenses: SUMMARY_COLUMNS,
+  route: ROUTE_COLUMNS, route_data_sensors: ROUTE_COLUMNS,
+  overspeed: ROUTE_COLUMNS, overspeed_count: ROUTE_COLUMNS,
+  underspeed: ROUTE_COLUMNS, underspeed_count: ROUTE_COLUMNS, logic_sensors: ROUTE_COLUMNS,
+  trips: TRIP_COLUMNS, drives_stops_sensors: TRIP_COLUMNS, drives_stops_logic: TRIP_COLUMNS,
+  travel_sheet: TRIP_COLUMNS, travel_sheet_dn: TRIP_COLUMNS,
+  stops: STOP_COLUMNS,
+  events: EVENT_COLUMNS, zone_in_out: EVENT_COLUMNS, zone_in_out_general: EVENT_COLUMNS,
+  rilogbook: EVENT_COLUMNS, dtc: EVENT_COLUMNS,
   speed_graph: [
     { key: 'fixTime', label: 'Time', format: formatDateTime },
     { key: 'speed', label: 'Speed (km/h)', format: (v) => (v ? (v * 1.852).toFixed(1) : '0') },
   ],
-  routes_map: [
+  altitude_graph: [
     { key: 'fixTime', label: 'Time', format: formatDateTime },
-    { key: 'latitude', label: 'Lat', format: (v) => v?.toFixed(5) },
-    { key: 'longitude', label: 'Lng', format: (v) => v?.toFixed(5) },
+    { key: 'altitude', label: 'Altitude (m)', format: (v) => (v ? v.toFixed(1) : '0') },
+  ],
+  acc_graph: [
+    { key: 'fixTime', label: 'Time', format: formatDateTime },
     { key: 'speed', label: 'Speed (km/h)', format: (v) => (v ? (v * 1.852).toFixed(1) : '0') },
   ],
+  fuellevel_graph: [
+    { key: 'fixTime', label: 'Time', format: formatDateTime },
+    { key: 'speed', label: 'Speed', format: (v) => (v ? (v * 1.852).toFixed(1) : '0') },
+  ],
+  temperature_graph: [
+    { key: 'fixTime', label: 'Time', format: formatDateTime },
+    { key: 'speed', label: 'Speed', format: (v) => (v ? (v * 1.852).toFixed(1) : '0') },
+  ],
+  sensor_graph: [
+    { key: 'fixTime', label: 'Time', format: formatDateTime },
+    { key: 'speed', label: 'Speed', format: (v) => (v ? (v * 1.852).toFixed(1) : '0') },
+  ],
+  routes_map: ROUTE_COLUMNS, routes_stops_map: ROUTE_COLUMNS, image_gallery: ROUTE_COLUMNS,
+  summary: SUMMARY_COLUMNS,
 };
 
 const GeneratedViewDialog = ({ open, onClose, report }) => {
@@ -650,23 +701,25 @@ const GeneratedViewDialog = ({ open, onClose, report }) => {
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
-                <TableCell className={classes.tableHead}>#</TableCell>
-                {columns.map((c) => <TableCell key={c.key} className={classes.tableHead}>{c.label}</TableCell>)}
+                <TableCell className={classes.viewTableHead}>#</TableCell>
+                {columns.map((c) => <TableCell key={c.key} className={classes.viewTableHead}>{c.label}</TableCell>)}
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.map((row, i) => (
                 <TableRow key={i} hover>
-                  <TableCell className={classes.tableCell}>{i + 1}</TableCell>
+                  <TableCell className={classes.viewTableCell}>{i + 1}</TableCell>
                   {columns.map((c) => (
-                    <TableCell key={c.key} className={classes.tableCell}>
+                    <TableCell key={c.key} className={classes.viewTableCell}>
                       {c.format ? c.format(row[c.key]) : (row[c.key] ?? '')}
                     </TableCell>
                   ))}
                 </TableRow>
               ))}
               {rows.length === 0 && (
-                <TableRow><TableCell colSpan={columns.length + 1} align="center" sx={{ py: 4, color: '#999', fontSize: '12px' }}>No data</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={columns.length + 1} align="center" sx={{ py: 4, color: '#999', fontSize: '12px' }}>No data</TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
@@ -674,8 +727,8 @@ const GeneratedViewDialog = ({ open, onClose, report }) => {
         <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
           <Typography variant="caption" color="text.secondary">{rows.length} record{rows.length !== 1 ? 's' : ''}</Typography>
           <Box display="flex" gap={1}>
-            <Button variant="outlined" size="small" onClick={handleExportCSV} sx={{ textTransform: 'none', fontSize: '11px' }}>Export CSV</Button>
-            <Button variant="outlined" size="small" onClick={handleExportPDF} sx={{ textTransform: 'none', fontSize: '11px' }}>Export PDF</Button>
+            <CustomButton variant="outlined" onClick={handleExportCSV} size="small">Export CSV</CustomButton>
+            <CustomButton variant="outlined" onClick={handleExportPDF} size="small">Export PDF</CustomButton>
           </Box>
         </Box>
       </DialogContent>
@@ -684,7 +737,7 @@ const GeneratedViewDialog = ({ open, onClose, report }) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   Main ReportsDialog  – 2 tabs (V1 parity)
+   Main ReportsDialog  – 2 tabs with CustomTable (V1 parity)
    ═══════════════════════════════════════════════════════════════ */
 const ReportsDialog = ({ open, onClose }) => {
   const { classes } = useStyles();
@@ -698,21 +751,67 @@ const ReportsDialog = ({ open, onClose }) => {
   const [generated, setGenerated] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Properties dialog
+  /* Search state per tab */
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [generatedSearch, setGeneratedSearch] = useState('');
+
+  /* Checkbox selection per tab */
+  const [templateSelected, setTemplateSelected] = useState([]);
+  const [generatedSelected, setGeneratedSelected] = useState([]);
+
+  /* Properties dialog */
   const [propsOpen, setPropsOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState(null);
 
-  // Generated viewer dialog
+  /* Generated viewer dialog */
   const [viewReport, setViewReport] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
 
-  // Load data on open
+  /* Load data on open */
   useEffect(() => {
     if (open) {
       fetchReportTemplates().then(setTemplates);
-      setGenerated(loadGenerated());
+      fetchGeneratedReports().then(setGenerated);
     }
   }, [open]);
+
+  /* ── Filtered rows ── */
+  const filteredTemplates = useMemo(() => {
+    if (!templateSearch) return templates;
+    const q = templateSearch.toLowerCase();
+    return templates.filter((t) => (t.name || '').toLowerCase().includes(q)
+      || (REPORT_TYPE_MAP[t.type]?.label || '').toLowerCase().includes(q));
+  }, [templates, templateSearch]);
+
+  const filteredGenerated = useMemo(() => {
+    if (!generatedSearch) return generated;
+    const q = generatedSearch.toLowerCase();
+    return generated.filter((g) => (g.name || '').toLowerCase().includes(q)
+      || (REPORT_TYPE_MAP[g.type]?.label || '').toLowerCase().includes(q));
+  }, [generated, generatedSearch]);
+
+  /* ── CustomTable column definitions ── */
+  const templateColumns = useMemo(() => [
+    { key: 'name', label: 'Name' },
+    { key: 'type', label: 'Type', render: (row) => REPORT_TYPE_MAP[row.type]?.label || row.type },
+    { key: 'format', label: 'Format', render: (row) => (row.format || '').toUpperCase() },
+    { key: 'deviceIds', label: 'Objects', align: 'center', render: (row) => row.deviceIds?.length || 0 },
+    { key: 'zoneIds', label: 'Zones', align: 'center', render: (row) => row.zoneIds?.length || 0 },
+    { key: 'sensorIds', label: 'Sensors', align: 'center', render: (row) => row.sensorIds?.length || 0 },
+    { key: 'daily', label: 'Daily', align: 'center', render: (row) => <BoolIcon value={row.daily} /> },
+    { key: 'weekly', label: 'Weekly', align: 'center', render: (row) => <BoolIcon value={row.weekly} /> },
+  ], []);
+
+  const generatedColumns = useMemo(() => [
+    { key: 'dateTime', label: 'DateTime', render: (row) => fmtShort(row.dateTime) },
+    { key: 'name', label: 'Name' },
+    { key: 'type', label: 'Type', render: (row) => REPORT_TYPE_MAP[row.type]?.label || row.type },
+    { key: 'format', label: 'Format', render: (row) => (row.format || '').toUpperCase() },
+    { key: 'deviceIds', label: 'Objects', align: 'center', render: (row) => row.deviceIds?.length || 0 },
+    { key: 'zoneIds', label: 'Zones', align: 'center', render: (row) => row.zoneIds?.length || 0 },
+    { key: 'schedule', label: 'Schedule', align: 'center', render: (row) => <BoolIcon value={row.schedule} /> },
+    { key: 'recordCount', label: 'Records', render: (row) => row.recordCount ?? (row.data?.length || 0) },
+  ], []);
 
   /* ── Template CRUD ── */
   const handleSaveTemplate = useCallback(async (tpl) => {
@@ -725,17 +824,17 @@ const ReportsDialog = ({ open, onClose }) => {
     }
   }, []);
 
-  const handleDeleteTemplate = useCallback(async (id) => {
-    const tpl = templates.find((t) => t.id === id);
-    if (tpl?._serverId) {
-      await deleteReportTemplate(tpl._serverId);
+  const handleDeleteTemplate = useCallback(async (row) => {
+    if (row?._serverId) {
+      await deleteUserTemplate(row._serverId);
     }
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
-  }, [templates]);
+    setTemplates((prev) => prev.filter((t) => t.id !== row.id));
+    setTemplateSelected((prev) => prev.filter((id) => id !== row.id));
+  }, []);
 
   const handleRefresh = useCallback(() => {
     fetchReportTemplates().then(setTemplates);
-    setGenerated(loadGenerated());
+    fetchGeneratedReports().then(setGenerated);
   }, []);
 
   /* ── Generate report from template ── */
@@ -744,41 +843,26 @@ const ReportsDialog = ({ open, onClose }) => {
     if (!tpl.dateFrom || !tpl.dateTo) return;
     setLoading(true);
     try {
-      const rt = REPORT_TYPE_MAP[tpl.type];
-      if (!rt) throw new Error('Unknown report type');
-      const from = new Date(tpl.dateFrom).toISOString();
-      const to = new Date(tpl.dateTo).toISOString();
+      const allData = await refetchReportData(tpl);
 
-      // Fetch for each device and merge
-      const allData = [];
-      for (const devId of tpl.deviceIds) {
-        const url = `${rt.endpoint}?deviceId=${devId}&from=${from}&to=${to}`;
-        const resp = await fetch(url, { headers: { Accept: 'application/json' } });
-        if (resp.ok) {
-          const json = await resp.json();
-          allData.push(...json);
-        }
-      }
-
-      // Save generated report
-      const genReport = {
-        id: Date.now(),
-        dateTime: new Date().toISOString(),
+      // Save metadata to server (no raw data blob)
+      const genMeta = {
         name: tpl.name || 'Untitled',
         type: tpl.type,
         format: tpl.format,
         deviceIds: tpl.deviceIds,
         zoneIds: tpl.zoneIds,
         schedule: tpl.daily || tpl.weekly,
-        data: allData,
+        dateFrom: tpl.dateFrom,
+        dateTo: tpl.dateTo,
+        dateTime: new Date().toISOString(),
         recordCount: allData.length,
       };
-      setGenerated((prev) => {
-        const next = [genReport, ...prev];
-        saveGenerated(next);
-        return next;
-      });
-      setTab(1); // Switch to Generated tab
+      const saved = await saveGeneratedReport(genMeta);
+      if (saved) {
+        setGenerated((prev) => [saved, ...prev]);
+      }
+      setTab(1);
     } catch (err) {
       console.error('Generate error:', err);
     } finally {
@@ -786,21 +870,71 @@ const ReportsDialog = ({ open, onClose }) => {
     }
   }, []);
 
-  const handleDeleteGenerated = useCallback((id) => {
-    setGenerated((prev) => {
-      const next = prev.filter((g) => g.id !== id);
-      saveGenerated(next);
-      return next;
-    });
+  const handleDeleteGenerated = useCallback(async (row) => {
+    if (row?._serverId) {
+      await deleteUserTemplate(row._serverId);
+    }
+    setGenerated((prev) => prev.filter((g) => g.id !== row.id));
+    setGeneratedSelected((prev) => prev.filter((id) => id !== row.id));
   }, []);
 
-  const handleOpenGenerated = useCallback((report) => {
-    setViewReport(report);
-    setViewOpen(true);
+  /* ── Bulk delete ── */
+  const handleBulkDeleteTemplates = useCallback(async (ids) => {
+    for (const id of ids) {
+      const tpl = templates.find((t) => t.id === id);
+      if (tpl?._serverId) {
+        await deleteUserTemplate(tpl._serverId);
+      }
+    }
+    setTemplates((prev) => prev.filter((t) => !ids.includes(t.id)));
+    setTemplateSelected([]);
+  }, [templates]);
+
+  const handleBulkDeleteGenerated = useCallback(async (ids) => {
+    for (const id of ids) {
+      const gen = generated.find((g) => g.id === id);
+      if (gen?._serverId) {
+        await deleteUserTemplate(gen._serverId);
+      }
+    }
+    setGenerated((prev) => prev.filter((g) => !ids.includes(g.id)));
+    setGeneratedSelected([]);
+  }, [generated]);
+
+  const handleOpenGenerated = useCallback(async (report) => {
+    // Re-fetch data from Traccar API using stored params
+    setLoading(true);
+    try {
+      const data = await refetchReportData(report);
+      setViewReport({ ...report, data });
+      setViewOpen(true);
+    } catch (err) {
+      console.error('Failed to open report:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  /* ── Device name resolver ── */
-  const deviceName = useCallback((id) => devices[id]?.name || id, [devices]);
+  /* ── Toggle helpers ── */
+  const onToggleTemplateAll = useCallback(() => {
+    setTemplateSelected((prev) => (prev.length === filteredTemplates.length ? [] : filteredTemplates.map((t) => t.id)));
+  }, [filteredTemplates]);
+
+  const onToggleTemplate = useCallback((id) => {
+    setTemplateSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const onToggleGeneratedAll = useCallback(() => {
+    setGeneratedSelected((prev) => (prev.length === filteredGenerated.length ? [] : filteredGenerated.map((g) => g.id)));
+  }, [filteredGenerated]);
+
+  const onToggleGenerated = useCallback((id) => {
+    setGeneratedSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  /* ── Open add/edit dialog ── */
+  const openAdd = useCallback(() => { setEditTemplate(null); setPropsOpen(true); }, []);
+  const openEdit = useCallback((row) => { setEditTemplate(row); setPropsOpen(true); }, []);
 
   return (
     <>
@@ -817,163 +951,73 @@ const ReportsDialog = ({ open, onClose }) => {
 
         <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
           {loading && (
-            <Box display="flex" justifyContent="center" alignItems="center" py={2}>
-              <CircularProgress size={20} />
-              <Typography variant="caption" sx={{ ml: 1 }}>Generating report…</Typography>
+            <Box display="flex" justifyContent="center" alignItems="center" py={1} sx={{ borderBottom: '1px solid #e0e0e0' }}>
+              <CircularProgress size={16} />
+              <Typography variant="caption" sx={{ ml: 1, fontSize: '11px' }}>Generating report…</Typography>
             </Box>
           )}
 
-          {/* ════════ Tab 0: Reports (Templates) ════════ */}
+          {/* ════════ Tab 0: Reports (Templates) – CustomTable ════════ */}
           {tab === 0 && (
-            <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell className={classes.tableHead}>Name</TableCell>
-                    <TableCell className={classes.tableHead}>Type</TableCell>
-                    <TableCell className={classes.tableHead}>Format</TableCell>
-                    <TableCell className={classes.tableHead}>Objects</TableCell>
-                    <TableCell className={classes.tableHead}>Zones</TableCell>
-                    <TableCell className={classes.tableHead} align="center">Daily</TableCell>
-                    <TableCell className={classes.tableHead} align="center">Weekly</TableCell>
-                    <TableCell className={classes.tableHead} align="center">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {templates.map((tpl) => (
-                    <TableRow key={tpl.id} hover>
-                      <TableCell className={classes.tableCell}>{tpl.name}</TableCell>
-                      <TableCell className={classes.tableCell}>{REPORT_TYPE_MAP[tpl.type]?.label || tpl.type}</TableCell>
-                      <TableCell className={classes.tableCell}>{(tpl.format || '').toUpperCase()}</TableCell>
-                      <TableCell className={classes.tableCell}>
-                        {tpl.deviceIds?.length > 0
-                          ? <Tooltip title={tpl.deviceIds.map(deviceName).join(', ')}><Chip label={tpl.deviceIds.length} size="small" sx={{ height: 18, fontSize: '10px' }} /></Tooltip>
-                          : '0'}
-                      </TableCell>
-                      <TableCell className={classes.tableCell}>
-                        {tpl.zoneIds?.length > 0
-                          ? <Chip label={tpl.zoneIds.length} size="small" sx={{ height: 18, fontSize: '10px' }} />
-                          : '0'}
-                      </TableCell>
-                      <TableCell className={classes.tableCell} align="center">
-                        {tpl.daily ? <CheckIcon sx={{ fontSize: 14, color: '#4caf50' }} /> : <CloseIcon sx={{ fontSize: 14, color: '#ccc' }} />}
-                      </TableCell>
-                      <TableCell className={classes.tableCell} align="center">
-                        {tpl.weekly ? <CheckIcon sx={{ fontSize: 14, color: '#4caf50' }} /> : <CloseIcon sx={{ fontSize: 14, color: '#ccc' }} />}
-                      </TableCell>
-                      <TableCell className={classes.tableCell} align="center" sx={{ whiteSpace: 'nowrap' }}>
-                        <Tooltip title="Generate">
-                          <IconButton className={classes.actionBtn} onClick={() => handleGenerate(tpl)} disabled={loading}>
-                            <FlashOnIcon sx={{ fontSize: 16, color: '#f57c00' }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton className={classes.actionBtn} onClick={() => { setEditTemplate(tpl); setPropsOpen(true); }}>
-                            <EditIcon sx={{ fontSize: 16, color: '#1976d2' }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton className={classes.actionBtn} onClick={() => handleDeleteTemplate(tpl.id)}>
-                            <DeleteIcon sx={{ fontSize: 16, color: '#d32f2f' }} />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {templates.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 6, color: '#999', fontSize: '12px' }}>
-                        No report templates. Click + to add one.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <CustomTable
+              rows={filteredTemplates}
+              columns={templateColumns}
+              loading={false}
+              selected={templateSelected}
+              onToggleAll={onToggleTemplateAll}
+              onToggleRow={onToggleTemplate}
+              onEdit={openEdit}
+              onDelete={handleDeleteTemplate}
+              search={templateSearch}
+              onSearchChange={setTemplateSearch}
+              onAdd={openAdd}
+              onRefresh={handleRefresh}
+              onOpenSettings={() => {}}
+              onBulkDelete={handleBulkDeleteTemplates}
+              customActions={(row) => (
+                <IconButton
+                  size="small"
+                  onClick={() => handleGenerate(row)}
+                  title="Generate"
+                  disabled={loading}
+                  sx={{ padding: '2px' }}
+                >
+                  <FlashOnIcon sx={{ fontSize: 14, color: '#f57c00' }} />
+                </IconButton>
+              )}
+            />
           )}
 
-          {/* ════════ Tab 1: Generated ════════ */}
+          {/* ════════ Tab 1: Generated – CustomTable ════════ */}
           {tab === 1 && (
-            <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell className={classes.tableHead}>DateTime</TableCell>
-                    <TableCell className={classes.tableHead}>Name</TableCell>
-                    <TableCell className={classes.tableHead}>Type</TableCell>
-                    <TableCell className={classes.tableHead}>Format</TableCell>
-                    <TableCell className={classes.tableHead}>Objects</TableCell>
-                    <TableCell className={classes.tableHead}>Zones</TableCell>
-                    <TableCell className={classes.tableHead} align="center">Schedule</TableCell>
-                    <TableCell className={classes.tableHead}>Records</TableCell>
-                    <TableCell className={classes.tableHead} align="center">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {generated.map((gen) => (
-                    <TableRow key={gen.id} hover>
-                      <TableCell className={classes.tableCell}>{fmtShort(gen.dateTime)}</TableCell>
-                      <TableCell className={classes.tableCell}>{gen.name}</TableCell>
-                      <TableCell className={classes.tableCell}>{REPORT_TYPE_MAP[gen.type]?.label || gen.type}</TableCell>
-                      <TableCell className={classes.tableCell}>{(gen.format || '').toUpperCase()}</TableCell>
-                      <TableCell className={classes.tableCell}>
-                        {gen.deviceIds?.length > 0
-                          ? <Tooltip title={gen.deviceIds.map(deviceName).join(', ')}><Chip label={gen.deviceIds.length} size="small" sx={{ height: 18, fontSize: '10px' }} /></Tooltip>
-                          : '0'}
-                      </TableCell>
-                      <TableCell className={classes.tableCell}>
-                        {gen.zoneIds?.length > 0
-                          ? <Chip label={gen.zoneIds.length} size="small" sx={{ height: 18, fontSize: '10px' }} />
-                          : '0'}
-                      </TableCell>
-                      <TableCell className={classes.tableCell} align="center">
-                        {gen.schedule ? <CheckIcon sx={{ fontSize: 14, color: '#4caf50' }} /> : <CloseIcon sx={{ fontSize: 14, color: '#ccc' }} />}
-                      </TableCell>
-                      <TableCell className={classes.tableCell}>{gen.recordCount ?? (gen.data?.length || 0)}</TableCell>
-                      <TableCell className={classes.tableCell} align="center" sx={{ whiteSpace: 'nowrap' }}>
-                        <Tooltip title="Open">
-                          <IconButton className={classes.actionBtn} onClick={() => handleOpenGenerated(gen)}>
-                            <OpenInNewIcon sx={{ fontSize: 16, color: '#1976d2' }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton className={classes.actionBtn} onClick={() => handleDeleteGenerated(gen.id)}>
-                            <DeleteIcon sx={{ fontSize: 16, color: '#d32f2f' }} />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {generated.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 6, color: '#999', fontSize: '12px' }}>
-                        No generated reports yet.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <CustomTable
+              rows={filteredGenerated}
+              columns={generatedColumns}
+              loading={false}
+              selected={generatedSelected}
+              onToggleAll={onToggleGeneratedAll}
+              onToggleRow={onToggleGenerated}
+              onEdit={handleOpenGenerated}
+              onDelete={handleDeleteGenerated}
+              search={generatedSearch}
+              onSearchChange={setGeneratedSearch}
+              onAdd={openAdd}
+              onRefresh={handleRefresh}
+              onOpenSettings={() => {}}
+              onBulkDelete={handleBulkDeleteGenerated}
+              customActions={(row) => (
+                <IconButton
+                  size="small"
+                  onClick={() => handleOpenGenerated(row)}
+                  title="Open Report"
+                  sx={{ padding: '2px' }}
+                >
+                  <OpenInNewIcon sx={{ fontSize: 14, color: '#1976d2' }} />
+                </IconButton>
+              )}
+            />
           )}
         </DialogContent>
-
-        {/* ── Bottom Toolbar (V1: + / Refresh / — ) ── */}
-        <Box className={classes.toolbar}>
-          <Tooltip title="Add Report Template">
-            <IconButton className={classes.toolbarBtn} onClick={() => { setEditTemplate(null); setPropsOpen(true); }}>
-              <AddIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Refresh">
-            <IconButton className={classes.toolbarBtn} onClick={handleRefresh}>
-              <RefreshIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
-          <Box flex={1} />
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
-            {tab === 0 ? `${templates.length} template${templates.length !== 1 ? 's' : ''}` : `${generated.length} report${generated.length !== 1 ? 's' : ''}`}
-          </Typography>
-        </Box>
       </Dialog>
 
       {/* ── Report Properties (Add/Edit) ── */}

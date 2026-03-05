@@ -208,6 +208,7 @@ const CustomTable = ({
   onOpenSettings = () => {},
   onImport,
   onExport,
+  onBulkDelete,
   customActions,
   showSearch = true,
   hideToolbar = false,
@@ -327,8 +328,9 @@ const CustomTable = ({
             className={classes.actionButton}
             onClick={() => {
               if (selected.length > 0 && window.confirm(`Delete ${selected.length} selected item(s)?`)) {
-                // Handle bulk delete
-                console.log('Delete selected:', selected);
+                if (onBulkDelete) {
+                  onBulkDelete(selected);
+                }
               }
             }}
             title="Delete Selected"

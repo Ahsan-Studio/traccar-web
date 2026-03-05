@@ -94,7 +94,7 @@ const AddDeviceDialog = ({ open, onClose }) => {
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.uniqueId.trim()) {
-      setError("Nama dan IMEI harus diisi");
+      setError("Name and IMEI are required");
       return;
     }
 
@@ -121,7 +121,7 @@ const AddDeviceDialog = ({ open, onClose }) => {
       // Add device to Redux store
       dispatch(devicesActions.add(newDevice));
       
-      setSuccess("Device berhasil ditambahkan");
+      setSuccess("Device added successfully");
       setFormData({ name: "", uniqueId: "" });
       
       setTimeout(() => {
@@ -131,7 +131,7 @@ const AddDeviceDialog = ({ open, onClose }) => {
 
     } catch (err) {
       console.error("Error creating device:", err);
-      setError(err.message || "Gagal menambahkan device");
+      setError(err.message || "Failed to add device");
     } finally {
       setLoading(false);
     }

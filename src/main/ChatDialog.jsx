@@ -71,19 +71,6 @@ const useStyles = makeStyles()(() => ({
   },
 }));
 
-const STORAGE_KEY = 'gps_chat';
-
-const loadChatHistory = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
-};
-
-const saveChatHistory = (data) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
-
 const ChatDialog = ({ open, onClose }) => {
   const { classes } = useStyles();
   const devices = useSelector((state) => state.devices.items);
@@ -93,17 +80,39 @@ const ChatDialog = ({ open, onClose }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Load messages when device changes
-  useEffect(() => {
-    if (!selectedDeviceId) {
+  // Load messages from API when device changes
+  const fetchMessages = useCallback(async (deviceId) => {
+    if (!deviceId) {
       setMessages([]);
       return;
     }
-    const history = loadChatHistory();
-    setMessages(history[selectedDeviceId] || []);
-  }, [selectedDeviceId]);
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/chat?deviceId=${deviceId}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to fetch chat messages:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open && selectedDeviceId) {
+      fetchMessages(selectedDeviceId);
+    } else {
+      setMessages([]);
+    }
+  }, [selectedDeviceId, open, fetchMessages]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -116,50 +125,45 @@ const ChatDialog = ({ open, onClose }) => {
     if (!message.trim() || !selectedDeviceId) return;
 
     setSending(true);
-    const newMsg = {
-      id: Date.now(),
-      side: 'server',
-      text: message.trim(),
-      time: new Date().toISOString(),
-      status: 'sending',
-    };
-
-    // Add to local messages
-    const updatedMessages = [...messages, newMsg];
-    setMessages(updatedMessages);
+    const msgText = message.trim();
     setMessage('');
 
     try {
-      // Try to send via Traccar command API (custom message command)
-      const response = await fetch('/api/commands/send', {
+      // Save message to server
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deviceId: parseInt(selectedDeviceId),
-          type: 'custom',
-          attributes: {
-            data: message.trim(),
-          },
+          deviceId: parseInt(selectedDeviceId, 10),
+          side: 'S',
+          message: msgText,
+          messageTime: new Date().toISOString(),
+          messageStatus: 0,
         }),
       });
 
       if (response.ok) {
-        newMsg.status = 'sent';
-      } else {
-        // Even if API fails, keep message in local history
-        newMsg.status = 'local';
+        const saved = await response.json();
+        setMessages((prev) => [...prev, saved]);
       }
-    } catch {
-      newMsg.status = 'local';
+
+      // Also try to send via Traccar command API
+      await fetch('/api/commands/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: parseInt(selectedDeviceId, 10),
+          type: 'custom',
+          attributes: { data: msgText },
+        }),
+      }).catch(() => {});
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send message:', e);
     } finally {
       setSending(false);
-      // Save to local storage
-      const history = loadChatHistory();
-      history[selectedDeviceId] = updatedMessages.map((m) => (m.id === newMsg.id ? newMsg : m));
-      saveChatHistory(history);
-      setMessages(history[selectedDeviceId]);
     }
-  }, [message, selectedDeviceId, messages]);
+  }, [message, selectedDeviceId]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -168,12 +172,17 @@ const ChatDialog = ({ open, onClose }) => {
     }
   };
 
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
     if (!selectedDeviceId) return;
-    const history = loadChatHistory();
-    delete history[selectedDeviceId];
-    saveChatHistory(history);
-    setMessages([]);
+    try {
+      const response = await fetch(`/api/chat/${selectedDeviceId}`, { method: 'DELETE' });
+      if (response.ok || response.status === 204) {
+        setMessages([]);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to clear chat:', e);
+    }
   };
 
   const deviceName = selectedDeviceId ? (devices[selectedDeviceId]?.name || `ID: ${selectedDeviceId}`) : '';
@@ -233,16 +242,11 @@ const ChatDialog = ({ open, onClose }) => {
             messages.map((msg) => (
               <Box
                 key={msg.id}
-                className={`${classes.msgBubble} ${msg.side === 'server' ? classes.serverMsg : classes.deviceMsg}`}
+                className={`${classes.msgBubble} ${msg.side === 'S' ? classes.serverMsg : classes.deviceMsg}`}
               >
-                <div>{msg.text}</div>
+                <div>{msg.message}</div>
                 <div className={classes.msgTime}>
-                  {msg.time ? new Date(msg.time).toLocaleTimeString() : ''}
-                  {msg.side === 'server' && msg.status && msg.status !== 'sent' && (
-                    <span style={{ marginLeft: '4px' }}>
-                      {msg.status === 'sending' ? ' ...' : msg.status === 'local' ? ' (local)' : ''}
-                    </span>
-                  )}
+                  {msg.messageTime ? new Date(msg.messageTime).toLocaleTimeString() : ''}
                 </div>
               </Box>
             ))

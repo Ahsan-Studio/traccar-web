@@ -254,7 +254,7 @@ const ZonesTab = ({ onFocusLocation, onCountChange }) => {
       const gId = 'ungrouped';
       const expanded = expandedGroups[gId] !== false;
       result.push({
-        type: 'header', groupId: gId, content: 'Tidak digrup', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((z) => z.id),
+        type: 'header', groupId: gId, content: 'Ungrouped', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((z) => z.id),
       });
       if (expanded) ungrouped.forEach((z) => result.push({ type: 'item', content: z }));
     }
@@ -335,11 +335,11 @@ const ZonesTab = ({ onFocusLocation, onCountChange }) => {
           console.error('Failed to import zone:', item.name, e);
         }
       }
-      alert(`Berhasil import ${successCount} dari ${importItems.length} zone`);
+      alert(`Successfully imported ${successCount} of ${importItems.length} zone`);
       setRefreshVersion((v) => v + 1);
       await refreshGeofencesStore();
     } catch (e) {
-      alert('Gagal membaca file import. Pastikan format JSON valid.');
+      alert('Failed to read import file. Ensure valid JSON format.');
       console.error('Import error:', e);
     } finally {
       setLoading(false);
@@ -350,7 +350,7 @@ const ZonesTab = ({ onFocusLocation, onCountChange }) => {
   // Delete all zones
   const handleDeleteAll = useCallback(async () => {
     if (items.length === 0) return;
-    if (!window.confirm(`Hapus semua ${items.length} zone? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!window.confirm(`Delete all ${items.length} zone? This action cannot be undone.`)) return;
     try {
       setLoading(true);
       await Promise.all(items.map((item) => fetchOrThrow(`/api/zones/${item.id}`, { method: 'DELETE' }).catch(() => null)));

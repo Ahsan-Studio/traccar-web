@@ -147,12 +147,12 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
 
   return (
     <Box className={classes.container}>
-      {/* Akurasi Section */}
+      {/* Accuracy Section */}
       <div className={classes.row}>
-        <div className={classes.titleBlock}>Akurasi</div>
+        <div className={classes.titleBlock}>Accuracy</div>
         
         <div className={classes.row2}>
-          <div className={classes.width40}>Pengimbangan zona waktu - secara default harus disetting ke (UTC 0:00), atur jika anda tidak mungkin mengatur zona waktu GPS</div>
+          <div className={classes.width40}>Timezone offset - by default should be set to (UTC 0:00), adjust if you cannot set the GPS timezone</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
@@ -193,7 +193,7 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Deteksi berhenti menggunakan</div>
+          <div className={classes.width40}>Stop detection using</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
@@ -208,7 +208,7 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Batas minimum deteksi berjalan, dalam km/jam (settingan berimbas ke akurasi berhenti dan berjalan, nilai standar: 6)</div>
+          <div className={classes.width40}>Minimum moving detection threshold, in km/h (affects stop and moving accuracy, default: 6)</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}
@@ -222,7 +222,7 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Batas minimum deteksi mesin diam dalam satuan km/jam (settingan berimbas ke status mesin diam, nilai standar: 3)</div>
+          <div className={classes.width40}>Minimum engine idle detection threshold in km/h (affects engine idle status, default: 3)</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}
@@ -236,7 +236,7 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Jarak terkecil antar titik track (menghilangkan drif, standar 0.0005)</div>
+          <div className={classes.width40}>Minimum distance between track points (eliminates drifting, default 0.0005)</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}
@@ -308,7 +308,7 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Jumlah bahan bakar minimal utk mendeteksi pengisian BBM (standar 10)</div>
+          <div className={classes.width40}>Minimum fuel amount to detect fuel refill (default 10)</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}
@@ -341,13 +341,13 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
         <div className={classes.titleBlock}>Other</div>
         
         <div className={classes.row2}>
-          <div className={classes.width40}>Hapus cache sensor yang terdeksi</div>
+          <div className={classes.width40}>Delete detected sensor cache</div>
           <div className={classes.width60}>
             <button
               className={classes.button}
               onClick={handleButtonClick}
             >
-              Hapus
+              Delete
             </button>
           </div>
         </div>

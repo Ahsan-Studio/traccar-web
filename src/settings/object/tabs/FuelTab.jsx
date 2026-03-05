@@ -110,10 +110,10 @@ const FuelTab = ({ formData, onFormDataChange }) => {
     <Box className={classes.container}>
       {/* Perhitungan Section */}
       <div className={classes.row}>
-        <div className={classes.titleBlock}>Perhitungan</div>
+        <div className={classes.titleBlock}>Calculation</div>
         
         <div className={classes.row2}>
-          <div className={classes.width40}>Sumber</div>
+          <div className={classes.width40}>Source</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
@@ -121,14 +121,14 @@ const FuelTab = ({ formData, onFormDataChange }) => {
               onChange={handleFuelAttributeChange("source")}
             >
               <option value="rates">Rates</option>
-              <option value="fuelLevel">Tingkat Bahan Bakar</option>
-              <option value="fuelConsumption">Konsumsi bahan bakar</option>
+              <option value="fuelLevel">Fuel Level</option>
+              <option value="fuelConsumption">Fuel Consumption</option>
             </select>
           </div>
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Pengukuran</div>
+          <div className={classes.width40}>Measurement</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
@@ -142,7 +142,7 @@ const FuelTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Biaya per liter</div>
+          <div className={classes.width40}>Cost per liter</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}
@@ -161,7 +161,7 @@ const FuelTab = ({ formData, onFormDataChange }) => {
         <div className={classes.titleBlock}>Rates</div>
         
         <div className={classes.row2}>
-          <div className={classes.width40}>Rate musim panas (kilometers per liter)</div>
+          <div className={classes.width40}>Summer rate (kilometers per liter)</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}
@@ -175,7 +175,7 @@ const FuelTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Rate musim dingin (kilometer per liter)</div>
+          <div className={classes.width40}>Winter rate (kilometers per liter)</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}
@@ -189,7 +189,7 @@ const FuelTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Musim dingin dari</div>
+          <div className={classes.width40}>Winter from</div>
           <div className={classes.width60}>
             <div className={classes.inputWrapper}>
               <input
@@ -205,7 +205,7 @@ const FuelTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Musim dingin sampai</div>
+          <div className={classes.width40}>Winter to</div>
           <div className={classes.width60}>
             <div className={classes.inputWrapper}>
               <input

@@ -3,7 +3,7 @@ import { map } from '../core/MapView';
 import { useAttributePreference } from '../../common/util/preferences';
 import { findFonts } from '../core/mapUtil';
 
-// Fungsi untuk fetch markers dari API
+// Function to fetch markers from API
 // DEPRECATED: Markers now loaded via CachingController.js from /api/markers
 // const fetchMarkers = async (session) => {
 //   try {
@@ -38,7 +38,7 @@ const MapMarkersLayer = () => {
   const [markers] = useState([]);
   const mapMarkers = useAttributePreference('mapMarkers', true);
   
-  // Fetch markers saat komponen mount atau session berubah
+  // Fetch markers when component mounts or session changes
   // DEPRECATED: Markers now loaded via CachingController.js
   // useEffect(() => {
   //   if (!mapMarkers || !session?.authenticated) return;
@@ -50,7 +50,7 @@ const MapMarkersLayer = () => {
   //       setMarkers(data);
   //       setError(null);
   //       
-  //       // Pindah ke marker pertama jika ada
+  //       // Move to first marker if available
   //       if (data.length > 0) {
   //         map.flyTo({
   //           center: [data[0].longitude, data[0].latitude],
@@ -60,7 +60,7 @@ const MapMarkersLayer = () => {
   //       }
   //     } catch (err) {
   //       console.error('Failed to load markers:', err);
-  //       setError('Gagal memuat marker. Silakan refresh halaman.');
+  //       setError('Failed to load markers. Please refresh the page.');
   //     } finally {
   //       setLoading(false);
   //     }
@@ -71,10 +71,10 @@ const MapMarkersLayer = () => {
 
   useEffect(() => {
     if (!mapMarkers) {
-      return () => {}; // Cleanup function kosong
+      return () => {}; // Empty cleanup function
     }
 
-    // Skip jika tidak ada marker atau mapMarkers dinonaktifkan
+    // Skip if no markers or mapMarkers is disabled
     if (!mapMarkers || markers.length === 0) {
       console.log('[MapMarkersLayer] No markers to display');
       return () => {};
@@ -88,13 +88,13 @@ const MapMarkersLayer = () => {
     
     console.log('[MapMarkersLayer] Creating source with ID:', sourceId);
     
-    // Cek apakah source sudah ada
+    // Check if source already exists
     if (map.getSource(sourceId)) {
       console.log('[MapMarkersLayer] Source already exists, removing it first');
       map.removeSource(sourceId);
     }
 
-    // Buat source baru
+    // Create new source
     map.addSource(sourceId, {
       type: 'geojson',
       data: {
@@ -119,7 +119,7 @@ const MapMarkersLayer = () => {
     
     console.log('[MapMarkersLayer] Source created successfully');
 
-    // Hapus layer jika sudah ada
+    // Remove layer if it already exists
     if (map.getLayer(layerId)) {
       console.log('[MapMarkersLayer] Removing existing layer:', layerId);
       map.removeLayer(layerId);
@@ -132,13 +132,13 @@ const MapMarkersLayer = () => {
       type: 'symbol',
       source: sourceId,
       layout: {
-        // Gunakan built-in marker dari Mapbox
+        // Use built-in marker from Mapbox
         'icon-image': '{image}',
         'icon-size': 1.5,
         'icon-anchor': 'bottom',
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
-        // Teks marker
+        // Marker text
         'text-field': '{title}',
         'text-allow-overlap': true,
         'text-anchor': 'top',
@@ -147,7 +147,7 @@ const MapMarkersLayer = () => {
         'text-size': 12,
       },
       paint: {
-        'icon-color': ['get', 'color'],  // Warna marker
+        'icon-color': ['get', 'color'],  // Marker color
         'text-halo-color': 'white',
         'text-halo-width': 2,
         'text-halo-blur': 1,

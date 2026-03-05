@@ -306,7 +306,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           <Typography className={classes.sectionTitle}>Service</Typography>
           
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Nama</Typography>
+            <Typography className={classes.label}>Name</Typography>
             <TextField
               value={formData.name}
               onChange={handleInputChange("name")}
@@ -317,13 +317,13 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           </Box>
 
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Daftar data</Typography>
+            <Typography className={classes.label}>Data list</Typography>
             <Checkbox
               checked={formData.dataList}
               onChange={handleCheckboxChange("dataList")}
               className={classes.checkbox}
             />
-            <Typography className={classes.checkboxLabel}>Daftar data</Typography>
+            <Typography className={classes.checkboxLabel}>Data list</Typography>
           </Box>
 
           <Box className={classes.formRow}>
@@ -350,7 +350,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
               size="small"
               disabled={!formData.odometerInterval}
             />
-            <Typography className={classes.rightLabel}>Servis terakhir (km)</Typography>
+            <Typography className={classes.rightLabel}>Last service (km)</Typography>
             <TextField
               value={formData.lastServiceOdometer}
               onChange={handleInputChange("lastServiceOdometer")}
@@ -361,7 +361,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           </Box>
 
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Interval jam mesin (h)</Typography>
+            <Typography className={classes.label}>Engine hour interval (h)</Typography>
             <Checkbox
               checked={formData.engineHourInterval}
               onChange={handleCheckboxChange("engineHourInterval")}
@@ -374,7 +374,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
               size="small"
               disabled={!formData.engineHourInterval}
             />
-            <Typography className={classes.rightLabel}>Servis terakhir (h)</Typography>
+            <Typography className={classes.rightLabel}>Last service (h)</Typography>
             <TextField
               value={formData.lastServiceEngineHour}
               onChange={handleInputChange("lastServiceEngineHour")}
@@ -385,7 +385,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           </Box>
 
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Interval hari</Typography>
+            <Typography className={classes.label}>Day interval</Typography>
             <Checkbox
               checked={formData.dayInterval}
               onChange={handleCheckboxChange("dayInterval")}
@@ -398,7 +398,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
               size="small"
               disabled={!formData.dayInterval}
             />
-            <Typography className={classes.rightLabel}>Servis terakhir</Typography>
+            <Typography className={classes.rightLabel}>Last service</Typography>
             <TextField
               type="date"
               value={formData.lastServiceDay}
@@ -413,7 +413,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
 
         {/* Trigger Event Section */}
         <Box className={classes.section}>
-          <Typography className={classes.sectionTitle}>Pemicu kejadian</Typography>
+          <Typography className={classes.sectionTitle}>Trigger event</Typography>
           
           <Box className={classes.formRow}>
             <Typography className={classes.label}>Odometer left (km)</Typography>
@@ -430,7 +430,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
               size="small"
               disabled={!formData.odometerLeft || !formData.odometerInterval}
             />
-            <Typography className={classes.rightLabel}>Perbaharui servis terakhir</Typography>
+            <Typography className={classes.rightLabel}>Update last service</Typography>
             <Checkbox
               checked={formData.updateLastService}
               onChange={handleCheckboxChange("updateLastService")}
@@ -440,7 +440,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           </Box>
 
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Sisa jam mesin (h)</Typography>
+            <Typography className={classes.label}>Remaining engine hours (h)</Typography>
             <Checkbox
               checked={formData.remainingEngineHours}
               onChange={handleCheckboxChange("remainingEngineHours")}
@@ -457,7 +457,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           </Box>
 
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Hari tersisa</Typography>
+            <Typography className={classes.label}>Remaining days</Typography>
             <Checkbox
               checked={formData.remainingDays}
               onChange={handleCheckboxChange("remainingDays")}
@@ -476,10 +476,10 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
 
         {/* Current Object Counter Section */}
         <Box className={classes.section}>
-          <Typography className={classes.sectionTitle}>Penghitung objek saat ini</Typography>
+          <Typography className={classes.sectionTitle}>Current object counter</Typography>
           
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Odometer saat ini (km)</Typography>
+            <Typography className={classes.label}>Current odometer (km)</Typography>
             <TextField
               value={formData.currentOdometer}
               onChange={handleInputChange("currentOdometer")}
@@ -490,7 +490,7 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           </Box>
 
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Jam mesin saat ini (h)</Typography>
+            <Typography className={classes.label}>Current engine hours (h)</Typography>
             <TextField
               value={formData.currentEngineHours}
               onChange={handleInputChange("currentEngineHours")}
@@ -508,14 +508,14 @@ const ServiceDialog = ({ open, onClose, onSave, service }) => {
           className={classes.saveButton}
           startIcon={<SaveIcon />}
         >
-          Simpan
+          Save
         </Button>
         <Button
           onClick={handleCancel}
           className={classes.cancelButton}
           startIcon={<CancelIcon />}
         >
-          Batal
+          Cancel
         </Button>
       </DialogActions>
     </Dialog>

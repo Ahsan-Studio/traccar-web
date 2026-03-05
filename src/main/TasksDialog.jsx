@@ -6,7 +6,7 @@ import {
   IconButton, Typography, Box, Button, TextField,
   FormControl, InputLabel, Select, MenuItem,
   Table, TableBody, TableHead, TableRow, TableCell, TableContainer,
-  Chip,
+  Chip, CircularProgress,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
@@ -14,6 +14,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useSelector } from 'react-redux';
+import dayjs from 'dayjs';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
 const STATUSES = ['New', 'In Progress', 'Completed', 'Cancelled'];
@@ -62,26 +63,14 @@ const useStyles = makeStyles()(() => ({
   },
 }));
 
-const STORAGE_KEY = 'gps_tasks';
-
-const loadTasks = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-};
-
-const saveTasks = (tasks) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-};
-
 const TasksDialog = ({ open, onClose }) => {
   const { classes } = useStyles();
   const devices = useSelector((state) => state.devices.items);
   const deviceList = useMemo(() => Object.values(devices), [devices]);
 
   const [tasks, setTasks] = useState([]);
-  const [editMode, setEditMode] = useState(false); // false = list, true = form
+  const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [form, setForm] = useState({
     name: '', deviceId: '', priority: 'Medium', status: 'New',
@@ -89,8 +78,24 @@ const TasksDialog = ({ open, onClose }) => {
     startDate: '', endDate: '',
   });
 
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/tasks', { headers: { Accept: 'application/json' } });
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to fetch tasks:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (open) setTasks(loadTasks());
+    if (open) fetchTasks();
   }, [open]);
 
   const handleNew = () => {
@@ -104,34 +109,76 @@ const TasksDialog = ({ open, onClose }) => {
   };
 
   const handleEdit = (task) => {
-    setForm({ ...task });
+    setForm({
+      name: task.name || '',
+      deviceId: task.deviceId || '',
+      priority: task.priority || 'Medium',
+      status: task.status || 'New',
+      description: task.description || '',
+      startAddress: task.startAddress || '',
+      endAddress: task.endAddress || '',
+      startDate: task.startDate ? dayjs(task.startDate).format('YYYY-MM-DDTHH:mm') : '',
+      endDate: task.endDate ? dayjs(task.endDate).format('YYYY-MM-DDTHH:mm') : '',
+    });
     setEditTask(task);
     setEditMode(true);
   };
 
-  const handleDelete = (taskId) => {
-    const updated = tasks.filter((t) => t.id !== taskId);
-    setTasks(updated);
-    saveTasks(updated);
+  const handleDelete = async (taskId) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+      if (response.ok) {
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to delete task:', e);
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) return;
-    let updated;
-    if (editTask) {
-      updated = tasks.map((t) => (t.id === editTask.id ? { ...form, id: editTask.id, updatedAt: new Date().toISOString() } : t));
-    } else {
-      const newTask = {
-        ...form,
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      updated = [...tasks, newTask];
+
+    const payload = {
+      name: form.name,
+      deviceId: form.deviceId || 0,
+      priority: form.priority,
+      status: form.status,
+      description: form.description,
+      startAddress: form.startAddress,
+      endAddress: form.endAddress,
+      startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
+      endDate: form.endDate ? new Date(form.endDate).toISOString() : null,
+    };
+
+    try {
+      if (editTask) {
+        payload.id = editTask.id;
+        const response = await fetch(`/api/tasks/${editTask.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          const updated = await response.json();
+          setTasks((prev) => prev.map((t) => (t.id === editTask.id ? updated : t)));
+        }
+      } else {
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          const created = await response.json();
+          setTasks((prev) => [...prev, created]);
+        }
+      }
+      setEditMode(false);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save task:', e);
     }
-    setTasks(updated);
-    saveTasks(updated);
-    setEditMode(false);
   };
 
   const handleCancel = () => setEditMode(false);
@@ -168,6 +215,11 @@ const TasksDialog = ({ open, onClose }) => {
               </Button>
             </Box>
             <TableContainer sx={{ flex: 1, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+              {loading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
@@ -201,8 +253,8 @@ const TasksDialog = ({ open, onClose }) => {
                           sx={{ fontSize: '10px', height: '18px', backgroundColor: STATUS_COLORS[task.status], color: '#fff' }}
                         />
                       </TableCell>
-                      <TableCell className={classes.tableCell}>{task.startDate || '—'}</TableCell>
-                      <TableCell className={classes.tableCell}>{task.endDate || '—'}</TableCell>
+                      <TableCell className={classes.tableCell}>{task.startDate ? dayjs(task.startDate).format('YYYY-MM-DD HH:mm') : '—'}</TableCell>
+                      <TableCell className={classes.tableCell}>{task.endDate ? dayjs(task.endDate).format('YYYY-MM-DD HH:mm') : '—'}</TableCell>
                       <TableCell className={classes.tableCell} align="center">
                         <IconButton size="small" onClick={() => handleEdit(task)}><EditIcon fontSize="small" /></IconButton>
                         <IconButton size="small" onClick={() => handleDelete(task.id)}><DeleteIcon fontSize="small" /></IconButton>
@@ -218,6 +270,7 @@ const TasksDialog = ({ open, onClose }) => {
                   )}
                 </TableBody>
               </Table>
+              )}
             </TableContainer>
           </>
         ) : (

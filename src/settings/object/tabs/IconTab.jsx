@@ -184,74 +184,74 @@ const IconTab = ({ formData, onFormDataChange, deviceId, deviceUniqueId }) => {
                 });
               }}
             >
-              <option value="arrow">Anak Panah</option>
+              <option value="arrow">Arrow</option>
               <option value="icon">Icon</option>
             </select>
           </div>
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Warna anak panah tidak ada koneksi</div>
+          <div className={classes.width40}>Arrow color when disconnected</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
               value={formData.attributes?.icon?.disconnectedColor || "red"}
               onChange={handleIconAttributeChange("disconnectedColor")}
             >
-              <option value="black">Hitam</option>
-              <option value="blue">Biru</option>
-              <option value="green">Hijau</option>
-              <option value="gray">Abu-abu</option>
+              <option value="black">Black</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="gray">Gray</option>
               <option value="orange">Orange</option>
-              <option value="purple">Ungu</option>
-              <option value="red">Merah</option>
-              <option value="yellow">Kuning</option>
+              <option value="purple">Purple</option>
+              <option value="red">Red</option>
+              <option value="yellow">Yellow</option>
             </select>
           </div>
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Warna anak panah saat berhenti</div>
+          <div className={classes.width40}>Arrow color when stopped</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
               value={formData.attributes?.icon?.stopColor || "red"}
               onChange={handleIconAttributeChange("stopColor")}
             >
-              <option value="black">Hitam</option>
-              <option value="blue">Biru</option>
-              <option value="green">Hijau</option>
-              <option value="gray">Abu-abu</option>
+              <option value="black">Black</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="gray">Gray</option>
               <option value="orange">Orange</option>
-              <option value="purple">Ungu</option>
-              <option value="red">Merah</option>
-              <option value="yellow">Kuning</option>
+              <option value="purple">Purple</option>
+              <option value="red">Red</option>
+              <option value="yellow">Yellow</option>
             </select>
           </div>
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Warna anak panah berjalan</div>
+          <div className={classes.width40}>Arrow color when moving</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
               value={formData.attributes?.icon?.movingColor || "green"}
               onChange={handleIconAttributeChange("movingColor")}
             >
-              <option value="black">Hitam</option>
-              <option value="blue">Biru</option>
-              <option value="green">Hijau</option>
-              <option value="gray">Abu-abu</option>
+              <option value="black">Black</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="gray">Gray</option>
               <option value="orange">Orange</option>
-              <option value="purple">Ungu</option>
-              <option value="red">Merah</option>
-              <option value="yellow">Kuning</option>
+              <option value="purple">Purple</option>
+              <option value="red">Red</option>
+              <option value="yellow">Yellow</option>
             </select>
           </div>
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Warna anak panah mesin diam</div>
+          <div className={classes.width40}>Arrow color when engine idle</div>
           <div className={classes.width60}>
             <select
               className={`${classes.select} ${classes.width100}`}
@@ -259,14 +259,14 @@ const IconTab = ({ formData, onFormDataChange, deviceId, deviceUniqueId }) => {
               onChange={handleIconAttributeChange("ignitionOffColor")}
             >
               <option value="off">Off</option>
-              <option value="black">Hitam</option>
-              <option value="blue">Biru</option>
-              <option value="green">Hijau</option>
-              <option value="gray">Abu-abu</option>
+              <option value="black">Black</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="gray">Gray</option>
               <option value="orange">Orange</option>
-              <option value="purple">Ungu</option>
-              <option value="red">Merah</option>
-              <option value="yellow">Kuning</option>
+              <option value="purple">Purple</option>
+              <option value="red">Red</option>
+              <option value="yellow">Yellow</option>
             </select>
           </div>
         </div>
@@ -294,12 +294,12 @@ const IconTab = ({ formData, onFormDataChange, deviceId, deviceUniqueId }) => {
         </div>
       </div>
 
-      {/* Ekor Section */}
+      {/* Tail Section */}
       <div className={classes.row}>
-        <div className={classes.titleBlock}>Ekor</div>
+        <div className={classes.titleBlock}>Tail</div>
         
         <div className={classes.row2}>
-          <div className={classes.width40}>Warna ekor</div>
+          <div className={classes.width40}>Tail color</div>
           <div className={classes.width60}>
             <div style={{ display: "flex", alignItems: "center" }}>
               <input
@@ -318,7 +318,7 @@ const IconTab = ({ formData, onFormDataChange, deviceId, deviceUniqueId }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Jumlah titik ekor</div>
+          <div className={classes.width40}>Number of tail points</div>
           <div className={classes.width60}>
             <input
               className={`${classes.inputbox} ${classes.width100}`}

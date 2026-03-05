@@ -152,7 +152,7 @@ const SensorsTab = ({ formData, onFormDataChange }) => {
   const [editingSensor, setEditingSensor] = useState(null);
 
   const sensors = formData.sensors || [
-    { id: 1, name: "EngineStatus", type: "Pengapian (ACC)", parameter: "acc" },
+    { id: 1, name: "EngineStatus", type: "Ignition (ACC)", parameter: "acc" },
   ];
 
   const handleSort = (field) => {
@@ -251,13 +251,13 @@ const SensorsTab = ({ formData, onFormDataChange }) => {
                     className={classes.sortableHeader}
                     onClick={() => handleSort("name")}
                   >
-                    Nama
+                    Name
                     <ArrowUpwardIcon className={classes.sortIcon} />
                   </div>
                 </TableCell>
-                <TableCell>Tipe</TableCell>
+                <TableCell>Type</TableCell>
                 <TableCell>Parameter</TableCell>
-                <TableCell align="center">Aksi</TableCell>
+                <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -302,7 +302,7 @@ const SensorsTab = ({ formData, onFormDataChange }) => {
           <IconButton
             className={`${classes.footerButton} ${classes.addButton}`}
             onClick={handleAddSensor}
-            title="Tambah Sensor"
+            title="Add Sensor"
           >
             <AddIcon />
           </IconButton>
@@ -329,9 +329,9 @@ const SensorsTab = ({ formData, onFormDataChange }) => {
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           rowsPerPageOptions={[5, 10, 25]}
-          labelRowsPerPage="Baris per halaman:"
+          labelRowsPerPage="Rows per page:"
           labelDisplayedRows={({ from, to, count }) => 
-            `${from}-${to} dari ${count !== -1 ? count : `lebih dari ${to}`}`
+            `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`
           }
         />
       </Box>

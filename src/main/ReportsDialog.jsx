@@ -70,14 +70,78 @@ const STOP_DURATIONS = [
   { value: '300', label: '> 5 h' },
 ];
 
-/* ─────────── localStorage helpers ─────────── */
-const LS_TEMPLATES_KEY = 'gps_report_templates';
+/* ─────────── API + localStorage helpers ─────────── */
 const LS_GENERATED_KEY = 'gps_report_generated';
 
-const loadTemplates = () => {
-  try { return JSON.parse(localStorage.getItem(LS_TEMPLATES_KEY)) || []; } catch { return []; }
+const fetchReportTemplates = async () => {
+  try {
+    const response = await fetch('/api/user-templates', { headers: { Accept: 'application/json' } });
+    if (response.ok) {
+      const data = await response.json();
+      // Filter only report templates (subject = 'report_template')
+      return data
+        .filter((t) => t.subject === 'report_template')
+        .map((t) => ({
+          ...t.attributes,
+          id: t.id,
+          name: t.name,
+          _serverId: t.id,
+        }));
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to fetch report templates:', e);
+  }
+  return [];
 };
-const saveTemplates = (list) => localStorage.setItem(LS_TEMPLATES_KEY, JSON.stringify(list));
+
+const saveReportTemplate = async (tpl) => {
+  const payload = {
+    name: tpl.name,
+    subject: 'report_template',
+    description: tpl.type || 'summary',
+    attributes: { ...tpl },
+  };
+  delete payload.attributes._serverId;
+
+  try {
+    if (tpl._serverId) {
+      payload.id = tpl._serverId;
+      const response = await fetch(`/api/user-templates/${tpl._serverId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        return { ...saved.attributes, id: saved.id, name: saved.name, _serverId: saved.id };
+      }
+    } else {
+      const response = await fetch('/api/user-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        return { ...saved.attributes, id: saved.id, name: saved.name, _serverId: saved.id };
+      }
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to save report template:', e);
+  }
+  return null;
+};
+
+const deleteReportTemplate = async (serverId) => {
+  try {
+    await fetch(`/api/user-templates/${serverId}`, { method: 'DELETE' });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to delete report template:', e);
+  }
+};
 
 const loadGenerated = () => {
   try { return JSON.parse(localStorage.getItem(LS_GENERATED_KEY)) || []; } catch { return []; }
@@ -557,6 +621,27 @@ const GeneratedViewDialog = ({ open, onClose, report }) => {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const tableHeader = columns.map((c) => `<th style="border:1px solid #ccc;padding:4px 8px;font-size:11px;background:#f5f5f5;text-align:left">${c.label}</th>`).join('');
+    const bodyRows = rows.map((row, i) => {
+      const cells = columns.map((c) => {
+        const val = c.format ? c.format(row[c.key]) : (row[c.key] ?? '');
+        return `<td style="border:1px solid #eee;padding:3px 6px;font-size:10px">${val}</td>`;
+      }).join('');
+      return `<tr><td style="border:1px solid #eee;padding:3px 6px;font-size:10px">${i + 1}</td>${cells}</tr>`;
+    }).join('');
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${report.name}</title>
+      <style>body{font-family:Arial,sans-serif;margin:20px}table{border-collapse:collapse;width:100%}
+      @media print{button{display:none}}</style></head><body>
+      <h3 style="color:#2a81d4;margin-bottom:4px">${report.name} – ${REPORT_TYPE_MAP[report.type]?.label || report.type}</h3>
+      <p style="font-size:11px;color:#666">${rows.length} records | Generated ${new Date().toLocaleString()}</p>
+      <table><thead><tr><th style="border:1px solid #ccc;padding:4px 8px;font-size:11px;background:#f5f5f5">#</th>${tableHeader}</tr></thead>
+      <tbody>${bodyRows}</tbody></table>
+      <script>setTimeout(()=>window.print(),500)</script></body></html>`);
+    printWindow.document.close();
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 900, height: 550 } }}>
       <DialogTitle className={classes.dialogTitle}>
@@ -591,7 +676,10 @@ const GeneratedViewDialog = ({ open, onClose, report }) => {
         </TableContainer>
         <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
           <Typography variant="caption" color="text.secondary">{rows.length} record{rows.length !== 1 ? 's' : ''}</Typography>
-          <Button variant="outlined" size="small" onClick={handleExportCSV} sx={{ textTransform: 'none', fontSize: '11px' }}>Export CSV</Button>
+          <Box display="flex" gap={1}>
+            <Button variant="outlined" size="small" onClick={handleExportCSV} sx={{ textTransform: 'none', fontSize: '11px' }}>Export CSV</Button>
+            <Button variant="outlined" size="small" onClick={handleExportPDF} sx={{ textTransform: 'none', fontSize: '11px' }}>Export PDF</Button>
+          </Box>
         </Box>
       </DialogContent>
     </Dialog>
@@ -624,31 +712,32 @@ const ReportsDialog = ({ open, onClose }) => {
   // Load data on open
   useEffect(() => {
     if (open) {
-      setTemplates(loadTemplates());
+      fetchReportTemplates().then(setTemplates);
       setGenerated(loadGenerated());
     }
   }, [open]);
 
   /* ── Template CRUD ── */
-  const handleSaveTemplate = useCallback((tpl) => {
-    setTemplates((prev) => {
-      const idx = prev.findIndex((t) => t.id === tpl.id);
-      const next = idx >= 0 ? prev.map((t, i) => (i === idx ? tpl : t)) : [...prev, tpl];
-      saveTemplates(next);
-      return next;
-    });
+  const handleSaveTemplate = useCallback(async (tpl) => {
+    const saved = await saveReportTemplate(tpl);
+    if (saved) {
+      setTemplates((prev) => {
+        const idx = prev.findIndex((t) => t._serverId === saved._serverId);
+        return idx >= 0 ? prev.map((t, i) => (i === idx ? saved : t)) : [...prev, saved];
+      });
+    }
   }, []);
 
-  const handleDeleteTemplate = useCallback((id) => {
-    setTemplates((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      saveTemplates(next);
-      return next;
-    });
-  }, []);
+  const handleDeleteTemplate = useCallback(async (id) => {
+    const tpl = templates.find((t) => t.id === id);
+    if (tpl?._serverId) {
+      await deleteReportTemplate(tpl._serverId);
+    }
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+  }, [templates]);
 
   const handleRefresh = useCallback(() => {
-    setTemplates(loadTemplates());
+    fetchReportTemplates().then(setTemplates);
     setGenerated(loadGenerated());
   }, []);
 

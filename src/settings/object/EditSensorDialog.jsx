@@ -242,7 +242,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
   const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState({
     name: "EngineStatus",
-    type: "Pengapian (ACC)",
+    type: "Ignition (ACC)",
     parameter: "acc",
     dataList: true,
     popup: false,
@@ -340,7 +340,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           <Typography className={classes.sectionTitle}>Sensor</Typography>
           
           <div className={classes.formRow}>
-            <div className={classes.label}>Nama</div>
+            <div className={classes.label}>Name</div>
             <TextField
               className={classes.input}
               value={formData.name}
@@ -350,15 +350,15 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           </div>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Tipe</div>
+            <div className={classes.label}>Type</div>
             <FormControl className={classes.select} size="small">
-              <InputLabel>Tipe</InputLabel>
+              <InputLabel>Type</InputLabel>
               <Select
                 value={formData.type}
                 onChange={handleInputChange("type")}
-                label="Tipe"
+                label="Type"
               >
-                <MenuItem value="Pengapian (ACC)">Pengapian (ACC)</MenuItem>
+                <MenuItem value="Ignition (ACC)">Ignition (ACC)</MenuItem>
                 <MenuItem value="Digital">Digital</MenuItem>
                 <MenuItem value="Analog">Analog</MenuItem>
                 <MenuItem value="Counter">Counter</MenuItem>
@@ -393,7 +393,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
                   size="small"
                 />
               }
-              label="Daftar data"
+              label="Data list"
               className={classes.checkbox}
             />
           </div>
@@ -417,13 +417,13 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           <Typography className={classes.sectionTitle}>Result</Typography>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Tipe</div>
+            <div className={classes.label}>Type</div>
             <FormControl className={classes.select} size="small">
-              <InputLabel>Tipe</InputLabel>
+              <InputLabel>Type</InputLabel>
               <Select
                 value={formData.resultType}
                 onChange={handleInputChange("resultType")}
-                label="Tipe"
+                label="Type"
               >
                 <MenuItem value="Logic">Logic</MenuItem>
                 <MenuItem value="Numeric">Numeric</MenuItem>
@@ -433,7 +433,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           </div>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Satuan pengukuran</div>
+            <div className={classes.label}>Unit of measurement</div>
             <TextField
               className={classes.input}
               value={formData.unit}
@@ -443,7 +443,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           </div>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Jika sensor "1" (text)</div>
+            <div className={classes.label}>If sensor "1" (text)</div>
             <TextField
               className={classes.input}
               value={formData.text1}
@@ -453,7 +453,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           </div>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Jika sensor "0" (text)</div>
+            <div className={classes.label}>If sensor "0" (text)</div>
             <TextField
               className={classes.input}
               value={formData.text0}
@@ -473,7 +473,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           </div>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Nilai terendah</div>
+            <div className={classes.label}>Lowest value</div>
             <TextField
               className={classes.input}
               value={formData.lowestValue}
@@ -483,7 +483,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           </div>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Nilai tertinggi</div>
+            <div className={classes.label}>Highest value</div>
             <TextField
               className={classes.input}
               value={formData.highestValue}
@@ -511,7 +511,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           <Typography className={classes.sectionTitle}>Sensor result preview</Typography>
 
           <div className={classes.formRow}>
-            <div className={classes.label}>Nilai saat ini</div>
+            <div className={classes.label}>Current value</div>
             <div className={classes.previewValue}>{formData.currentValue}</div>
           </div>
 
@@ -525,8 +525,8 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
         <Box className={classes.rightPanel}>
           <Box className={classes.tabsContainer}>
             <Tabs value={tabValue} onChange={handleTabChange}>
-              <Tab label="Kalibrasi" className={classes.tab} />
-              <Tab label="Kamus" className={classes.tab} />
+              <Tab label="Calibration" className={classes.tab} />
+              <Tab label="Dictionary" className={classes.tab} />
             </Tabs>
           </Box>
 
@@ -584,7 +584,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
                   <Table>
                     <TableHead className={classes.tableHeader}>
                       <TableRow>
-                        <TableCell>Nilai</TableCell>
+                        <TableCell>Value</TableCell>
                         <TableCell>Text</TableCell>
                       </TableRow>
                     </TableHead>
@@ -602,7 +602,7 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
                 <div className={classes.inputRow}>
                   <TextField
                     className={classes.inputField}
-                    placeholder="Nilai"
+                    placeholder="Value"
                     value={newDictionary.value}
                     onChange={(e) => setNewDictionary(prev => ({ ...prev, value: e.target.value }))}
                     size="small"
@@ -635,14 +635,14 @@ const EditSensorDialog = ({ open, onClose, sensor, onSave }) => {
           className={classes.cancelButton}
           startIcon={<CloseIcon />}
         >
-          Batal
+          Cancel
         </Button>
         <Button
           onClick={handleSave}
           className={classes.saveButton}
           startIcon={<SaveIcon />}
         >
-          Simpan
+          Save
         </Button>
       </DialogActions>
     </Dialog>

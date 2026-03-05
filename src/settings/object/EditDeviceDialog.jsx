@@ -421,7 +421,7 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
       maxWidth={false}
     >
       <DialogTitle className={classes.dialogTitle}>
-        <Typography>Ubah objek</Typography>
+        <Typography>Edit Object</Typography>
         <IconButton
           onClick={onClose}
           className={classes.closeButton}
@@ -439,10 +439,10 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
           variant="scrollable"
           scrollButtons="auto"
         >
-          <Tab label="Utama" />
+          <Tab label="Main" />
           <Tab label="Icon" />
-          <Tab label="Konsumsi bahan bakar" />
-          <Tab label="Akurasi" />
+          <Tab label="Fuel Consumption" />
+          <Tab label="Accuracy" />
           <Tab label="Sensors" />
           <Tab label="Service" />
           <Tab label="Custom fields" />

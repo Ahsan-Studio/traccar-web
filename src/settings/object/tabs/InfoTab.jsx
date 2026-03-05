@@ -80,15 +80,15 @@ const InfoTab = ({ device }) => {
 
 
   const infoData = [
-    { label: "Kecepatan", value: position ? `${position.speed.toFixed(0)} kph` : "N/A" },
-    { label: "Ketinggian", value: position ? `${position.altitude.toFixed(0)} m` : "N/A" },
+    { label: "Speed", value: position ? `${position.speed.toFixed(0)} kph` : "N/A" },
+    { label: "Altitude", value: position ? `${position.altitude.toFixed(0)} m` : "N/A" },
     { label: "Latitude", value: position ? `${position.latitude.toFixed(6)}°` : "N/A" },
     { label: "Longitude", value: position ? `${position.longitude.toFixed(6)}°` : "N/A" },
     { label: "Parameters", value: position?.attributes ? JSON.stringify(position.attributes) : "" },
     { label: "Protocol", value: position?.protocol || "N/A" },
-    { label: "Sudut", value: position ? `${position.course.toFixed(0)}°` : "N/A" },
-    { label: "Waktu (posisi)", value: position ? new Date(position.deviceTime).toLocaleString("id-ID") : "N/A" },
-    { label: "Waktu (server)", value: position ? new Date(position.serverTime).toLocaleString("id-ID") : "N/A" },
+    { label: "Angle", value: position ? `${position.course.toFixed(0)}°` : "N/A" },
+    { label: "Time (position)", value: position ? new Date(position.deviceTime).toLocaleString("en-US") : "N/A" },
+    { label: "Time (server)", value: position ? new Date(position.serverTime).toLocaleString("en-US") : "N/A" },
   ];
 
   return (
@@ -101,7 +101,7 @@ const InfoTab = ({ device }) => {
                 Data
               </TableCell>
               <TableCell className={`${classes.headerCell} ${classes.infoHeaderCell}`}>
-                Nilai
+                Value
               </TableCell>
             </TableRow>
           </TableHead>

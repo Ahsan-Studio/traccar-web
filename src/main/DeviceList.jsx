@@ -184,7 +184,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
       result.push({ 
         type: 'header', 
         groupId,
-        content: `Tidak digrup (${ungrouped.length})`,
+        content: `Ungrouped (${ungrouped.length})`,
         isExpanded,
         deviceIds: ungrouped.map(d => d.id), // Store device IDs for group actions
       });

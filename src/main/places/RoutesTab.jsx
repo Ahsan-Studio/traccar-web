@@ -254,7 +254,7 @@ const RoutesTab = ({ onFocusLocation, onCountChange }) => {
       const gId = 'ungrouped';
       const expanded = expandedGroups[gId] !== false;
       result.push({
-        type: 'header', groupId: gId, content: 'Tidak digrup', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((r) => r.id),
+        type: 'header', groupId: gId, content: 'Ungrouped', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((r) => r.id),
       });
       if (expanded) ungrouped.forEach((r) => result.push({ type: 'item', content: r }));
     }
@@ -335,11 +335,11 @@ const RoutesTab = ({ onFocusLocation, onCountChange }) => {
           console.error('Failed to import route:', item.name, e);
         }
       }
-      alert(`Berhasil import ${successCount} dari ${importItems.length} route`);
+      alert(`Successfully imported ${successCount} of ${importItems.length} route`);
       setRefreshVersion((v) => v + 1);
       await refreshGeofencesStore();
     } catch (e) {
-      alert('Gagal membaca file import. Pastikan format JSON valid.');
+      alert('Failed to read import file. Ensure valid JSON format.');
       console.error('Import error:', e);
     } finally {
       setLoading(false);
@@ -350,7 +350,7 @@ const RoutesTab = ({ onFocusLocation, onCountChange }) => {
   // Delete all routes
   const handleDeleteAll = useCallback(async () => {
     if (items.length === 0) return;
-    if (!window.confirm(`Hapus semua ${items.length} route? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!window.confirm(`Delete all ${items.length} route? This action cannot be undone.`)) return;
     try {
       setLoading(true);
       await Promise.all(items.map((item) => fetchOrThrow(`/api/routes/${item.id}`, { method: 'DELETE' }).catch(() => null)));

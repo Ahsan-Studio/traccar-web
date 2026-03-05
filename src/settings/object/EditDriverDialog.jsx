@@ -295,7 +295,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      setError("Nama pengemudi wajib diisi");
+      setError("Driver name is required");
       return;
     }
 
@@ -321,10 +321,10 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
         "uniqueId": "RFID123456",
         "attributes": {
           "identityNumber": "3201234567890123",
-          "address": "Jl. Merdeka No. 123, Jakarta",
-          "phone": "+6281234567890",
+          "address": "123 Main Street, City",
+          "phone": "+1234567890",
           "email": "john.doe@email.com",
-          "description": "Driver profesional dengan pengalaman 5 tahun"
+          "description": "Professional driver with 5 years experience"
         }
       });
       
@@ -371,10 +371,10 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
         }, 1000);
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Gagal menyimpan pengemudi");
+        setError(errorData.message || "Failed to save driver");
       }
     } catch (err) {
-      setError(err.message || "Gagal menyimpan pengemudi");
+      setError(err.message || "Failed to save driver");
     } finally {
       setSaving(false);
     }
@@ -415,7 +415,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
       maxWidth={false}
     >
       <DialogTitle className={classes.dialogTitle}>
-        <Typography>Properti pengemudi objek</Typography>
+        <Typography>Object Driver Properties</Typography>
         <IconButton
           onClick={onClose}
           className={classes.closeButton}
@@ -467,7 +467,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
                   component="span"
                   disabled={uploadingPhoto}
                 >
-                  {uploadingPhoto ? "Uploading..." : "Unggah"}
+                  {uploadingPhoto ? "Uploading..." : "Upload"}
                 </Button>
               </label>
               <Button
@@ -478,7 +478,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
                 onClick={handlePhotoDelete}
                 disabled={uploadingPhoto || !photoUrl}
               >
-                Hapus
+                Delete
               </Button>
             </Box>
           </Box>
@@ -487,7 +487,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
         {/* Right Column - Form Fields */}
         <Box className={classes.rightColumn}>
           <div className={classes.formRow}>
-            <div className={classes.formLabel}>Nama</div>
+            <div className={classes.formLabel}>Name</div>
             <TextField
               value={formData.name}
               onChange={handleInputChange("name")}
@@ -510,7 +510,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
           </div>
           
           <div className={classes.formRow}>
-            <div className={classes.formLabel}>Nomor identitas</div>
+            <div className={classes.formLabel}>Identity Number</div>
             <TextField
               value={formData.attributes.identityNumber}
               onChange={handleAttributesChange("identityNumber")}
@@ -521,7 +521,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
           </div>
           
           <div className={classes.formRow}>
-            <div className={classes.formLabel}>Alamat</div>
+            <div className={classes.formLabel}>Address</div>
             <TextField
               value={formData.attributes.address}
               onChange={handleAttributesChange("address")}
@@ -555,7 +555,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
           </div>
           
           <div className={classes.formRow}>
-            <div className={classes.formLabel}>Diskripsi</div>
+            <div className={classes.formLabel}>Description</div>
             <TextField
               value={formData.attributes.description}
               onChange={handleAttributesChange("description")}
@@ -581,7 +581,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
             "&:hover": { backgroundColor: "#357abd" },
           }}
         >
-          {saving ? "Menyimpan..." : "Simpan"}
+          {saving ? "Saving..." : "Save"}
         </Button>
         <Button
           onClick={handleCancel}
@@ -589,7 +589,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
           startIcon={<CancelIcon />}
           className={classes.actionButton}
         >
-          Batal
+          Cancel
         </Button>
       </DialogActions>
 
@@ -621,7 +621,7 @@ const EditDriverDialog = ({ open, onClose, driver, onDriverSaved }) => {
           severity="success"
           sx={{ width: "100%" }}
         >
-          Pengemudi berhasil {driver ? "diperbarui" : "dibuat"}!
+          Driver successfully {driver ? "updated" : "created"}!
         </Alert>
       </Snackbar>
     </Dialog>

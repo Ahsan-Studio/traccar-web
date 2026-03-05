@@ -202,27 +202,27 @@ const EventsList = () => {
   // Memoized event type mapping
   const getEventDescription = useCallback((event) => {
     const eventTypeMap = {
-      deviceOnline: 'Perangkat Online',
-      deviceOffline: 'Perangkat Offline',
-      deviceUnknown: 'Status Tidak Diketahui',
-      deviceInactive: 'Perangkat Tidak Aktif',
-      deviceMoving: 'Perangkat Bergerak',
-      deviceStopped: 'Perangkat Berhenti',
-      geofenceEnter: 'Masuk Geofence',
-      geofenceExit: 'Keluar Geofence',
-      deviceOverspeed: 'Kecepatan Berlebih',
-      deviceFuelDrop: 'Bahan Bakar Turun',
-      deviceFuelIncrease: 'Bahan Bakar Bertambah',
-      ignitionOn: 'Mesin Dihidupkan',
-      ignitionOff: 'Mesin Dimatikan',
+      deviceOnline: 'Device Online',
+      deviceOffline: 'Device Offline',
+      deviceUnknown: 'Unknown Status',
+      deviceInactive: 'Device Inactive',
+      deviceMoving: 'Device Moving',
+      deviceStopped: 'Device Stopped',
+      geofenceEnter: 'Geofence Enter',
+      geofenceExit: 'Geofence Exit',
+      deviceOverspeed: 'Overspeed',
+      deviceFuelDrop: 'Fuel Drop',
+      deviceFuelIncrease: 'Fuel Increase',
+      ignitionOn: 'Ignition On',
+      ignitionOff: 'Ignition Off',
       alarm: 'Alarm',
       maintenance: 'Maintenance',
-      driverChanged: 'Pengemudi Berganti',
-      commandResult: 'Hasil Perintah',
-      media: 'Media Diterima',
+      driverChanged: 'Driver Changed',
+      commandResult: 'Command Result',
+      media: 'Media Received',
     };
     
-    return eventTypeMap[event.type] || event.type || 'Event tidak diketahui';
+    return eventTypeMap[event.type] || event.type || 'Unknown event';
   }, []);
 
   // Memoized filtered events to avoid recalculating on every render
@@ -315,7 +315,7 @@ const EventsList = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching events:', err);
-      setError(`Gagal memuat events: ${err.message || 'Unknown error'}`);
+      setError(`Failed to load events: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -342,7 +342,7 @@ const EventsList = () => {
 
   // Memoized delete handler
   const handleDelete = useCallback(async () => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus semua events?')) {
+    if (window.confirm('Are you sure you want to delete all events?')) {
       try {
         setLoading(true);
         await fetchOrThrow('/api/events', { method: 'DELETE' });
@@ -350,7 +350,7 @@ const EventsList = () => {
         setInitialLoadDone(false);
       } catch (err) {
         console.error('Error deleting events:', err);
-        setError('Gagal menghapus events');
+        setError('Failed to delete events');
       } finally {
         setLoading(false);
       }
@@ -465,14 +465,14 @@ const EventsList = () => {
               >
                 <Typography variant="body2" sx={{ fontSize: '11px' }}>
                   {searchQuery 
-                    ? 'Tidak ada events yang sesuai dengan pencarian' 
+                    ? 'No events matching search' 
                     : initialLoadDone 
-                      ? `Tidak ada events dalam ${EVENTS_HISTORY_PERIOD} hari terakhir` 
-                      : 'Belum ada events'}
+                      ? `No events in the last ${EVENTS_HISTORY_PERIOD} days` 
+                      : 'No events yet'}
                 </Typography>
                 {!searchQuery && !initialLoadDone && (
                   <Typography variant="caption" sx={{ fontSize: '10px', display: 'block', mt: 1 }}>
-                    Klik tombol refresh untuk memuat events
+                    Click the refresh button to load events
                   </Typography>
                 )}
               </Box>

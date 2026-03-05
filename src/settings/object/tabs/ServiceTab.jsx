@@ -123,7 +123,7 @@ const ServiceTab = ({ device }) => {
       setServiceData(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching services:", err);
-      setError("Gagal memuat data service");
+      setError("Failed to load service data");
       setServiceData([]);
     } finally {
       setLoading(false);
@@ -158,7 +158,7 @@ const ServiceTab = ({ device }) => {
 
   const handleDeleteService = async (service) => {
     if (!service?.id) return;
-    const ok = window.confirm("Hapus service ini?");
+    const ok = window.confirm("Delete this service?");
     if (!ok) return;
     try {
       setLoading(true);
@@ -171,7 +171,7 @@ const ServiceTab = ({ device }) => {
       await fetchServices();
     } catch (err) {
       console.error("Error deleting service:", err);
-      setError(err.message || "Gagal menghapus service");
+      setError(err.message || "Failed to delete service");
     } finally {
       setLoading(false);
     }
@@ -244,7 +244,7 @@ const ServiceTab = ({ device }) => {
       await fetchServices();
     } catch (err) {
       console.error("Error creating service:", err);
-      setError(err.message || "Gagal menyimpan service");
+      setError(err.message || "Failed to save service");
     } finally {
       setLoading(false);
     }
@@ -280,7 +280,7 @@ const ServiceTab = ({ device }) => {
                   disabled={loading}
                 />
               </TableCell>
-              <TableCell>Nama</TableCell>
+              <TableCell>Name</TableCell>
               <TableCell>Status</TableCell>
               <TableCell className={classes.actionCell}></TableCell>
             </TableRow>
@@ -291,14 +291,14 @@ const ServiceTab = ({ device }) => {
                 <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={24} />
                   <Box sx={{ mt: 1, fontSize: "12px", color: "#666" }}>
-                    Memuat data service...
+                    Loading service data...
                   </Box>
                 </TableCell>
               </TableRow>
             ) : serviceData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} align="center" sx={{ py: 4, color: "#666" }}>
-                  Tidak ada data service
+                  No service data
                 </TableCell>
               </TableRow>
             ) : (
@@ -345,7 +345,7 @@ const ServiceTab = ({ device }) => {
           <IconButton
             className={classes.footerButton}
             onClick={handleAddService}
-            title="Tambah Service"
+            title="Add Service"
           >
             <AddIcon />
           </IconButton>
@@ -357,7 +357,7 @@ const ServiceTab = ({ device }) => {
           </IconButton>
         </Box>
         <Box className={classes.pagination}>
-          Halaman 1 dari 1 &gt;&gt; 50
+          Page 1 of 1 &gt;&gt; 50
         </Box>
       </Box>
 

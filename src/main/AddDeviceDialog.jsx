@@ -98,7 +98,7 @@ const AddDeviceDialog = ({ open, onClose }) => {
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.uniqueId) {
-      setError('Nama dan IMEI harus diisi');
+      setError('Name and IMEI are required');
       return;
     }
 
@@ -113,9 +113,9 @@ const AddDeviceDialog = ({ open, onClose }) => {
       if (!response.ok) {
         const errorData = await response.text();
         if (errorData.includes('Duplicate entry') && errorData.includes('uniqueid')) {
-          throw new Error('IMEI sudah digunakan');
+          throw new Error('IMEI already in use');
         }
-        throw new Error('Gagal menambahkan device');
+        throw new Error('Failed to add device');
       }
       
       // Refresh device list instead of updating single device
@@ -127,7 +127,7 @@ const AddDeviceDialog = ({ open, onClose }) => {
       setFormData({ name: '', uniqueId: '' }); // Reset form
     } catch (err) {
       console.error('Error adding device:', err);
-      setError(err.message || 'Gagal menambahkan device');
+      setError(err.message || 'Failed to add device');
     } finally {
       setLoading(false);
     }
@@ -136,11 +136,11 @@ const AddDeviceDialog = ({ open, onClose }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs">
       <DialogTitle className={classes.dialogTitle}>
-        Tambah objek
+        Add Object
       </DialogTitle>
       <DialogContent className={classes.dialogContent}>
         <Box mt={2} sx={{ display: 'flex', flexDirection: 'row', gap: '10px', alignItems: 'center' }}>
-          <div className={classes.label}>Nama</div>
+          <div className={classes.label}>Name</div>
           <TextField
             fullWidth
             name="name"
@@ -171,7 +171,7 @@ const AddDeviceDialog = ({ open, onClose }) => {
           disabled={loading}
           sx={{ fontSize: '13px', height: '24px' }}
         >
-          Batal
+          Cancel
         </Button>
         <Button
           variant="contained"
@@ -180,7 +180,7 @@ const AddDeviceDialog = ({ open, onClose }) => {
           startIcon={loading ? <CircularProgress size={16} /> : null}
           sx={{ fontSize: '13px', height: '24px' }}
         >
-          Simpan
+          Save
         </Button>
       </DialogActions>
     </Dialog>

@@ -181,7 +181,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
   const [error, setError] = useState(null);
 
   // Get custom attributes from formData.attributes.custom (which is updated) or device.attributes.custom (fallback)
-  // Struktur sesuai dokumentasi:
+  // Structure according to documentation:
   // {
   //   "attributes": {
   //     "custom": {
@@ -210,10 +210,10 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
   });
 
   // Convert attributes object to array format for table display
-  // Mapping sesuai dokumentasi:
-  // - Nama: attributes.custom.[attribute_name]
-  // - Nilai: attributes.custom.[attribute_name].value
-  // - Daftar Data: attributes.custom.[attribute_name].showOnListData
+  // Mapping according to documentation:
+  // - Name: attributes.custom.[attribute_name]
+  // - Value: attributes.custom.[attribute_name].value
+  // - Data List: attributes.custom.[attribute_name].showOnListData
   // - Popup: attributes.custom.[attribute_name].showOnPopup
   const customFields = Object.entries(customAttributes).map(([attributeName, config]) => ({
     id: attributeName,
@@ -275,7 +275,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
         await saveDeviceAttributes(device.id, updatedAttributes);
       } catch (err) {
         console.error('Failed to save custom field change:', err);
-        setError(err.message || "Gagal menyimpan perubahan");
+        setError(err.message || "Failed to save changes");
       }
     }
   };
@@ -329,12 +329,12 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
 
   const saveCustomField = async () => {
     if (!modalFormData.name.trim()) {
-      setError("Nama field tidak boleh kosong");
+      setError("Field name cannot be empty");
       return;
     }
 
     if (!device || !device.id) {
-      setError("Device ID tidak tersedia");
+      setError("Device ID not available");
       return;
     }
 
@@ -376,7 +376,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
       closeModal();
     } catch (err) {
       console.error('Failed to save custom field:', err);
-      setError(err.message || "Gagal menyimpan custom field");
+      setError(err.message || "Failed to save custom field");
     } finally {
       setLoading(false);
     }
@@ -386,7 +386,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
     const fieldName = customFields[index].name;
     
     if (!device || !device.id) {
-      setError("Device ID tidak tersedia");
+      setError("Device ID not available");
       return;
     }
     
@@ -411,7 +411,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
       });
     } catch (err) {
       console.error('Failed to delete custom field:', err);
-      setError(err.message || "Gagal menghapus custom field");
+      setError(err.message || "Failed to delete custom field");
     } finally {
       setLoading(false);
     }
@@ -465,7 +465,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
           fontSize: "14px"
         }}>
           <Typography variant="body2" sx={{ marginBottom: 2 }}>
-            Belum ada custom fields. Klik tombol + untuk menambah field baru.
+            No custom fields yet. Click the + button to add a new field.
           </Typography>
         </Box>
       ) : (
@@ -475,11 +475,11 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
               <TableRow>
                 <TableCell className={classes.checkboxCell}></TableCell>
                 <TableCell className={classes.headerCell}>
-                  Nama
+                  Name
                   <span className={classes.sortIcon}>↑</span>
                 </TableCell>
-                <TableCell className={classes.headerCell}>Nilai</TableCell>
-                <TableCell className={classes.headerCell}>Daftar data</TableCell>
+                <TableCell className={classes.headerCell}>Value</TableCell>
+                <TableCell className={classes.headerCell}>Data list</TableCell>
                 <TableCell className={classes.headerCell}>Popup</TableCell>
                 <TableCell className={classes.actionCell}></TableCell>
               </TableRow>
@@ -608,7 +608,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
       >
         <DialogTitle className={classes.modalTitle}>
           <Typography variant="h6" sx={{ color: "white", fontSize: "14px", fontWeight: 600 }}>
-            Properti isian buatan sendiri
+            Custom Field Properties
           </Typography>
           <IconButton onClick={closeModal} size="small" sx={{ color: "white", padding: "4px" }}>
             <CloseIcon />
@@ -617,7 +617,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
         
         <DialogContent className={classes.modalContent}>
           <TextField
-            label="Nama"
+            label="Name"
             value={modalFormData.name}
             onChange={(e) => handleFormChange("name", e.target.value)}
             fullWidth
@@ -626,7 +626,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
           />
           
           <TextField
-            label="Nilai"
+            label="Value"
             value={modalFormData.value}
             onChange={(e) => handleFormChange("value", e.target.value)}
             fullWidth
@@ -642,7 +642,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
               size="small"
             />
             <Typography variant="body2" sx={{ fontSize: "12px" }}>
-              Daftar data
+              Data list
             </Typography>
           </Box>
           
@@ -666,7 +666,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
             startIcon={<CloseIcon />}
             size="small"
           >
-            Batal
+            Cancel
           </Button>
           <Button
             onClick={saveCustomField}
@@ -675,7 +675,7 @@ const CustomTab = ({ onFormDataChange, device, formData }) => {
             size="small"
             disabled={loading}
           >
-            {loading ? "Menyimpan..." : "Simpan"}
+            {loading ? "Saving..." : "Save"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -340,7 +340,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
     if (!selectedFile) return;
     
     if (!deviceId) {
-      setError("Device ID tidak tersedia untuk upload");
+      setError("Device ID not available for upload");
       return;
     }
 
@@ -413,7 +413,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
       }
     } catch (error) {
       console.error("Error uploading image:", error);
-      setError(error.message || "Gagal mengupload gambar");
+      setError(error.message || "Failed to upload image");
     } finally {
       setUploading(false);
     }
@@ -457,7 +457,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
     e.stopPropagation();
     
     if (!deviceId) {
-      setError("Device ID tidak tersedia untuk delete");
+      setError("Device ID not available for delete");
       return;
     }
 
@@ -476,13 +476,13 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
       }
     } catch (error) {
       console.error("Error deleting image:", error);
-      setError(error.message || "Gagal menghapus gambar");
+      setError(error.message || "Failed to delete image");
     }
   };
 
   const handleDeleteAllCustomIcons = async () => {
     if (!deviceId) {
-      setError("Device ID tidak tersedia untuk delete");
+      setError("Device ID not available for delete");
       return;
     }
 
@@ -496,7 +496,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
       setSelectedIcon("");
     } catch (error) {
       console.error("Error deleting image:", error);
-      setError(error.message || "Gagal menghapus gambar");
+      setError(error.message || "Failed to delete image");
     }
   };
 
@@ -528,7 +528,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
           className={classes.tabs}
         >
           <Tab label="Default" />
-          <Tab label="Buatan sendiri" />
+          <Tab label="Custom" />
         </Tabs>
 
         <Box className={classes.tabContent}>
@@ -616,7 +616,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
                         startIcon={<DeleteIcon />}
                         onClick={handleDeleteAllCustomIcons}
                       >
-                        Hapus semua
+                        Delete all
                       </Button>
                     </>
                   )}
@@ -646,7 +646,7 @@ const IconSelectorDialog = ({ open, onClose, onIconSelect, currentIcon, deviceId
                       onClick={handleUploadClick}
                       disabled={uploading}
                     >
-                      {uploading ? "Mengupload..." : "Upload"}
+                      {uploading ? "Uploading..." : "Upload"}
                     </Button>
                     <Button
                       variant="outlined"

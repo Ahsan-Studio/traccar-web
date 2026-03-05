@@ -262,7 +262,7 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
       const gId = 'ungrouped';
       const expanded = expandedGroups[gId] !== false;
       result.push({
-        type: 'header', groupId: gId, content: 'Tidak digrup', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((m) => m.id),
+        type: 'header', groupId: gId, content: 'Ungrouped', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((m) => m.id),
       });
       if (expanded) ungrouped.forEach((m) => result.push({ type: 'item', content: m }));
     }
@@ -331,11 +331,11 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
           console.error('Failed to import marker:', item.name, e);
         }
       }
-      alert(`Berhasil import ${successCount} dari ${importItems.length} marker`);
+      alert(`Successfully imported ${successCount} of ${importItems.length} marker`);
       setRefreshVersion((v) => v + 1);
       await refreshGeofencesStore();
     } catch (e) {
-      alert('Gagal membaca file import. Pastikan format JSON valid.');
+      alert('Failed to read import file. Ensure valid JSON format.');
       console.error('Import error:', e);
     } finally {
       setLoading(false);
@@ -346,7 +346,7 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   // Delete all markers
   const handleDeleteAll = useCallback(async () => {
     if (items.length === 0) return;
-    if (!window.confirm(`Hapus semua ${items.length} marker? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!window.confirm(`Delete all ${items.length} marker? This action cannot be undone.`)) return;
     try {
       setLoading(true);
       await Promise.all(items.map((item) => fetchOrThrow(`/api/markers/${item.id}`, { method: 'DELETE' }).catch(() => null)));

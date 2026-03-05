@@ -64,14 +64,14 @@ const RemoveDialog = ({
         </IconButton>
       </DialogTitle>
       <DialogContent className={classes.content}>
-        <Typography variant="body1">Anda yakin akan menghapus?</Typography>
+        <Typography variant="body1">Are you sure you want to delete?</Typography>
       </DialogContent>
       <DialogActions className={classes.actions}>
         <Button size="small" variant="outlined" onClick={handleRemove} className={classes.actionButton}>
-          Ya
+          Yes
         </Button>
         <Button size="small" variant="outlined" onClick={() => onResult(false)} className={classes.actionButton}>
-          Tidak
+          No
         </Button>
       </DialogActions>
     </Dialog>

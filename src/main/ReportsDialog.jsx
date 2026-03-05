@@ -318,7 +318,7 @@ const buildFilenameBase = (name, dateFrom, dateTo) => {
 const openReportInNewTab = (html, format) => {
   if (format === 'pdf') {
     // Open HTML in new tab with auto-print for PDF
-    const pdfHtml = html.replace('</body>', '<script>setTimeout(()=>window.print(),500)<\/script></body>');
+    const pdfHtml = html.replace('</body>', '<script>setTimeout(()=>window.print(),500)</script></body>');
     const blob = new Blob([pdfHtml], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
@@ -344,7 +344,7 @@ const downloadReportFile = (html, name, dateFrom, dateTo, format) => {
     filename = `${base}.xls`;
   } else if (format === 'pdf') {
     // PDF = open HTML with print dialog as download
-    const pdfHtml = html.replace('</body>', '<script>setTimeout(()=>window.print(),500)<\/script></body>');
+    const pdfHtml = html.replace('</body>', '<script>setTimeout(()=>window.print(),500)</script></body>');
     blob = new Blob([pdfHtml], { type: 'text/html;charset=utf-8' });
     filename = `${base}.html`;
   } else {
@@ -822,10 +822,6 @@ const ReportsDialog = ({ open, onClose }) => {
   /* Properties dialog */
   const [propsOpen, setPropsOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState(null);
-
-  /* Generated viewer dialog */
-  const [viewReport, setViewReport] = useState(null);
-  const [viewOpen, setViewOpen] = useState(false);
 
   /* Gear dropdown menu (Reports tab quick-generate) */
   const [menuAnchor, setMenuAnchor] = useState(null);

@@ -274,12 +274,14 @@ const LogbookDialog = ({ open, onClose }) => {
     { key: 'deviceName', label: 'Object' },
     { key: 'group', label: 'Group', render: (row) => GROUP_LABELS[row.group] || row.group },
     { key: 'assignId', label: 'Assign ID' },
-    { key: 'address', label: 'Position', render: (row) => {
+    {
+ key: 'address', label: 'Position', render: (row) => {
       const pos = row.latitude && row.longitude
         ? `${Number(row.latitude).toFixed(6)}°, ${Number(row.longitude).toFixed(6)}°`
         : '';
       return row.address ? `${pos}${pos ? ' - ' : ''}${row.address}` : pos;
-    }},
+    }
+},
   ], []);
 
   /* Delete handlers */

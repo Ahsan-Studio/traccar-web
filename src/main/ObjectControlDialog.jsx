@@ -219,7 +219,7 @@ const ObjectControlDialog = ({ open, onClose, preselectedDeviceId }) => {
               classes={classes}
               showNotification={showNotification}
             />
-          )}}
+          )}
         </DialogContent>
 
         <Snackbar

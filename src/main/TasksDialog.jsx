@@ -107,12 +107,12 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => ({ value: pad(i), label: pa
 const SUBJECT_TASK = 'task';
 
 const parseTask = (t) => ({
+  ...(t.attributes || {}),
   id: t.id,
   _serverId: t.id,
   name: t.name || '',
   priority: t.description || 'normal',
   status: t.message || '0',
-  ...t.attributes,
 });
 
 const fetchTasks = async () => {
@@ -284,7 +284,16 @@ const TaskPropertiesDialog = ({
   const setVal = (key) => (v) => setForm((prev) => ({ ...prev, [key]: v }));
   const setEvent = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const handleSave = () => { onSave(form); onClose(); };
+  const [saving, setSaving] = useState(false);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(form);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const deviceOptions = useMemo(() => [
     { value: '', label: '— All objects —' },
@@ -386,8 +395,8 @@ const TaskPropertiesDialog = ({
 
         {/* ── Buttons ── */}
         <Box display="flex" justifyContent="center" gap={1} py={1.5} sx={{ borderTop: '1px solid #eee' }}>
-          <CustomButton variant="contained" color="primary" icon={<SaveIcon style={{ width: 14, height: 14 }} />} onClick={handleSave} size="small">
-            Save
+          <CustomButton variant="contained" color="primary" icon={<SaveIcon style={{ width: 14, height: 14 }} />} onClick={handleSave} size="small" disabled={saving}>
+            {saving ? 'Saving...' : 'Save'}
           </CustomButton>
           <CustomButton variant="outlined" icon={<CloseIcon style={{ width: 14, height: 14 }} />} onClick={onClose} size="small">
             Cancel
@@ -428,7 +437,10 @@ const TasksDialog = ({ open, onClose }) => {
   /* Load tasks on open */
   const loadTasks = useCallback(() => {
     setLoading(true);
-    fetchTasks().then((data) => { setTasks(data); setLoading(false); });
+    fetchTasks()
+      .then((data) => { setTasks(data); })
+      .catch((e) => { console.error('loadTasks error:', e); })
+      .finally(() => { setLoading(false); });
   }, []);
 
   useEffect(() => {
@@ -502,12 +514,10 @@ const TasksDialog = ({ open, onClose }) => {
   const handleSaveTask = useCallback(async (taskData) => {
     const saved = await saveTaskApi(taskData);
     if (saved) {
-      setTasks((prev) => {
-        const idx = prev.findIndex((t) => t._serverId === saved._serverId);
-        return idx >= 0 ? prev.map((t, i) => (i === idx ? saved : t)) : [...prev, saved];
-      });
+      /* Reload from API to ensure consistency */
+      loadTasks();
     }
-  }, []);
+  }, [loadTasks]);
 
   const handleDeleteTask = useCallback(async (row) => {
     if (row?._serverId) await deleteTaskApi(row._serverId);
@@ -581,27 +591,30 @@ const TasksDialog = ({ open, onClose }) => {
           <CustomButton variant="outlined" onClick={loadTasks} size="small">Show</CustomButton>
         </Box>
 
-        {/* ── Filter row (V1 parity) ── */}
-        <Box className={classes.filterRow}>
-          <Box className={classes.filterField}>
-            <span className="lbl">Object</span>
-            <CustomSelect value={filterDevice} onChange={setFilterDevice} options={deviceFilterOptions} style={{ width: 160 }} />
+        <Box className={classes.propRow} style={{ paddingTop: '10px', marginBottom: '0px', borderBottom: '1px solid #e0e0e0' }}>
+          <Box className={classes.propCol} style={{ maxWidth: '300px' }}>
+            <Box className={classes.propRow}>
+              <span className="lbl">Object</span>
+              <CustomSelect value={filterDevice} onChange={setFilterDevice} options={deviceFilterOptions} style={{ width: 200 }} />
+            </Box> 
+            <Box className={classes.propRow}>
+              <span className="lbl">Filter</span>
+              <CustomSelect value={filterPeriod} onChange={handleFilterChange} options={TIME_FILTERS} style={{ width: 200 }} />
+            </Box>
           </Box>
-          <Box className={classes.filterField}>
-            <span className="lbl">Filter</span>
-            <CustomSelect value={filterPeriod} onChange={handleFilterChange} options={TIME_FILTERS} style={{ width: 140 }} />
-          </Box>
-          <Box className={classes.filterField}>
-            <span className="lbl">Time from</span>
-            <CustomInput type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ width: 120 }} />
-            <CustomSelect value={hourFrom} onChange={setHourFrom} options={HOURS} style={{ width: 55 }} />
-            <CustomSelect value={minuteFrom} onChange={setMinuteFrom} options={MINUTES} style={{ width: 55 }} />
-          </Box>
-          <Box className={classes.filterField}>
-            <span className="lbl">Time to</span>
-            <CustomInput type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ width: 120 }} />
-            <CustomSelect value={hourTo} onChange={setHourTo} options={HOURS} style={{ width: 55 }} />
-            <CustomSelect value={minuteTo} onChange={setMinuteTo} options={MINUTES} style={{ width: 55 }} />
+          <Box className={classes.propCol}>
+            <Box className={classes.propRow}>
+              <span className="lbl" style={{ maxWidth: '100px' }}>Time from</span>
+              <CustomInput type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ width: 120, marginRight: 5 }} />
+              <CustomSelect value={hourFrom} onChange={setHourFrom} options={HOURS} style={{ width: 55, marginRight: 5 }} />
+              <CustomSelect value={minuteFrom} onChange={setMinuteFrom} options={MINUTES} style={{ width: 55 }} />
+            </Box>
+            <Box className={classes.propRow}>
+              <span className="lbl" style={{ maxWidth: '100px' }}>Time to</span>
+              <CustomInput type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ width: 120, marginRight: 5 }} />
+              <CustomSelect value={hourTo} onChange={setHourTo} options={HOURS} style={{ width: 55, marginRight: 5 }} />
+              <CustomSelect value={minuteTo} onChange={setMinuteTo} options={MINUTES} style={{ width: 55 }} />
+            </Box>
           </Box>
         </Box>
 

@@ -9,15 +9,8 @@ import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
 import { useSelector } from 'react-redux';
 import {
-  CustomTable, CustomSelect, CustomInput, CustomButton, CustomCheckbox, CustomMultiSelect,
+  CustomTable, CustomInput, CustomButton, CustomCheckbox, CustomMultiSelect,
 } from '../common/components/custom';
-
-/* ─────────── Constants ─────────── */
-const MAINT_TYPES = [
-  { value: 'totalDistance', label: 'Odometer (km)' },
-  { value: 'hours', label: 'Engine Hours' },
-  { value: 'date', label: 'Days' },
-];
 
 const TYPE_LABEL = { totalDistance: 'Odometer (km)', hours: 'Engine Hours', date: 'Days' };
 

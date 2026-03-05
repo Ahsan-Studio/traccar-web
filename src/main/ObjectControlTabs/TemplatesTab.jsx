@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+ useState, useEffect, useCallback, useMemo 
+} from "react";
 import { CustomTable } from "../../common/components/custom";
 import TemplateFormDialog from "./TemplateFormDialog";
 

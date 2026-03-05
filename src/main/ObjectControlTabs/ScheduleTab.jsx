@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+ useState, useEffect, useCallback, useMemo 
+} from "react";
 import { useSelector } from "react-redux";
 import { CustomTable } from "../../common/components/custom";
 import ScheduleFormDialog from "./ScheduleFormDialog";
@@ -91,12 +93,14 @@ const ScheduleTab = ({ classes, showNotification }) => {
   /* CustomTable columns (V1: Name, Active, Schedule, Object, Gateway, Type, Command) */
   const columns = useMemo(() => [
     { key: "name", label: "Name" },
-    { key: "active", label: "Active", width: 60, render: (row) => (
+    {
+ key: "active", label: "Active", width: 60, render: (row) => (
       <span style={{
         display: "inline-block", width: 10, height: 10, borderRadius: "50%",
         backgroundColor: row.active ? "#4caf50" : "#f44336",
       }} />
-    )},
+    )
+},
     { key: "schedule", label: "Schedule", render: (row) => formatSchedule(row) },
     { key: "deviceId", label: "Object", render: (row) => getDeviceName(row.deviceId) },
     { key: "gateway", label: "Gateway", render: (row) => (row.gateway || "GPRS").toUpperCase() },

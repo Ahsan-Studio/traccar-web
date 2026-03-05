@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+ useState, useEffect, useCallback, useMemo 
+} from "react";
 import { useSelector } from "react-redux";
 import { formatTime } from "../../common/util/formatter";
 import {
@@ -175,9 +177,11 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId, textChannel =
     { key: "deviceId", label: "Object", render: (row) => getDeviceName(row.deviceId) },
     { key: "type", label: "Name" },
     { key: "data", label: "Command", render: (row) => row.attributes?.data || "—" },
-    { key: "result", label: "Status", render: (row) => (
+    {
+ key: "result", label: "Status", render: (row) => (
       <span style={{ color: "#4caf50" }}>{row.result || "sent"}</span>
-    )},
+    )
+},
   ], [devices]);
 
   const rowStyle = { display: 'flex', alignItems: 'center', marginBottom: 4 };

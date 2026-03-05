@@ -87,7 +87,6 @@ const TasksDialog = ({ open, onClose }) => {
         setTasks(data);
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to fetch tasks:', e);
     } finally {
       setLoading(false);
@@ -131,7 +130,6 @@ const TasksDialog = ({ open, onClose }) => {
         setTasks((prev) => prev.filter((t) => t.id !== taskId));
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to delete task:', e);
     }
   };
@@ -176,7 +174,6 @@ const TasksDialog = ({ open, onClose }) => {
       }
       setEditMode(false);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to save task:', e);
     }
   };

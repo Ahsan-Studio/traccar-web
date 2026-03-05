@@ -1,4 +1,6 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import {
+  useEffect, useState, useMemo, useCallback, useRef,
+} from 'react';
 import {
   Dialog, DialogTitle, DialogContent,
   IconButton, Typography, Box, Menu, MenuItem, CircularProgress,
@@ -40,7 +42,7 @@ const BAR_PALETTE = [
   '#2A81D4', '#E91E63', '#00BCD4', '#FF5722', '#795548',
 ];
 
-const REFRESH_INTERVAL = 60_000; // 60 s
+const REFRESH_INTERVAL = 60000; // 60 s
 
 /* ───── styles ───── */
 const useStyles = makeStyles()(() => ({

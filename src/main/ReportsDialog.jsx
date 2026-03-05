@@ -89,7 +89,6 @@ const fetchReportTemplates = async () => {
         }));
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('Failed to fetch report templates:', e);
   }
   return [];
@@ -128,7 +127,6 @@ const saveReportTemplate = async (tpl) => {
       }
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('Failed to save report template:', e);
   }
   return null;
@@ -138,7 +136,6 @@ const deleteReportTemplate = async (serverId) => {
   try {
     await fetch(`/api/user-templates/${serverId}`, { method: 'DELETE' });
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('Failed to delete report template:', e);
   }
 };

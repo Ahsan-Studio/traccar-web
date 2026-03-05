@@ -80,7 +80,6 @@ const ChatDialog = ({ open, onClose }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
 
   // Load messages from API when device changes
@@ -89,7 +88,6 @@ const ChatDialog = ({ open, onClose }) => {
       setMessages([]);
       return;
     }
-    setLoading(true);
     try {
       const response = await fetch(`/api/chat?deviceId=${deviceId}`, {
         headers: { Accept: 'application/json' },
@@ -99,10 +97,9 @@ const ChatDialog = ({ open, onClose }) => {
         setMessages(data);
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to fetch chat messages:', e);
     } finally {
-      setLoading(false);
+      // done
     }
   }, []);
 
@@ -158,7 +155,6 @@ const ChatDialog = ({ open, onClose }) => {
         }),
       }).catch(() => {});
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to send message:', e);
     } finally {
       setSending(false);
@@ -180,7 +176,6 @@ const ChatDialog = ({ open, onClose }) => {
         setMessages([]);
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to clear chat:', e);
     }
   };

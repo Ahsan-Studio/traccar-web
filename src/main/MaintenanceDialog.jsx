@@ -50,9 +50,9 @@ const useStyles = makeStyles()(() => ({
   },
   propSection: {
     margin: '8px 0 4px 0',
-    padding: '4px 8px',
-    backgroundColor: '#2a81d4',
-    color: '#fff',
+    padding: '4px 8px 4px 0px',
+    backgroundColor: 'transparent',
+    color: '#2a81d4',
     fontSize: '12px',
     fontWeight: 600,
     borderRadius: '3px',
@@ -238,22 +238,21 @@ const ServicePropertiesDialog = ({
           {/* Left column */}
           <Box className="col">
             <Box className={classes.propRow}>
-              <span className="propLabel">Name</span>
+              <span className="propLabel" style={{ textAlign: 'left' }}>Name</span>
               <CustomInput value={form.name} onChange={(e) => set('name', e.target.value)} style={{ flex: 1 }} />
             </Box>
             <Box className={classes.propCheckRow}>
+              <span className="propLabel" style={{ marginRight : '18px' }}>Show in data list</span>
               <CustomCheckbox checked={form.dataList} onChange={() => set('dataList', !form.dataList)} />
-              <span className="propLabel">Show in data list</span>
             </Box>
             <Box className={classes.propCheckRow}>
+              <span className="propLabel" style={{ marginRight : '18px' }}>Show popup</span>
               <CustomCheckbox checked={form.popup} onChange={() => set('popup', !form.popup)} />
-              <span className="propLabel">Show popup</span>
             </Box>
 
             {/* Odometer interval */}
-            <Box className={classes.propCheckRow}>
+            <Box className={classes.propCheckRow}><span className="propLabel" style={{ marginRight : '18px' }}>Odo interval</span>
               <CustomCheckbox checked={form.enableOdo} onChange={() => set('enableOdo', !form.enableOdo)} />
-              <span className="propLabel">Odo interval</span>
               <CustomInput
                 type="number"
                 value={form.odoInterval}
@@ -264,8 +263,8 @@ const ServicePropertiesDialog = ({
             </Box>
             {/* Engine hours interval */}
             <Box className={classes.propCheckRow}>
+              <span className="propLabel" style={{ marginRight : '18px' }}>EH interval</span>
               <CustomCheckbox checked={form.enableEH} onChange={() => set('enableEH', !form.enableEH)} />
-              <span className="propLabel">EH interval</span>
               <CustomInput
                 type="number"
                 value={form.ehInterval}
@@ -276,8 +275,8 @@ const ServicePropertiesDialog = ({
             </Box>
             {/* Days interval */}
             <Box className={classes.propCheckRow}>
+              <span className="propLabel" style={{ marginRight : '18px' }}>Days interval</span>
               <CustomCheckbox checked={form.enableDays} onChange={() => set('enableDays', !form.enableDays)} />
-              <span className="propLabel">Days interval</span>
               <CustomInput
                 type="number"
                 value={form.daysInterval}
@@ -291,7 +290,7 @@ const ServicePropertiesDialog = ({
           {/* Right column */}
           <Box className="col">
             <Box className={classes.propRow}>
-              <span className="propLabel">Objects</span>
+              <span className="propLabel" style={{ textAlign: 'left' }}>Objects</span>
               <CustomMultiSelect
                 value={form.selectedDevices}
                 onChange={(v) => set('selectedDevices', v)}
@@ -300,15 +299,15 @@ const ServicePropertiesDialog = ({
               />
             </Box>
             <Box className={classes.propRow}>
-              <span className="propLabel">Last service odo</span>
+              <span className="propLabel" style={{ textAlign: 'left' }}>Last service odo</span>
               <CustomInput type="number" value={form.lastOdo} onChange={(e) => set('lastOdo', e.target.value)} style={{ width: 100 }} />
             </Box>
             <Box className={classes.propRow}>
-              <span className="propLabel">Last service EH</span>
+              <span className="propLabel" style={{ textAlign: 'left' }}>Last service EH</span>
               <CustomInput type="number" value={form.lastEH} onChange={(e) => set('lastEH', e.target.value)} style={{ width: 100 }} />
             </Box>
             <Box className={classes.propRow}>
-              <span className="propLabel">Last service days</span>
+              <span className="propLabel" style={{ textAlign: 'left' }} >Last service days</span>
               <CustomInput type="number" value={form.lastDays} onChange={(e) => set('lastDays', e.target.value)} style={{ width: 100 }} />
             </Box>
           </Box>
@@ -321,8 +320,8 @@ const ServicePropertiesDialog = ({
           {/* Left column */}
           <Box className="col">
             <Box className={classes.propCheckRow}>
+              <span className="propLabel" style={{ marginRight: '18px' }} >Odo left</span>
               <CustomCheckbox checked={form.trigOdo} onChange={() => set('trigOdo', !form.trigOdo)} />
-              <span className="propLabel">Odo left</span>
               <CustomInput
                 type="number"
                 value={form.trigOdoVal}
@@ -332,8 +331,8 @@ const ServicePropertiesDialog = ({
               />
             </Box>
             <Box className={classes.propCheckRow}>
+              <span className="propLabel" style={{ marginRight: '18px' }}>EH left</span>
               <CustomCheckbox checked={form.trigEH} onChange={() => set('trigEH', !form.trigEH)} />
-              <span className="propLabel">EH left</span>
               <CustomInput
                 type="number"
                 value={form.trigEHVal}
@@ -343,8 +342,8 @@ const ServicePropertiesDialog = ({
               />
             </Box>
             <Box className={classes.propCheckRow}>
+              <span className="propLabel" style={{ marginRight: '18px' }}>Days left</span>
               <CustomCheckbox checked={form.trigDays} onChange={() => set('trigDays', !form.trigDays)} />
-              <span className="propLabel">Days left</span>
               <CustomInput
                 type="number"
                 value={form.trigDaysVal}
@@ -357,8 +356,8 @@ const ServicePropertiesDialog = ({
           {/* Right column */}
           <Box className="col">
             <Box className={classes.propCheckRow}>
-              <CustomCheckbox checked={form.updateLastService} onChange={() => set('updateLastService', !form.updateLastService)} />
               <span className="propLabel">Update last service</span>
+              <CustomCheckbox checked={form.updateLastService} onChange={() => set('updateLastService', !form.updateLastService)} />
             </Box>
           </Box>
         </Box>

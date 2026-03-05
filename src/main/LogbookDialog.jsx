@@ -13,7 +13,7 @@ import {
 } from '../common/components/custom';
 
 /* ─────────── Constants ─────────── */
-const GROUP_LABELS = { driver: 'Driver', passenger: 'Passenger', trailer: 'Trailer' };
+const GROUP_LABELS = { driver: 'Driver'};
 
 const TIME_FILTERS = [
   { value: '0', label: 'Whole period' },
@@ -115,6 +115,17 @@ const useStyles = makeStyles()(() => ({
       color: '#444',
     },
   },
+  propRow: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '8px',
+    '& .lbl': { width: '30%', fontSize: '12px', color: '#333' },
+    '& .val': { width: '70%' },
+  },
+  propCol: {
+    flex: 1,
+    padding: '0 12px',
+  },
 }));
 
 /* ═══════════════════════════════════════════════════════════════
@@ -139,11 +150,7 @@ const LogbookDialog = ({ open, onClose }) => {
   const [dateTo, setDateTo] = useState(fmtDate(new Date()));
   const [hourTo, setHourTo] = useState('00');
   const [minuteTo, setMinuteTo] = useState('00');
-
-  /* Group checkboxes (V1: Drivers / Passengers / Trailers) */
   const [showDrivers, setShowDrivers] = useState(true);
-  const [showPassengers, setShowPassengers] = useState(true);
-  const [showTrailers, setShowTrailers] = useState(true);
 
   /* Init dates on open */
   useEffect(() => {
@@ -249,8 +256,6 @@ const LogbookDialog = ({ open, onClose }) => {
   const filteredData = useMemo(() => {
     let result = data.filter((d) => {
       if (d.group === 'driver' && !showDrivers) return false;
-      if (d.group === 'passenger' && !showPassengers) return false;
-      if (d.group === 'trailer' && !showTrailers) return false;
       return true;
     });
     if (search) {
@@ -260,7 +265,7 @@ const LogbookDialog = ({ open, onClose }) => {
         || (d.address || '').toLowerCase().includes(q));
     }
     return result;
-  }, [data, showDrivers, showPassengers, showTrailers, search]);
+  }, [data, showDrivers, search]);
 
   /* Device options */
   const deviceFilterOptions = useMemo(() => [
@@ -347,42 +352,38 @@ const LogbookDialog = ({ open, onClose }) => {
       </Box>
 
       {/* ── Filter row (V1 parity) ── */}
-      <Box className={classes.filterRow}>
-        <Box className={classes.filterField}>
-          <span className="lbl">Object</span>
-          <CustomSelect value={filterDevice} onChange={setFilterDevice} options={deviceFilterOptions} style={{ width: 160 }} />
+      <Box className={classes.propRow} style={{ paddingTop: '10px', marginBottom: '0px', borderBottom: '1px solid #e0e0e0' }}>
+        <Box className={classes.propCol} style={{ maxWidth: '300px' }}>
+          <Box className={classes.propRow}>
+            <span className="lbl">Object</span>
+            <CustomSelect value={filterDevice} onChange={setFilterDevice} options={deviceFilterOptions} style={{ width: 200 }} />
+          </Box>
+          <Box className={classes.propRow}>
+            <span className="lbl">Filter</span>
+            <CustomSelect value={filterPeriod} onChange={handleFilterChange} options={TIME_FILTERS} style={{ width: 200 }} />
+          </Box>
         </Box>
-        <Box className={classes.filterField}>
-          <span className="lbl">Filter</span>
-          <CustomSelect value={filterPeriod} onChange={handleFilterChange} options={TIME_FILTERS} style={{ width: 140 }} />
-        </Box>
-        <Box className={classes.filterField}>
-          <span className="lbl">Time from</span>
-          <CustomInput type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ width: 120 }} />
-          <CustomSelect value={hourFrom} onChange={setHourFrom} options={HOURS} style={{ width: 55 }} />
-          <CustomSelect value={minuteFrom} onChange={setMinuteFrom} options={MINUTES} style={{ width: 55 }} />
-        </Box>
-        <Box className={classes.filterField}>
-          <span className="lbl">Time to</span>
-          <CustomInput type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ width: 120 }} />
-          <CustomSelect value={hourTo} onChange={setHourTo} options={HOURS} style={{ width: 55 }} />
-          <CustomSelect value={minuteTo} onChange={setMinuteTo} options={MINUTES} style={{ width: 55 }} />
-        </Box>
+        <Box className={classes.propCol}>
+          <Box className={classes.propRow}>
+            <span className="lbl" style={{ maxWidth: '100px' }}>Time from</span>
+            <CustomInput type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ width: 120, marginRight: 5 }} />
+            <CustomSelect value={hourFrom} onChange={setHourFrom} options={HOURS} style={{ width: 55, marginRight: 5 }} />
+            <CustomSelect value={minuteFrom} onChange={setMinuteFrom} options={MINUTES} style={{ width: 55 }} />
+          </Box>
+          <Box className={classes.propRow}>
+            <span className="lbl" style={{ maxWidth: '100px' }}>Time to</span>
+            <CustomInput type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ width: 120, marginRight: 5 }} />
+            <CustomSelect value={hourTo} onChange={setHourTo} options={HOURS} style={{ width: 55, marginRight: 5 }} />
+            <CustomSelect value={minuteTo} onChange={setMinuteTo} options={MINUTES} style={{ width: 55 }} />
+          </Box>
+          </Box>
       </Box>
 
-      {/* ── Group checkboxes (V1: Drivers / Passengers / Trailers) ── */}
+      {/* ── Group checkboxes (V1: Drivers ── */}
       <Box className={classes.checkboxGroup}>
         <span className="cbx">
           <CustomCheckbox checked={showDrivers} onChange={() => setShowDrivers((p) => !p)} />
           Drivers
-        </span>
-        <span className="cbx">
-          <CustomCheckbox checked={showPassengers} onChange={() => setShowPassengers((p) => !p)} />
-          Passengers
-        </span>
-        <span className="cbx">
-          <CustomCheckbox checked={showTrailers} onChange={() => setShowTrailers((p) => !p)} />
-          Trailers
         </span>
       </Box>
 

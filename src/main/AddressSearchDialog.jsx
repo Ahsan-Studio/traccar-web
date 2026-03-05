@@ -129,7 +129,7 @@ const AddressSearchDialog = ({ open, onClose }) => {
           <CloseIcon sx={{ fontSize: 16 }} />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ p: '12px 16px' }}>
+      <DialogContent sx={{ p: '16px 16px 12px' }}>
         <input
           className={classes.input}
           type="text"

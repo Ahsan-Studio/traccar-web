@@ -141,8 +141,8 @@ const ShowPointDialog = ({ open, onClose }) => {
           <CloseIcon sx={{ fontSize: 16 }} />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ p: '12px 16px' }}>
-        <Box className={classes.formRow}>
+      <DialogContent sx={{ p: '16px 16px 12px' }}>
+        <Box className={classes.formRow} sx={{ mt: 1 }}>
           <span className={classes.label}>Latitude</span>
           <input
             className={classes.input}

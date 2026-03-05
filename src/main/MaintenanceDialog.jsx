@@ -1,25 +1,35 @@
 import {
- useEffect, useState, useCallback 
+  useEffect, useState, useCallback, useMemo,
 } from 'react';
 import {
   Dialog, DialogTitle, DialogContent,
-  IconButton, Typography, Box, Button, TextField,
-  FormControl, InputLabel, Select, MenuItem,
-  Table, TableBody, TableHead, TableRow, TableCell, TableContainer,
-  CircularProgress, Chip,
+  IconButton, Typography, Box,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { useSelector } from 'react-redux';
+import {
+  CustomTable, CustomSelect, CustomInput, CustomButton, CustomCheckbox, CustomMultiSelect,
+} from '../common/components/custom';
 
+/* ─────────── Constants ─────────── */
 const MAINT_TYPES = [
-  { value: 'totalDistance', label: 'Distance (km)' },
+  { value: 'totalDistance', label: 'Odometer (km)' },
   { value: 'hours', label: 'Engine Hours' },
-  { value: 'date', label: 'Date' },
+  { value: 'date', label: 'Days' },
 ];
 
+const TYPE_LABEL = { totalDistance: 'Odometer (km)', hours: 'Engine Hours', date: 'Days' };
+
+const formatValue = (type, value) => {
+  if (!value && value !== 0) return '—';
+  if (type === 'totalDistance') return `${(value / 1000).toFixed(1)} km`;
+  if (type === 'hours') return `${(value / 3600000).toFixed(1)} h`;
+  if (type === 'date') return `${value} days`;
+  return String(value);
+};
+
+/* ─────────── Styles ─────────── */
 const useStyles = makeStyles()(() => ({
   dialogTitle: {
     backgroundColor: '#2a81d4',
@@ -35,37 +45,363 @@ const useStyles = makeStyles()(() => ({
     padding: '4px',
     '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
   },
-  tableCell: {
-    fontSize: '11px',
-    padding: '4px 8px',
+  /* ── Service Properties dialog ── */
+  propDialogTitle: {
+    backgroundColor: '#2a81d4',
+    color: 'white',
+    padding: '3px 14px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    '& .MuiTypography-root': { fontSize: '14px', fontWeight: 500 },
   },
-  tableHead: {
-    fontSize: '11px',
+  propSection: {
+    margin: '8px 0 4px 0',
     padding: '4px 8px',
+    backgroundColor: '#2a81d4',
+    color: '#fff',
+    fontSize: '12px',
     fontWeight: 600,
-    backgroundColor: '#f5f5f5',
+    borderRadius: '3px',
   },
-  formField: {
-    marginBottom: '12px',
+  propRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '6px',
+    '& .propLabel': {
+      fontSize: '11px',
+      color: '#444',
+      width: 130,
+      flexShrink: 0,
+      textAlign: 'right',
+    },
+  },
+  propCols: {
+    display: 'flex',
+    gap: '24px',
+    '& .col': { flex: 1 },
+  },
+  propCheckRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginBottom: '4px',
+    '& .propLabel': {
+      fontSize: '11px',
+      color: '#444',
+      width: 110,
+      flexShrink: 0,
+    },
+  },
+  propFooter: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '6px',
+    padding: '8px 14px',
+    borderTop: '1px solid #e0e0e0',
   },
 }));
 
+/* ═══════════════════════════════════════════════════════════════
+   ServicePropertiesDialog — V1 parity (two-section form)
+   ═══════════════════════════════════════════════════════════════ */
+const ServicePropertiesDialog = ({
+  open, onClose, onSave, editItem, devices,
+}) => {
+  const { classes } = useStyles();
+  const deviceList = useMemo(() => Object.values(devices), [devices]);
+
+  const [form, setForm] = useState({
+    name: '',
+    type: 'totalDistance',
+    start: 0,
+    period: 0,
+    enableOdo: false,
+    odoInterval: '',
+    enableEH: false,
+    ehInterval: '',
+    enableDays: false,
+    daysInterval: '',
+    lastOdo: '',
+    lastEH: '',
+    lastDays: '',
+    dataList: false,
+    popup: false,
+    /* trigger */
+    trigOdo: false,
+    trigOdoVal: '',
+    trigEH: false,
+    trigEHVal: '',
+    trigDays: false,
+    trigDaysVal: '',
+    updateLastService: false,
+    selectedDevices: [],
+  });
+
+  useEffect(() => {
+    if (open) {
+      if (editItem) {
+        const attrs = editItem.attributes || {};
+        setForm({
+          name: editItem.name || '',
+          type: editItem.type || 'totalDistance',
+          start: editItem.start || 0,
+          period: editItem.period || 0,
+          enableOdo: editItem.type === 'totalDistance',
+          odoInterval: editItem.type === 'totalDistance' ? String(editItem.period || '') : (attrs.odoInterval || ''),
+          enableEH: editItem.type === 'hours',
+          ehInterval: editItem.type === 'hours' ? String(editItem.period || '') : (attrs.ehInterval || ''),
+          enableDays: editItem.type === 'date',
+          daysInterval: editItem.type === 'date' ? String(editItem.period || '') : (attrs.daysInterval || ''),
+          lastOdo: attrs.lastOdo || '',
+          lastEH: attrs.lastEH || '',
+          lastDays: attrs.lastDays || '',
+          dataList: attrs.dataList || false,
+          popup: attrs.popup || false,
+          trigOdo: attrs.trigOdo || false,
+          trigOdoVal: attrs.trigOdoVal || '',
+          trigEH: attrs.trigEH || false,
+          trigEHVal: attrs.trigEHVal || '',
+          trigDays: attrs.trigDays || false,
+          trigDaysVal: attrs.trigDaysVal || '',
+          updateLastService: attrs.updateLastService || false,
+          selectedDevices: attrs.selectedDevices || [],
+        });
+      } else {
+        setForm({
+          name: '', type: 'totalDistance', start: 0, period: 0,
+          enableOdo: false, odoInterval: '', enableEH: false, ehInterval: '',
+          enableDays: false, daysInterval: '', lastOdo: '', lastEH: '', lastDays: '',
+          dataList: false, popup: false,
+          trigOdo: false, trigOdoVal: '', trigEH: false, trigEHVal: '',
+          trigDays: false, trigDaysVal: '', updateLastService: false,
+          selectedDevices: [],
+        });
+      }
+    }
+  }, [open, editItem]);
+
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const handleSave = () => {
+    if (!form.name.trim()) return;
+
+    /* Determine primary type + period */
+    let type = 'totalDistance';
+    let period = 0;
+    if (form.enableOdo) { type = 'totalDistance'; period = parseFloat(form.odoInterval) || 0; }
+    else if (form.enableEH) { type = 'hours'; period = parseFloat(form.ehInterval) || 0; }
+    else if (form.enableDays) { type = 'date'; period = parseFloat(form.daysInterval) || 0; }
+
+    const payload = {
+      name: form.name,
+      type,
+      start: parseFloat(form.start) || 0,
+      period,
+      attributes: {
+        odoInterval: form.odoInterval,
+        ehInterval: form.ehInterval,
+        daysInterval: form.daysInterval,
+        lastOdo: form.lastOdo,
+        lastEH: form.lastEH,
+        lastDays: form.lastDays,
+        dataList: form.dataList,
+        popup: form.popup,
+        trigOdo: form.trigOdo,
+        trigOdoVal: form.trigOdoVal,
+        trigEH: form.trigEH,
+        trigEHVal: form.trigEHVal,
+        trigDays: form.trigDays,
+        trigDaysVal: form.trigDaysVal,
+        updateLastService: form.updateLastService,
+        selectedDevices: form.selectedDevices,
+      },
+    };
+    if (editItem) payload.id = editItem.id;
+    onSave(payload);
+  };
+
+  const deviceOptions = useMemo(() => deviceList.map((d) => ({
+    value: String(d.id), label: d.name,
+  })), [deviceList]);
+
+  if (!open) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 680, maxHeight: '85vh' } }}>
+      <DialogTitle className={classes.propDialogTitle}>
+        <Typography variant="subtitle2" component="span">
+          {editItem ? 'Edit Service' : 'Service Properties'}
+        </Typography>
+        <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: '10px 14px', overflow: 'auto' }}>
+        {/* ── SECTION: SERVICE ── */}
+        <Box className={classes.propSection}>SERVICE</Box>
+
+        <Box className={classes.propCols} sx={{ mt: 1 }}>
+          {/* Left column */}
+          <Box className="col">
+            <Box className={classes.propRow}>
+              <span className="propLabel">Name</span>
+              <CustomInput value={form.name} onChange={(e) => set('name', e.target.value)} style={{ flex: 1 }} />
+            </Box>
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.dataList} onChange={() => set('dataList', !form.dataList)} />
+              <span className="propLabel">Show in data list</span>
+            </Box>
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.popup} onChange={() => set('popup', !form.popup)} />
+              <span className="propLabel">Show popup</span>
+            </Box>
+
+            {/* Odometer interval */}
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.enableOdo} onChange={() => set('enableOdo', !form.enableOdo)} />
+              <span className="propLabel">Odo interval</span>
+              <CustomInput
+                type="number"
+                value={form.odoInterval}
+                onChange={(e) => set('odoInterval', e.target.value)}
+                disabled={!form.enableOdo}
+                style={{ width: 100 }}
+              />
+            </Box>
+            {/* Engine hours interval */}
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.enableEH} onChange={() => set('enableEH', !form.enableEH)} />
+              <span className="propLabel">EH interval</span>
+              <CustomInput
+                type="number"
+                value={form.ehInterval}
+                onChange={(e) => set('ehInterval', e.target.value)}
+                disabled={!form.enableEH}
+                style={{ width: 100 }}
+              />
+            </Box>
+            {/* Days interval */}
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.enableDays} onChange={() => set('enableDays', !form.enableDays)} />
+              <span className="propLabel">Days interval</span>
+              <CustomInput
+                type="number"
+                value={form.daysInterval}
+                onChange={(e) => set('daysInterval', e.target.value)}
+                disabled={!form.enableDays}
+                style={{ width: 100 }}
+              />
+            </Box>
+          </Box>
+
+          {/* Right column */}
+          <Box className="col">
+            <Box className={classes.propRow}>
+              <span className="propLabel">Objects</span>
+              <CustomMultiSelect
+                value={form.selectedDevices}
+                onChange={(v) => set('selectedDevices', v)}
+                options={deviceOptions}
+                style={{ flex: 1, minWidth: 160 }}
+              />
+            </Box>
+            <Box className={classes.propRow}>
+              <span className="propLabel">Last service odo</span>
+              <CustomInput type="number" value={form.lastOdo} onChange={(e) => set('lastOdo', e.target.value)} style={{ width: 100 }} />
+            </Box>
+            <Box className={classes.propRow}>
+              <span className="propLabel">Last service EH</span>
+              <CustomInput type="number" value={form.lastEH} onChange={(e) => set('lastEH', e.target.value)} style={{ width: 100 }} />
+            </Box>
+            <Box className={classes.propRow}>
+              <span className="propLabel">Last service days</span>
+              <CustomInput type="number" value={form.lastDays} onChange={(e) => set('lastDays', e.target.value)} style={{ width: 100 }} />
+            </Box>
+          </Box>
+        </Box>
+
+        {/* ── SECTION: TRIGGER EVENT ── */}
+        <Box className={classes.propSection}>TRIGGER EVENT</Box>
+
+        <Box className={classes.propCols} sx={{ mt: 1 }}>
+          {/* Left column */}
+          <Box className="col">
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.trigOdo} onChange={() => set('trigOdo', !form.trigOdo)} />
+              <span className="propLabel">Odo left</span>
+              <CustomInput
+                type="number"
+                value={form.trigOdoVal}
+                onChange={(e) => set('trigOdoVal', e.target.value)}
+                disabled={!form.trigOdo}
+                style={{ width: 100 }}
+              />
+            </Box>
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.trigEH} onChange={() => set('trigEH', !form.trigEH)} />
+              <span className="propLabel">EH left</span>
+              <CustomInput
+                type="number"
+                value={form.trigEHVal}
+                onChange={(e) => set('trigEHVal', e.target.value)}
+                disabled={!form.trigEH}
+                style={{ width: 100 }}
+              />
+            </Box>
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.trigDays} onChange={() => set('trigDays', !form.trigDays)} />
+              <span className="propLabel">Days left</span>
+              <CustomInput
+                type="number"
+                value={form.trigDaysVal}
+                onChange={(e) => set('trigDaysVal', e.target.value)}
+                disabled={!form.trigDays}
+                style={{ width: 100 }}
+              />
+            </Box>
+          </Box>
+          {/* Right column */}
+          <Box className="col">
+            <Box className={classes.propCheckRow}>
+              <CustomCheckbox checked={form.updateLastService} onChange={() => set('updateLastService', !form.updateLastService)} />
+              <span className="propLabel">Update last service</span>
+            </Box>
+          </Box>
+        </Box>
+      </DialogContent>
+
+      {/* Footer */}
+      <Box className={classes.propFooter}>
+        <CustomButton variant="outlined" size="small" onClick={onClose}>Cancel</CustomButton>
+        <CustomButton variant="contained" size="small" onClick={handleSave}>Save</CustomButton>
+      </Box>
+    </Dialog>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   MaintenanceDialog — V1 parity (Maintenance Services)
+   ═══════════════════════════════════════════════════════════════ */
 const MaintenanceDialog = ({ open, onClose }) => {
   const { classes } = useStyles();
+  const devices = useSelector((state) => state.devices.items);
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState({ name: '', type: 'totalDistance', start: 0, period: 0 });
+  const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState('');
 
+  /* Properties dialog state */
+  const [propOpen, setPropOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+
+  /* Fetch */
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/maintenance', { headers: { Accept: 'application/json' } });
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data);
-      }
+      if (res.ok) setItems(await res.json());
     } catch (err) {
       console.error('Failed to load maintenance:', err);
     } finally {
@@ -77,48 +413,32 @@ const MaintenanceDialog = ({ open, onClose }) => {
     if (open) fetchItems();
   }, [open, fetchItems]);
 
-  const handleNew = () => {
-    setForm({ name: '', type: 'totalDistance', start: 0, period: 0 });
-    setEditItem(null);
-    setEditMode(true);
-  };
+  /* Actions */
+  const handleAdd = () => { setEditItem(null); setPropOpen(true); };
+  const handleEdit = (item) => { setEditItem(item); setPropOpen(true); };
 
-  const handleEdit = (item) => {
-    setForm({
-      name: item.name || '',
-      type: item.type || 'totalDistance',
-      start: item.start || 0,
-      period: item.period || 0,
-    });
-    setEditItem(item);
-    setEditMode(true);
-  };
-
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (item) => {
     try {
-      await fetch(`/api/maintenance/${id}`, { method: 'DELETE' });
+      await fetch(`/api/maintenance/${item.id}`, { method: 'DELETE' });
       fetchItems();
     } catch (err) {
       console.error('Delete failed:', err);
     }
-  };
+  }, [fetchItems]);
 
-  const handleSave = async () => {
-    if (!form.name.trim()) return;
-    const payload = {
-      name: form.name,
-      type: form.type,
-      start: parseFloat(form.start) || 0,
-      period: parseFloat(form.period) || 0,
-      attributes: {},
-    };
+  const handleBulkDelete = useCallback(async (ids) => {
+    await Promise.all(ids.map((id) => fetch(`/api/maintenance/${id}`, { method: 'DELETE' }).catch(() => {})));
+    setSelected([]);
+    fetchItems();
+  }, [fetchItems]);
 
+  const handleSave = useCallback(async (payload) => {
     try {
-      if (editItem) {
-        await fetch(`/api/maintenance/${editItem.id}`, {
+      if (payload.id) {
+        await fetch(`/api/maintenance/${payload.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, id: editItem.id }),
+          body: JSON.stringify(payload),
         });
       } else {
         await fetch('/api/maintenance', {
@@ -127,143 +447,83 @@ const MaintenanceDialog = ({ open, onClose }) => {
           body: JSON.stringify(payload),
         });
       }
+      setPropOpen(false);
       fetchItems();
-      setEditMode(false);
     } catch (err) {
       console.error('Save failed:', err);
     }
-  };
+  }, [fetchItems]);
 
-  const getTypeLabel = (type) => {
-    const t = MAINT_TYPES.find((mt) => mt.value === type);
-    return t ? t.label : type;
-  };
+  const handleExportCSV = useCallback(() => {
+    const header = 'Name,Type,Start,Period';
+    const rows = items.map((d) => [
+      d.name, TYPE_LABEL[d.type] || d.type,
+      formatValue(d.type, d.start), formatValue(d.type, d.period),
+    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `maintenance_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }, [items]);
 
-  const formatValue = (type, value) => {
-    if (!value) return '0';
-    if (type === 'totalDistance') return `${(value / 1000).toFixed(1)} km`;
-    if (type === 'hours') return `${(value / 3600000).toFixed(1)} h`;
-    if (type === 'date') return new Date(value).toLocaleDateString();
-    return String(value);
-  };
+  /* Selection helpers */
+  const onToggleAll = useCallback(() => {
+    setSelected((prev) => (prev.length === items.length ? [] : items.map((d) => d.id)));
+  }, [items]);
+  const onToggleRow = useCallback((id) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
 
-  const setFormField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  /* Columns (V1: Name, Type, Start, Period) */
+  const columns = useMemo(() => [
+    { key: 'name', label: 'Name' },
+    { key: 'type', label: 'Type', render: (row) => TYPE_LABEL[row.type] || row.type },
+    { key: 'start', label: 'Start', render: (row) => formatValue(row.type, row.start) },
+    { key: 'period', label: 'Period', render: (row) => formatValue(row.type, row.period) },
+  ], []);
+
+  if (!open) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: '750px', height: '500px' } }}>
-      <DialogTitle className={classes.dialogTitle}>
-        <Typography variant="subtitle2">Maintenance</Typography>
-        <IconButton size="small" className={classes.closeButton} onClick={onClose}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ p: 2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {!editMode ? (
-          <>
-            <Box display="flex" justifyContent="flex-end" mb={1}>
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={handleNew}
-                sx={{ backgroundColor: '#2a81d4', textTransform: 'none' }}
-              >
-                Add Service
-              </Button>
-            </Box>
-            {loading ? (
-              <Box display="flex" justifyContent="center" py={4}>
-                <CircularProgress size={24} />
-              </Box>
-            ) : (
-              <TableContainer sx={{ flex: 1, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-                <Table stickyHeader size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell className={classes.tableHead}>#</TableCell>
-                      <TableCell className={classes.tableHead}>Service Name</TableCell>
-                      <TableCell className={classes.tableHead}>Type</TableCell>
-                      <TableCell className={classes.tableHead}>Start</TableCell>
-                      <TableCell className={classes.tableHead}>Period</TableCell>
-                      <TableCell className={classes.tableHead} align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {items.map((item, idx) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell className={classes.tableCell}>{idx + 1}</TableCell>
-                        <TableCell className={classes.tableCell}>{item.name}</TableCell>
-                        <TableCell className={classes.tableCell}>
-                          <Chip label={getTypeLabel(item.type)} size="small" sx={{ fontSize: '10px', height: '18px' }} />
-                        </TableCell>
-                        <TableCell className={classes.tableCell}>{formatValue(item.type, item.start)}</TableCell>
-                        <TableCell className={classes.tableCell}>{formatValue(item.type, item.period)}</TableCell>
-                        <TableCell className={classes.tableCell} align="center">
-                          <IconButton size="small" onClick={() => handleEdit(item)}><EditIcon fontSize="small" /></IconButton>
-                          <IconButton size="small" onClick={() => handleDelete(item.id)}><DeleteIcon fontSize="small" /></IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {items.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} align="center" sx={{ py: 4, color: '#999', fontSize: '12px' }}>
-                          No maintenance services configured.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </>
-        ) : (
-          <Box>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-              {editItem ? 'Edit Service' : 'New Service'}
-            </Typography>
-            <TextField
-              className={classes.formField}
-              label="Service Name"
-              size="small"
-              fullWidth
-              required
-              value={form.name}
-              onChange={(e) => setFormField('name', e.target.value)}
-            />
-            <FormControl size="small" fullWidth className={classes.formField}>
-              <InputLabel>Type</InputLabel>
-              <Select value={form.type} onChange={(e) => setFormField('type', e.target.value)} label="Type">
-                {MAINT_TYPES.map((t) => <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <TextField
-              className={classes.formField}
-              label="Start Value"
-              size="small"
-              fullWidth
-              type="number"
-              value={form.start}
-              onChange={(e) => setFormField('start', e.target.value)}
-              helperText={form.type === 'totalDistance' ? 'In meters' : form.type === 'hours' ? 'In milliseconds' : ''}
-            />
-            <TextField
-              className={classes.formField}
-              label="Period / Interval"
-              size="small"
-              fullWidth
-              type="number"
-              value={form.period}
-              onChange={(e) => setFormField('period', e.target.value)}
-              helperText={form.type === 'totalDistance' ? 'In meters (e.g. 10000 = 10km)' : form.type === 'hours' ? 'In milliseconds' : ''}
-            />
-            <Box display="flex" justifyContent="flex-end" gap={1} mt={2}>
-              <Button variant="outlined" size="small" onClick={() => setEditMode(false)} sx={{ textTransform: 'none' }}>Cancel</Button>
-              <Button variant="contained" size="small" onClick={handleSave} sx={{ backgroundColor: '#2a81d4', textTransform: 'none' }}>Save</Button>
-            </Box>
-          </Box>
-        )}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 780, height: 520 } }}>
+        <DialogTitle className={classes.dialogTitle}>
+          <Typography variant="subtitle2" component="span">Maintenance</Typography>
+          <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+          <CustomTable
+            rows={items}
+            columns={columns}
+            loading={loading}
+            selected={selected}
+            onToggleAll={onToggleAll}
+            onToggleRow={onToggleRow}
+            onAdd={handleAdd}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onRefresh={fetchItems}
+            onBulkDelete={handleBulkDelete}
+            onExport={handleExportCSV}
+            search={search}
+            onSearchChange={setSearch}
+            onOpenSettings={() => {}}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Properties dialog */}
+      <ServicePropertiesDialog
+        open={propOpen}
+        onClose={() => setPropOpen(false)}
+        onSave={handleSave}
+        editItem={editItem}
+        devices={devices}
+      />
+    </>
   );
 };
 

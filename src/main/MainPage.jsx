@@ -580,13 +580,13 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton} onClick={() => setDtcOpen(true)}>
+          {/* <IconButton className={classes.navButton} onClick={() => setDtcOpen(true)}>
             <img
               src="/img/top-nav/dtc.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
-          </IconButton>
+          </IconButton> */}
           <IconButton className={classes.navButton} onClick={() => setMaintenanceOpen(true)}>
             <img
               src="/img/top-nav/maintenance.svg"
@@ -594,13 +594,13 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton} onClick={() => setExpensesOpen(true)}>
+          {/* <IconButton className={classes.navButton} onClick={() => setExpensesOpen(true)}>
             <img
               src="/img/top-nav/expenses.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
-          </IconButton>
+          </IconButton> */}
           {/* Button Object Control (Command) */}
           <IconButton
             className={classes.navButton}
@@ -612,27 +612,27 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
-          <IconButton className={classes.navButton} onClick={() => setGalleryOpen(true)}>
+          {/* <IconButton className={classes.navButton} onClick={() => setGalleryOpen(true)}>
             <img
               src="/img/top-nav/gallery.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
-          </IconButton>
-          <IconButton className={classes.navButton} onClick={() => setChatOpen(true)}>
+          </IconButton> */}
+          {/* <IconButton className={classes.navButton} onClick={() => setChatOpen(true)}>
             <img
               src="/img/top-nav/chat.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
-          </IconButton>
-          <IconButton className={classes.navButton} onClick={() => setShareOpen(true)}>
+          </IconButton> */}
+          {/* <IconButton className={classes.navButton} onClick={() => setShareOpen(true)}>
             <img
               src="/img/top-nav/share.svg"
               border="0"
               style={{ width: "16px", height: "16px" }}
             />
-          </IconButton>
+          </IconButton> */}
 
           {/* Right section */}
           <div className={classes.rightSection}>

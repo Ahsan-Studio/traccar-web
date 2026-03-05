@@ -1,30 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableSortLabel,
-  Checkbox,
-  IconButton,
-  CircularProgress,
-  Tooltip,
-} from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import SettingsIcon from "@mui/icons-material/Settings";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { formatTime } from "../../common/util/formatter";
 import {
+  CustomTable,
   CustomInput,
   CustomSelect,
   CustomButton,
 } from "../../common/components/custom";
 import RemoveDialog from "../../common/components/RemoveDialog";
 
-const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
+const GprsTab = ({ classes, showNotification, preselectedDeviceId, textChannel = false }) => {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [selectedCommand, setSelectedCommand] = useState();
   const [cmdType, setCmdType] = useState("ascii");
@@ -34,16 +19,14 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [templates, setTemplates] = useState([]);
   const [removingCommandId, setRemovingCommandId] = useState(null);
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState("");
   const [hexError, setHexError] = useState(false);
 
   const devices = useSelector((state) => state.devices.items);
 
-  // Set preselected device when provided
   useEffect(() => {
-    if (preselectedDeviceId) {
-      setSelectedDevice(preselectedDeviceId.toString());
-    }
+    if (preselectedDeviceId) setSelectedDevice(preselectedDeviceId.toString());
   }, [preselectedDeviceId]);
 
   const getDeviceName = (deviceId) => {
@@ -51,179 +34,109 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
     return device ? device.name : `Device ${deviceId}`;
   };
 
-  // Fetch command history
   const fetchCommandHistory = useCallback(async () => {
     if (!selectedDevice) return;
-
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/commands/history?deviceId=${selectedDevice}`,
-        {
-          headers: { Accept: "application/json" },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setCommandHistory(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch command history:", error);
+      const res = await fetch(`/api/commands/history?deviceId=${selectedDevice}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) setCommandHistory(await res.json());
+    } catch (err) {
+      console.error("Failed to fetch command history:", err);
     } finally {
       setLoading(false);
     }
   }, [selectedDevice]);
 
-  // Fetch templates from both endpoints
   const fetchTemplates = useCallback(async () => {
     if (!selectedDevice) return;
-
     try {
-      // Fetch default command types
-      const defaultResponse = await fetch(
-        `/api/commands/types?deviceId=${selectedDevice}&textChannel=false`,
-        {
+      const [defaultRes, customRes] = await Promise.all([
+        fetch(`/api/commands/types?deviceId=${selectedDevice}&textChannel=${textChannel}`, {
           headers: { Accept: "application/json" },
-        }
-      );
+        }),
+        fetch("/api/commands", { headers: { Accept: "application/json" } }),
+      ]);
 
-      // Fetch custom saved commands
-      const customResponse = await fetch(`/api/commands`, {
-        headers: { Accept: "application/json" },
-      });
-
-      const combinedTemplates = [];
-
-      if (defaultResponse.ok) {
-        const defaultCommands = await defaultResponse.json();
-        // Filter out 'custom' type from default commands
-        const filteredDefaults = defaultCommands.filter(
-          (cmd) => cmd.type !== "custom"
-        );
-        combinedTemplates.push(
-          ...filteredDefaults.map((cmd) => ({
-            ...cmd,
-            category: "Default",
-            description: cmd.type,
+      const combined = [];
+      if (defaultRes.ok) {
+        const defaults = await defaultRes.json();
+        combined.push(
+          ...defaults.filter((c) => c.type !== "custom").map((c) => ({
+            ...c, category: "Default", description: c.type,
           }))
         );
       }
-
-      if (customResponse.ok) {
-        const customCommands = await customResponse.json();
-        combinedTemplates.push(
-          ...customCommands.map((cmd) => ({
-            ...cmd,
-            category: "Custom",
-          }))
-        );
+      if (customRes.ok) {
+        const customs = await customRes.json();
+        combined.push(...customs.map((c) => ({ ...c, category: "Custom" })));
       }
-
-      setTemplates(combinedTemplates);
-    } catch (error) {
-      console.error("Failed to fetch templates:", error);
+      setTemplates(combined);
+    } catch (err) {
+      console.error("Failed to fetch templates:", err);
     }
-  }, [selectedDevice]);
+  }, [selectedDevice, textChannel]);
 
   useEffect(() => {
     fetchCommandHistory();
     fetchTemplates();
   }, [selectedDevice, fetchCommandHistory, fetchTemplates]);
 
-  // Handle template selection
   const handleTemplateChange = (templateId) => {
     setSelectedTemplate(templateId);
     if (templateId) {
-      const template = templates.find(
-        (t) => (t.id ? t.id.toString() : t.type) === templateId
-      );
-      if (template) {
-        setCommandData(template.attributes?.data || "");
-        setSelectedCommand(template);
-      }
+      const t = templates.find((x) => (x.id ? x.id.toString() : x.type) === templateId);
+      if (t) { setCommandData(t.attributes?.data || ""); setSelectedCommand(t); }
     } else {
-      setSelectedCommand(null);
-      setCommandData("");
+      setSelectedCommand(null); setCommandData("");
     }
   };
 
   const handleSendCommand = async () => {
-    if (!selectedDevice || selectedDevice === "") {
-      showNotification("Please select a device", "warning");
-      return;
+    if (!selectedDevice) { showNotification("Please select a device", "warning"); return; }
+    if ((!selectedCommand && !commandData.trim()) || (selectedCommand?.type === "custom" && !commandData.trim())) {
+      showNotification("Please enter command data", "warning"); return;
     }
-
-    if (
-      (!selectedCommand && commandData.trim() === "") ||
-      (selectedCommand?.type === "custom" && commandData.trim() === "")
-    ) {
-      showNotification("Please enter command data", "warning");
-      return;
-    }
-
     setLoading(true);
     try {
-      const command = {
+      const cmd = {
         deviceId: parseInt(selectedDevice, 10),
         type: selectedCommand?.type || "custom",
-        textChannel: false,
-        attributes: {
-          data: commandData,
-          noQueue: false,
-        },
+        textChannel,
+        attributes: { data: commandData, noQueue: false },
       };
-
-      const response = await fetch("/api/commands/send", {
+      const res = await fetch("/api/commands/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(command),
+        body: JSON.stringify(cmd),
       });
-
-      if (response.ok) {
-        await response.json();
+      if (res.ok) {
         const deviceName = devices[selectedDevice]?.name || "device";
-        const resultMessage = `Command sent successfully to ${deviceName}`;
-        showNotification(resultMessage, "success");
+        showNotification(`Command sent successfully to ${deviceName}`, "success");
         fetchCommandHistory();
       } else {
-        const errorText = await response.text();
-        showNotification(
-          `Failed to send command: ${errorText || response.statusText}`,
-          "error"
-        );
+        const err = await res.text();
+        showNotification(`Failed to send command: ${err || res.statusText}`, "error");
       }
-    } catch (error) {
-      console.error("Failed to send command:", error);
-      showNotification(`Failed to send command: ${error.message}`, "error");
+    } catch (err) {
+      showNotification(`Failed to send command: ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteCommand = (id) => {
-    setRemovingCommandId(id);
-  };
-
+  const handleDeleteCommand = (row) => setRemovingCommandId(row.id);
   const handleRemoveResult = (removed) => {
-    if (removed) {
-      showNotification("Command history deleted successfully", "success");
-      fetchCommandHistory();
-    }
+    if (removed) { showNotification("Command history deleted", "success"); fetchCommandHistory(); }
     setRemovingCommandId(null);
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedRows.length === 0) return;
-    if (!window.confirm(`Delete ${selectedRows.length} selected history item(s)?`)) return;
+  const handleBulkDelete = async (ids) => {
     try {
-      await Promise.all(
-        selectedRows.map((id) =>
-          fetch(`/api/commands/history/${id}`, { method: "DELETE" })
-        )
-      );
+      await Promise.all(ids.map((id) => fetch(`/api/commands/history/${id}`, { method: "DELETE" })));
       showNotification("Selected commands deleted", "success");
-      setSelectedRows([]);
+      setSelected([]);
       fetchCommandHistory();
     } catch (err) {
       showNotification(`Error: ${err.message}`, "error");
@@ -231,40 +144,60 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
   };
 
   const isValidHex = (val) => /^[0-9a-fA-F\s]*$/.test(val);
-
   const handleCommandDataChange = (e) => {
     const val = e.target.value;
     setCommandData(val);
-    if (cmdType === "hex") {
-      setHexError(val.trim() !== "" && !isValidHex(val));
-    } else {
-      setHexError(false);
-    }
+    setHexError(cmdType === "hex" && val.trim() !== "" && !isValidHex(val));
   };
+
+  const onToggleAll = useCallback(() => {
+    setSelected((prev) => (prev.length === commandHistory.length ? [] : commandHistory.map((r) => r.id)));
+  }, [commandHistory]);
+  const onToggleRow = useCallback((id) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  /* Filtered rows */
+  const filteredHistory = useMemo(() => {
+    if (!search) return commandHistory;
+    const q = search.toLowerCase();
+    return commandHistory.filter((r) =>
+      (getDeviceName(r.deviceId) || "").toLowerCase().includes(q) ||
+      (r.type || "").toLowerCase().includes(q) ||
+      (r.attributes?.data || "").toLowerCase().includes(q) ||
+      (r.result || "").toLowerCase().includes(q)
+    );
+  }, [commandHistory, search, devices]);
+
+  /* CustomTable columns */
+  const columns = useMemo(() => [
+    { key: "sentTime", label: "Time", render: (row) => (row.sentTime ? formatTime(row.sentTime) : "—") },
+    { key: "deviceId", label: "Object", render: (row) => getDeviceName(row.deviceId) },
+    { key: "type", label: "Name" },
+    { key: "data", label: "Command", render: (row) => row.attributes?.data || "—" },
+    { key: "result", label: "Status", render: (row) => (
+      <span style={{ color: "#4caf50" }}>{row.result || "sent"}</span>
+    )},
+  ], [devices]);
 
   const rowStyle = { display: 'flex', alignItems: 'center', marginBottom: 4 };
   const labelStyle = { fontSize: 11, color: '#444', width: '20%', flexShrink: 0 };
   const sendBtnStyle = { height: 22, fontSize: 11, backgroundColor: '#f5f5f5', border: '1px solid #dddddd', color: '#444', width: '100%' };
+  const gateway = textChannel ? "SMS" : "GPRS";
 
   return (
-    <div
-      className={classes.tabPanel}
-      style={{ position: "relative", height: "100%" }}
-    >
-      <div className={classes.gprsPanel}>
-        {/* Row 1: Object + Template */}
+    <div className={classes.tabPanel} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0 }}>
+      {/* ── Command form (V1: Object, Template, Command rows) ── */}
+      <div style={{ padding: '12px 16px 8px', flexShrink: 0 }}>
         <div style={rowStyle}>
           <span style={labelStyle}>Object</span>
           <div style={{ width: '29%' }}>
             <CustomSelect
               value={selectedDevice}
-              onChange={(value) => setSelectedDevice(value)}
+              onChange={setSelectedDevice}
               options={[
                 { value: "", label: "Nothing selected" },
-                ...Object.values(devices).map((device) => ({
-                  value: device.id.toString(),
-                  label: device.name,
-                })),
+                ...Object.values(devices).map((d) => ({ value: d.id.toString(), label: d.name })),
               ]}
               placeholder="Nothing selected"
             />
@@ -274,38 +207,24 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
           <div style={{ flex: 1 }}>
             <CustomSelect
               value={selectedTemplate}
-              onChange={(value) => handleTemplateChange(value)}
+              onChange={handleTemplateChange}
               options={[
                 { value: "", label: "Custom" },
-                ...templates
-                  .filter((t) => t.category === "Default")
-                  .map((template) => ({
-                    value: template.type,
-                    label: template.description,
-                  })),
-                ...templates
-                  .filter((t) => t.category === "Custom")
-                  .map((template) => ({
-                    value: template.id.toString(),
-                    label: template.description,
-                  })),
+                ...templates.filter((t) => t.category === "Default").map((t) => ({ value: t.type, label: t.description })),
+                ...templates.filter((t) => t.category === "Custom").map((t) => ({ value: t.id.toString(), label: t.description })),
               ]}
               placeholder="Custom"
             />
           </div>
         </div>
 
-        {/* Row 2: Command type + input + Send */}
         <div style={rowStyle}>
           <span style={labelStyle}>Command</span>
           <div style={{ width: '26%', minWidth: 70 }}>
             <CustomSelect
               value={cmdType}
-              onChange={(v) => setCmdType(v)}
-              options={[
-                { value: 'ascii', label: 'ASCII' },
-                { value: 'hex', label: 'HEX' },
-              ]}
+              onChange={setCmdType}
+              options={[{ value: 'ascii', label: 'ASCII' }, { value: 'hex', label: 'HEX' }]}
             />
           </div>
           <div style={{ width: 8 }} />
@@ -316,11 +235,7 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
               placeholder=""
               style={hexError ? { border: "1px solid #f44336", borderRadius: 3 } : {}}
             />
-            {hexError && (
-              <div style={{ color: "#f44336", fontSize: 10, marginTop: 2 }}>
-                Invalid HEX input (only 0-9, a-f allowed)
-              </div>
-            )}
+            {hexError && <div style={{ color: "#f44336", fontSize: 10, marginTop: 2 }}>Invalid HEX input (only 0-9, a-f allowed)</div>}
           </div>
           <div style={{ width: 8 }} />
           <div style={{ width: '13%', minWidth: 60 }}>
@@ -334,117 +249,27 @@ const GprsTab = ({ classes, showNotification, preselectedDeviceId }) => {
           </div>
         </div>
 
-        <TableContainer>
-          <Table className={classes.table}>
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox" style={{ width: 32 }}>
-                  <Checkbox
-                    size="small"
-                    indeterminate={selectedRows.length > 0 && selectedRows.length < commandHistory.length}
-                    checked={commandHistory.length > 0 && selectedRows.length === commandHistory.length}
-                    onChange={(e) => setSelectedRows(e.target.checked ? commandHistory.map((r) => r.id) : [])}
-                    sx={{ padding: '2px' }}
-                  />
-                </TableCell>
-                <TableCell style={{ width: 32 }} />
-                <TableCell>
-                  <TableSortLabel active direction="desc">
-                    Time
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>Object</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Command</TableCell>
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <CircularProgress size={24} />
-                  </TableCell>
-                </TableRow>
-              ) : commandHistory.length > 0 ? (
-                commandHistory.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    selected={selectedRows.includes(item.id)}
-                    hover
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        size="small"
-                        checked={selectedRows.includes(item.id)}
-                        onChange={(e) => setSelectedRows((prev) =>
-                          e.target.checked ? [...prev, item.id] : prev.filter((id) => id !== item.id)
-                        )}
-                        sx={{ padding: '2px' }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        className={classes.iconButton}
-                        onClick={() => handleDeleteCommand(item.id)}
-                      >
-                        <DeleteIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>{item.sentTime ? formatTime(item.sentTime) : "-"}</TableCell>
-                    <TableCell>{getDeviceName(item.deviceId)}</TableCell>
-                    <TableCell>{item.type}</TableCell>
-                    <TableCell>{item.attributes?.data || "-"}</TableCell>
-                    <TableCell style={{ color: '#4caf50' }}>{item.result || 'sent'}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className={classes.emptyState}>
-                    No commands sent yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <div style={{ fontSize: 10, color: '#888', textAlign: 'right' }}>Gateway: {gateway}</div>
       </div>
 
-      {selectedRows.length > 0 && (
-        <div style={{ padding: '4px 0' }}>
-          <Tooltip title={`Delete ${selectedRows.length} selected`}>
-            <IconButton
-              size="small"
-              onClick={handleDeleteSelected}
-              style={{ backgroundColor: '#fff3f3', border: '1px solid #f44336', borderRadius: '4px', marginBottom: 4 }}
-            >
-              <DeleteIcon sx={{ fontSize: 14, color: '#f44336' }} />
-            </IconButton>
-          </Tooltip>
-          <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>{selectedRows.length} selected</span>
-        </div>
-      )}
-
-      <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', gap: 4, zIndex: 10 }}>
-        <Tooltip title="Refresh">
-          <IconButton
-            onClick={fetchCommandHistory}
-            disabled={loading || !selectedDevice}
-            style={{ backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}
-            size="small"
-          >
-            <RefreshIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Settings">
-          <IconButton
-            style={{ backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}
-            size="small"
-          >
-            <SettingsIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
+      {/* ── Command history via CustomTable ── */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <CustomTable
+          rows={filteredHistory}
+          columns={columns}
+          loading={loading}
+          selected={selected}
+          onToggleAll={onToggleAll}
+          onToggleRow={onToggleRow}
+          onDelete={handleDeleteCommand}
+          onBulkDelete={handleBulkDelete}
+          onRefresh={fetchCommandHistory}
+          onAdd={fetchCommandHistory}
+          search={search}
+          onSearchChange={setSearch}
+          onOpenSettings={() => {}}
+          hideEdit
+        />
       </div>
 
       <RemoveDialog

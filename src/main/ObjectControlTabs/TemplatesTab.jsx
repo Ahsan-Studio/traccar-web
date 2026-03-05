@@ -1,19 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  CircularProgress,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { CustomButton, CustomCheckbox } from "../../common/components/custom";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { CustomTable } from "../../common/components/custom";
 import TemplateFormDialog from "./TemplateFormDialog";
 
 const TemplatesTab = ({ classes, showNotification }) => {
@@ -21,92 +7,59 @@ const TemplatesTab = ({ classes, showNotification }) => {
   const [loading, setLoading] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState("");
   const [templateForm, setTemplateForm] = useState({
-    description: "",
-    type: "custom",
-    textChannel: false,
-    data: "",
-    protocol: "",
-    encoding: "ascii",
+    description: "", type: "custom", textChannel: false,
+    data: "", protocol: "", encoding: "ascii",
   });
 
-  // Fetch saved templates
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/commands", {
-        headers: { Accept: "application/json" },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTemplates(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch templates:", error);
+      const res = await fetch("/api/commands", { headers: { Accept: "application/json" } });
+      if (res.ok) setTemplates(await res.json());
+    } catch (err) {
+      console.error("Failed to fetch templates:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
+  useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
-  const handleAddTemplate = () => {
+  const handleAdd = () => {
     setEditingTemplate(null);
+    setTemplateForm({ description: "", type: "custom", textChannel: false, data: "", protocol: "", encoding: "ascii" });
+    setTemplateDialogOpen(true);
+  };
+
+  const handleEdit = (row) => {
+    setEditingTemplate(row);
     setTemplateForm({
-      description: "",
-      type: "custom",
-      textChannel: false,
-      data: "",
-      protocol: "",
-      encoding: "ascii",
+      description: row.description || "",
+      type: row.type || "custom",
+      textChannel: row.textChannel || false,
+      data: row.attributes?.data || "",
+      protocol: row.attributes?.protocol || "",
+      encoding: row.attributes?.encoding || "ascii",
     });
     setTemplateDialogOpen(true);
   };
 
-  const handleEditTemplate = (template) => {
-    setEditingTemplate(template);
-    setTemplateForm({
-      description: template.description || "",
-      type: template.type || "custom",
-      textChannel: template.textChannel || false,
-      data: template.attributes?.data || "",
-      protocol: template.attributes?.protocol || "",
-      encoding: template.attributes?.encoding || "ascii",
-    });
-    setTemplateDialogOpen(true);
-  };
-
-  const handleCloseTemplateDialog = () => {
+  const handleClose = () => {
     setTemplateDialogOpen(false);
     setEditingTemplate(null);
-    setTemplateForm({
-      description: "",
-      type: "custom",
-      textChannel: false,
-      data: "",
-      protocol: "",
-      encoding: "ascii",
-    });
+    setTemplateForm({ description: "", type: "custom", textChannel: false, data: "", protocol: "", encoding: "ascii" });
   };
 
-  const handleSaveTemplate = async () => {
-    if (!templateForm.description.trim()) {
-      showNotification("Please enter a template name", "warning");
-      return;
-    }
-
-    if (!templateForm.data.trim()) {
-      showNotification("Please enter command data", "warning");
-      return;
-    }
+  const handleSave = async () => {
+    if (!templateForm.description.trim()) { showNotification("Please enter a template name", "warning"); return; }
+    if (!templateForm.data.trim()) { showNotification("Please enter command data", "warning"); return; }
 
     setLoading(true);
     try {
-      const command = {
+      const cmd = {
         description: templateForm.description,
         type: templateForm.type,
         textChannel: templateForm.textChannel,
@@ -116,196 +69,112 @@ const TemplatesTab = ({ classes, showNotification }) => {
           ...(templateForm.protocol ? { protocol: templateForm.protocol } : {}),
         },
       };
-
-      if (editingTemplate) {
-        command.id = editingTemplate.id;
-      }
+      if (editingTemplate) cmd.id = editingTemplate.id;
 
       const method = editingTemplate ? "PUT" : "POST";
-      const url = editingTemplate
-        ? `/api/commands/${editingTemplate.id}`
-        : "/api/commands";
+      const url = editingTemplate ? `/api/commands/${editingTemplate.id}` : "/api/commands";
 
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(command),
+        body: JSON.stringify(cmd),
       });
 
-      if (response.ok) {
-        showNotification(
-          editingTemplate
-            ? "Template updated successfully"
-            : "Template created successfully",
-          "success"
-        );
-        handleCloseTemplateDialog();
+      if (res.ok) {
+        showNotification(editingTemplate ? "Template updated" : "Template created", "success");
+        handleClose();
         fetchTemplates();
       } else {
-        const errorText = await response.text();
-        showNotification(
-          `Failed to ${editingTemplate ? "update" : "create"} template: ${
-            errorText || response.statusText
-          }`,
-          "error"
-        );
+        const err = await res.text();
+        showNotification(`Failed: ${err || res.statusText}`, "error");
       }
-    } catch (error) {
-      console.error("Failed to save template:", error);
-      showNotification(`Failed to save template: ${error.message}`, "error");
+    } catch (err) {
+      showNotification(`Failed: ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedRows.length === 0) return;
-    if (!window.confirm(`Delete ${selectedRows.length} selected template(s)?`)) return;
+  const handleDelete = async (row) => {
+    if (!window.confirm("Delete this template?")) return;
     try {
-      await Promise.all(
-        selectedRows.map((id) => fetch(`/api/commands/${id}`, { method: "DELETE" }))
-      );
+      const res = await fetch(`/api/commands/${row.id}`, { method: "DELETE" });
+      if (res.ok) { showNotification("Template deleted", "success"); fetchTemplates(); }
+      else {
+        const err = await res.text();
+        showNotification(`Failed: ${err || res.statusText}`, "error");
+      }
+    } catch (err) {
+      showNotification(`Failed: ${err.message}`, "error");
+    }
+  };
+
+  const handleBulkDelete = async (ids) => {
+    try {
+      await Promise.all(ids.map((id) => fetch(`/api/commands/${id}`, { method: "DELETE" })));
       showNotification("Selected templates deleted", "success");
-      setSelectedRows([]);
+      setSelected([]);
       fetchTemplates();
     } catch (err) {
       showNotification(`Error: ${err.message}`, "error");
     }
   };
 
-  const handleDeleteTemplate = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this template?")) {
-      return;
-    }
+  const onToggleAll = useCallback(() => {
+    setSelected((prev) => (prev.length === templates.length ? [] : templates.map((t) => t.id)));
+  }, [templates]);
+  const onToggleRow = useCallback((id) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
 
-    try {
-      const response = await fetch(`/api/commands/${id}`, {
-        method: "DELETE",
-      });
+  /* Filtered rows */
+  const filteredTemplates = useMemo(() => {
+    if (!search) return templates;
+    const q = search.toLowerCase();
+    return templates.filter((t) =>
+      (t.description || "").toLowerCase().includes(q) ||
+      (t.type || "").toLowerCase().includes(q) ||
+      (t.attributes?.data || "").toLowerCase().includes(q)
+    );
+  }, [templates, search]);
 
-      if (response.ok) {
-        showNotification("Template deleted successfully", "success");
-        fetchTemplates();
-      } else {
-        const errorText = await response.text();
-        showNotification(
-          `Failed to delete template: ${errorText || response.statusText}`,
-          "error"
-        );
-      }
-    } catch (error) {
-      console.error("Failed to delete template:", error);
-      showNotification(`Failed to delete template: ${error.message}`, "error");
-    }
-  };
+  /* CustomTable columns (V1: Name, Protocol, Gateway, Type, Command) */
+  const columns = useMemo(() => [
+    { key: "description", label: "Name" },
+    { key: "protocol", label: "Protocol", render: (row) => row.attributes?.protocol || "—" },
+    { key: "gateway", label: "Gateway", render: (row) => (row.textChannel ? "SMS" : "GPRS") },
+    { key: "type", label: "Type" },
+    { key: "command", label: "Command", render: (row) => row.attributes?.data || "—" },
+  ], []);
+
   return (
-    <div className={classes.tabPanel}>
-      <TableContainer>
-        <Table className={classes.table}>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox">
-                <CustomCheckbox
-                  checked={templates.length > 0 && selectedRows.length === templates.length}
-                  indeterminate={selectedRows.length > 0 && selectedRows.length < templates.length}
-                  onChange={(e) => setSelectedRows(e.target.checked ? templates.map((t) => t.id) : [])}
-                />
-              </TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Protocol</TableCell>
-              <TableCell>Gateway</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Command</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  <CircularProgress size={24} />
-                </TableCell>
-              </TableRow>
-            ) : templates.length > 0 ? (
-              templates.map((template) => (
-                <TableRow key={template.id}>
-                  <TableCell padding="checkbox">
-                    <CustomCheckbox
-                      checked={selectedRows.includes(template.id)}
-                      onChange={(e) => setSelectedRows((prev) =>
-                        e.target.checked ? [...prev, template.id] : prev.filter((id) => id !== template.id)
-                      )}
-                    />
-                  </TableCell>
-                  <TableCell>{template.description}</TableCell>
-                  <TableCell>{template.attributes?.protocol || "-"}</TableCell>
-                  <TableCell>{template.textChannel ? "SMS" : "GPRS"}</TableCell>
-                  <TableCell>{template.type}</TableCell>
-                  <TableCell>{template.attributes?.data || "-"}</TableCell>
-                  <TableCell>
-                    <div className={classes.actionButtons}>
-                      <IconButton
-                        size="small"
-                        className={classes.iconButton}
-                        onClick={() => handleEditTemplate(template)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        className={classes.iconButton}
-                        onClick={() => handleDeleteTemplate(template.id)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className={classes.emptyState}>
-                  No templates available
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Box mt={2} display="flex" gap={1}>
-        <CustomButton
-          variant="contained"
-          color="primary"
-          icon={<AddIcon />}
-          iconPosition="left"
-          size="small"
-          onClick={handleAddTemplate}
-        >
-          Add Template
-        </CustomButton>
-        {selectedRows.length > 0 && (
-          <CustomButton
-            variant="outlined"
-            size="small"
-            icon={<DeleteIcon />}
-            iconPosition="left"
-            onClick={handleDeleteSelected}
-          >
-            Delete Selected ({selectedRows.length})
-          </CustomButton>
-        )}
-      </Box>
+    <div className={classes.tabPanel} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0 }}>
+      <CustomTable
+        rows={filteredTemplates}
+        columns={columns}
+        loading={loading}
+        selected={selected}
+        onToggleAll={onToggleAll}
+        onToggleRow={onToggleRow}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onRefresh={fetchTemplates}
+        onBulkDelete={handleBulkDelete}
+        search={search}
+        onSearchChange={setSearch}
+        onOpenSettings={() => {}}
+      />
 
-      {/* Template Form Dialog */}
       <TemplateFormDialog
         classes={classes}
         open={templateDialogOpen}
-        onClose={handleCloseTemplateDialog}
+        onClose={handleClose}
         editingTemplate={editingTemplate}
         templateForm={templateForm}
         setTemplateForm={setTemplateForm}
         loading={loading}
-        onSave={handleSaveTemplate}
+        onSave={handleSave}
       />
     </div>
   );

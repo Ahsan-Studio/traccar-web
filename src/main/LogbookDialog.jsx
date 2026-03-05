@@ -1,17 +1,65 @@
-import { useEffect, useState, useMemo } from 'react';
+import {
+  useEffect, useState, useMemo, useCallback,
+} from 'react';
 import {
   Dialog, DialogTitle, DialogContent,
-  IconButton, Typography, Box, TextField,
-  FormControl, InputLabel, Select, MenuItem,
-  Table, TableBody, TableHead, TableRow, TableCell, TableContainer,
-  Button, Checkbox, Chip, CircularProgress,
-  FormControlLabel,
+  IconButton, Typography, Box,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useSelector } from 'react-redux';
+import {
+  CustomTable, CustomSelect, CustomInput, CustomButton, CustomCheckbox,
+} from '../common/components/custom';
 
+/* ─────────── Constants ─────────── */
+const GROUP_LABELS = { driver: 'Driver', passenger: 'Passenger', trailer: 'Trailer' };
+
+const TIME_FILTERS = [
+  { value: '0', label: 'Whole period' },
+  { value: '1', label: 'Last Hour' },
+  { value: '2', label: 'Today' },
+  { value: '3', label: 'Yesterday' },
+  { value: '4', label: 'Before 2 Days' },
+  { value: '5', label: 'Before 3 Days' },
+  { value: '6', label: 'This Week' },
+  { value: '7', label: 'Last Week' },
+  { value: '8', label: 'This Month' },
+  { value: '9', label: 'Last Month' },
+];
+
+/* ─────────── date helpers ─────────── */
+const pad = (n) => String(n).padStart(2, '0');
+const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fmtDateTime = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const applyTimeFilter = (filterId) => {
+  const now = new Date();
+  let from; let to;
+  switch (filterId) {
+    case '1': from = new Date(now - 3600000); to = now; break;
+    case '2': from = new Date(now.getFullYear(), now.getMonth(), now.getDate()); to = now; break;
+    case '3': { const y = new Date(now); y.setDate(y.getDate() - 1); from = new Date(y.getFullYear(), y.getMonth(), y.getDate()); to = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59); break; }
+    case '4': { const d2 = new Date(now); d2.setDate(d2.getDate() - 2); from = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()); to = now; break; }
+    case '5': { const d3 = new Date(now); d3.setDate(d3.getDate() - 3); from = new Date(d3.getFullYear(), d3.getMonth(), d3.getDate()); to = now; break; }
+    case '6': { const day = now.getDay() || 7; from = new Date(now); from.setDate(now.getDate() - day + 1); from.setHours(0, 0, 0, 0); to = now; break; }
+    case '7': { const day2 = now.getDay() || 7; const end = new Date(now); end.setDate(now.getDate() - day2); end.setHours(23, 59, 59); const start = new Date(end); start.setDate(end.getDate() - 6); start.setHours(0, 0, 0, 0); from = start; to = end; break; }
+    case '8': from = new Date(now.getFullYear(), now.getMonth(), 1); to = now; break;
+    case '9': from = new Date(now.getFullYear(), now.getMonth() - 1, 1); to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); break;
+    default: return null;
+  }
+  return { from: fmtDate(from), to: fmtDate(to), hourFrom: pad(from.getHours()), minuteFrom: pad(from.getMinutes()), hourTo: pad(to.getHours()), minuteTo: pad(to.getMinutes()) };
+};
+
+const HOURS = Array.from({ length: 24 }, (_, i) => ({ value: pad(i), label: pad(i) }));
+const MINUTES = Array.from({ length: 60 }, (_, i) => ({ value: pad(i), label: pad(i) }));
+
+/* ─────────── Styles ─────────── */
 const useStyles = makeStyles()(() => ({
   dialogTitle: {
     backgroundColor: '#2a81d4',
@@ -27,31 +75,51 @@ const useStyles = makeStyles()(() => ({
     padding: '4px',
     '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
   },
-  tableCell: {
-    fontSize: '11px',
-    padding: '4px 8px',
-  },
-  tableHead: {
-    fontSize: '11px',
-    padding: '4px 8px',
-    fontWeight: 600,
-    backgroundColor: '#f5f5f5',
+  toolbarButtons: {
+    display: 'flex',
+    gap: '4px',
+    padding: '6px 10px',
+    borderBottom: '1px solid #e0e0e0',
+    justifyContent: 'flex-end',
+    flexShrink: 0,
   },
   filterRow: {
     display: 'flex',
+    gap: '16px',
+    padding: '8px 10px',
+    borderBottom: '1px solid #e0e0e0',
+    backgroundColor: '#fafafa',
+    alignItems: 'flex-end',
+    flexWrap: 'wrap',
+    flexShrink: 0,
+  },
+  filterField: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    '& .lbl': { fontSize: '11px', color: '#444', whiteSpace: 'nowrap' },
+  },
+  checkboxGroup: {
+    display: 'flex',
     gap: '12px',
     alignItems: 'center',
-    marginBottom: '12px',
-    flexWrap: 'wrap',
+    padding: '4px 10px',
+    borderBottom: '1px solid #e0e0e0',
+    backgroundColor: '#fafafa',
+    flexShrink: 0,
+    '& .cbx': {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      fontSize: '11px',
+      color: '#444',
+    },
   },
 }));
 
-const GROUP_COLORS = {
-  driver: '#2196f3',
-  passenger: '#ff9800',
-  trailer: '#9c27b0',
-};
-
+/* ═══════════════════════════════════════════════════════════════
+   LogbookDialog — V1 parity (RFID & iButton Logbook)
+   ═══════════════════════════════════════════════════════════════ */
 const LogbookDialog = ({ open, onClose }) => {
   const { classes } = useStyles();
   const devices = useSelector((state) => state.devices.items);
@@ -59,40 +127,43 @@ const LogbookDialog = ({ open, onClose }) => {
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDeviceId, setSelectedDeviceId] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState([]);
+
+  /* Filter state */
+  const [filterDevice, setFilterDevice] = useState('');
+  const [filterPeriod, setFilterPeriod] = useState('0');
+  const [dateFrom, setDateFrom] = useState(fmtDate(new Date()));
+  const [hourFrom, setHourFrom] = useState('00');
+  const [minuteFrom, setMinuteFrom] = useState('00');
+  const [dateTo, setDateTo] = useState(fmtDate(new Date()));
+  const [hourTo, setHourTo] = useState('00');
+  const [minuteTo, setMinuteTo] = useState('00');
+
+  /* Group checkboxes (V1: Drivers / Passengers / Trailers) */
   const [showDrivers, setShowDrivers] = useState(true);
   const [showPassengers, setShowPassengers] = useState(true);
   const [showTrailers, setShowTrailers] = useState(true);
-  const [selected, setSelected] = useState([]);
 
+  /* Init dates on open */
   useEffect(() => {
     if (open) {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const pad = (n) => String(n).padStart(2, '0');
-      const fmtLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      setDateFrom(fmtLocal(todayStart));
-      setDateTo(fmtLocal(now));
+      setDateFrom(fmtDate(new Date(now.getFullYear(), now.getMonth(), now.getDate())));
+      setDateTo(fmtDate(now));
+      setHourFrom('00'); setMinuteFrom('00');
+      setHourTo(pad(now.getHours())); setMinuteTo(pad(now.getMinutes()));
     }
   }, [open]);
 
-  const handleLoad = async () => {
+  /* Load data */
+  const handleLoad = useCallback(async () => {
     setLoading(true);
     setSelected([]);
     try {
-      // Build API query parameters
       let url = '/api/logbook?';
       const params = [];
-      if (selectedDeviceId) params.push(`deviceId=${selectedDeviceId}`);
-
-      // Build group filter
-      const groups = [];
-      if (showDrivers) groups.push('driver');
-      if (showPassengers) groups.push('passenger');
-      if (showTrailers) groups.push('trailer');
-
+      if (filterDevice) params.push(`deviceId=${filterDevice}`);
       url += params.join('&');
 
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -100,13 +171,13 @@ const LogbookDialog = ({ open, onClose }) => {
 
       if (res.ok) {
         const apiData = await res.json();
-        const fromTime = dateFrom ? new Date(dateFrom).getTime() : 0;
-        const toTime = dateTo ? new Date(dateTo).getTime() : Infinity;
+        const fromISO = new Date(`${dateFrom}T${hourFrom}:${minuteFrom}:00`).getTime();
+        const toISO = new Date(`${dateTo}T${hourTo}:${minuteTo}:59`).getTime();
 
         entries = apiData
           .filter((entry) => {
             const t = new Date(entry.eventTime || entry.serverTime).getTime();
-            return t >= fromTime && t <= toTime;
+            return t >= fromISO && t <= toISO;
           })
           .map((entry) => {
             const device = devices[entry.deviceId];
@@ -124,18 +195,18 @@ const LogbookDialog = ({ open, onClose }) => {
           });
       }
 
-      // Also try loading from driverChanged events as fallback/supplement
+      // Supplement with driverChanged events
       try {
-        const from = new Date(dateFrom).toISOString();
-        const to = new Date(dateTo).toISOString();
+        const from = new Date(`${dateFrom}T${hourFrom}:${minuteFrom}:00`).toISOString();
+        const to = new Date(`${dateTo}T${hourTo}:${minuteTo}:59`).toISOString();
         let eventsUrl = `/api/reports/events?from=${from}&to=${to}&type=driverChanged`;
-        if (selectedDeviceId) eventsUrl += `&deviceId=${selectedDeviceId}`;
+        if (filterDevice) eventsUrl += `&deviceId=${filterDevice}`;
 
         const eventsRes = await fetch(eventsUrl, { headers: { Accept: 'application/json' } });
         if (eventsRes.ok) {
           const events = await eventsRes.json();
           const eventEntries = events
-            .filter((e) => !entries.some((existing) => existing.id === e.id))
+            .filter((e) => !entries.some((ex) => ex.id === e.id))
             .map((e) => {
               const device = devices[e.deviceId];
               return {
@@ -150,7 +221,7 @@ const LogbookDialog = ({ open, onClose }) => {
           entries = [...entries, ...eventEntries];
         }
       } catch {
-        // Events API optional — ignore if fails
+        // Events API optional
       }
 
       setData(entries.sort((a, b) => new Date(b.time) - new Date(a.time)));
@@ -160,163 +231,178 @@ const LogbookDialog = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [devices, filterDevice, dateFrom, hourFrom, minuteFrom, dateTo, hourTo, minuteTo]);
 
-  const filteredData = useMemo(() => data.filter((d) => {
-    if (d.group === 'driver' && !showDrivers) return false;
-    if (d.group === 'passenger' && !showPassengers) return false;
-    if (d.group === 'trailer' && !showTrailers) return false;
-    return true;
-  }), [data, showDrivers, showPassengers, showTrailers]);
-
-  const handleToggle = (id) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
-  };
-
-  const handleDeleteSelected = async () => {
-    // Delete from API for server entries
-    const serverIds = selected.filter((id) => typeof id === 'number');
-    try {
-      await Promise.all(
-        serverIds.map((id) =>
-          fetch(`/api/logbook/${id}`, { method: 'DELETE' })
-        )
-      );
-    } catch (err) {
-      console.error('Failed to delete logbook entries:', err);
+  /* Filter period change */
+  const handleFilterChange = useCallback((val) => {
+    setFilterPeriod(val);
+    if (val !== '0') {
+      const tf = applyTimeFilter(val);
+      if (tf) {
+        setDateFrom(tf.from); setHourFrom(tf.hourFrom); setMinuteFrom(tf.minuteFrom);
+        setDateTo(tf.to); setHourTo(tf.hourTo); setMinuteTo(tf.minuteTo);
+      }
     }
+  }, []);
 
-    // Remove from local state
-    setData((prev) => prev.filter((d) => !selected.includes(d.id)));
+  /* Filtered by group checkboxes + search */
+  const filteredData = useMemo(() => {
+    let result = data.filter((d) => {
+      if (d.group === 'driver' && !showDrivers) return false;
+      if (d.group === 'passenger' && !showPassengers) return false;
+      if (d.group === 'trailer' && !showTrailers) return false;
+      return true;
+    });
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((d) => (d.deviceName || '').toLowerCase().includes(q)
+        || (d.assignId || '').toLowerCase().includes(q)
+        || (d.address || '').toLowerCase().includes(q));
+    }
+    return result;
+  }, [data, showDrivers, showPassengers, showTrailers, search]);
+
+  /* Device options */
+  const deviceFilterOptions = useMemo(() => [
+    { value: '', label: 'All objects' },
+    ...deviceList.map((d) => ({ value: String(d.id), label: d.name })),
+  ], [deviceList]);
+
+  /* CustomTable columns (V1: Time, Object, Group, Assign ID, Position) */
+  const columns = useMemo(() => [
+    { key: 'time', label: 'Time', render: (row) => fmtDateTime(row.time) },
+    { key: 'deviceName', label: 'Object' },
+    { key: 'group', label: 'Group', render: (row) => GROUP_LABELS[row.group] || row.group },
+    { key: 'assignId', label: 'Assign ID' },
+    { key: 'address', label: 'Position', render: (row) => {
+      const pos = row.latitude && row.longitude
+        ? `${Number(row.latitude).toFixed(6)}°, ${Number(row.longitude).toFixed(6)}°`
+        : '';
+      return row.address ? `${pos}${pos ? ' - ' : ''}${row.address}` : pos;
+    }},
+  ], []);
+
+  /* Delete handlers */
+  const handleDeleteRow = useCallback(async (row) => {
+    if (row?._serverId && typeof row._serverId === 'number') {
+      try { await fetch(`/api/logbook/${row._serverId}`, { method: 'DELETE' }); } catch { /* */ }
+    }
+    setData((prev) => prev.filter((d) => d.id !== row.id));
+    setSelected((prev) => prev.filter((id) => id !== row.id));
+  }, []);
+
+  const handleBulkDelete = useCallback(async (ids) => {
+    const serverIds = ids.filter((id) => typeof id === 'number');
+    await Promise.all(serverIds.map((id) => fetch(`/api/logbook/${id}`, { method: 'DELETE' }).catch(() => {})));
+    setData((prev) => prev.filter((d) => !ids.includes(d.id)));
     setSelected([]);
-  };
+  }, []);
+
+  const handleDeleteAll = useCallback(async () => {
+    if (!window.confirm('Delete all logbook entries? This cannot be undone.')) return;
+    const serverIds = data.filter((d) => typeof d._serverId === 'number').map((d) => d._serverId);
+    await Promise.all(serverIds.map((id) => fetch(`/api/logbook/${id}`, { method: 'DELETE' }).catch(() => {})));
+    setData([]);
+    setSelected([]);
+  }, [data]);
+
+  const handleExportCSV = useCallback(() => {
+    const header = 'Time,Object,Group,Assign ID,Position';
+    const rows = filteredData.map((d) => [
+      fmtDateTime(d.time), d.deviceName, GROUP_LABELS[d.group] || d.group,
+      d.assignId, d.address || '',
+    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `logbook_${fmtDate(new Date())}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredData]);
+
+  /* Checkbox / selection helpers */
+  const onToggleAll = useCallback(() => {
+    setSelected((prev) => (prev.length === filteredData.length ? [] : filteredData.map((d) => d.id)));
+  }, [filteredData]);
+  const onToggleRow = useCallback((id) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  if (!open) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: '800px', height: '550px' } }}>
+    <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 900, height: 600 } }}>
       <DialogTitle className={classes.dialogTitle}>
-        <Typography variant="subtitle2">Logbook (RFID / iButton)</Typography>
-        <IconButton size="small" className={classes.closeButton} onClick={onClose}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
+        <Typography variant="subtitle2" component="span">RFID &amp; iButton Logbook</Typography>
+        <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
       </DialogTitle>
-      <DialogContent sx={{ p: 2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Box className={classes.filterRow}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Device</InputLabel>
-            <Select
-              value={selectedDeviceId}
-              onChange={(e) => setSelectedDeviceId(e.target.value)}
-              label="Device"
-            >
-              <MenuItem value="">All Devices</MenuItem>
-              {deviceList.map((d) => (
-                <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            type="datetime-local"
-            label="From"
-            size="small"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 190 }}
-          />
-          <TextField
-            type="datetime-local"
-            label="To"
-            size="small"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 190 }}
-          />
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleLoad}
-            disabled={loading}
-            sx={{ backgroundColor: '#2a81d4', textTransform: 'none' }}
-          >
-            {loading ? <CircularProgress size={16} color="inherit" /> : 'Load'}
-          </Button>
-        </Box>
 
-        <Box display="flex" gap={2} mb={1}>
-          <FormControlLabel
-            control={<Checkbox size="small" checked={showDrivers} onChange={(e) => setShowDrivers(e.target.checked)} />}
-            label={<Typography variant="caption">Drivers</Typography>}
-          />
-          <FormControlLabel
-            control={<Checkbox size="small" checked={showPassengers} onChange={(e) => setShowPassengers(e.target.checked)} />}
-            label={<Typography variant="caption">Passengers</Typography>}
-          />
-          <FormControlLabel
-            control={<Checkbox size="small" checked={showTrailers} onChange={(e) => setShowTrailers(e.target.checked)} />}
-            label={<Typography variant="caption">Trailers</Typography>}
-          />
-          {selected.length > 0 && (
-            <Button
-              variant="outlined"
-              size="small"
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={handleDeleteSelected}
-              sx={{ textTransform: 'none', ml: 'auto' }}
-            >
-              Delete ({selected.length})
-            </Button>
-          )}
-        </Box>
+      {/* ── Toolbar: Delete all, Export CSV, Show ── */}
+      <Box className={classes.toolbarButtons}>
+        <CustomButton variant="outlined" onClick={handleDeleteAll} size="small">Delete all</CustomButton>
+        <CustomButton variant="outlined" onClick={handleExportCSV} size="small">Export to CSV</CustomButton>
+        <CustomButton variant="outlined" onClick={handleLoad} size="small">Show</CustomButton>
+      </Box>
 
-        <TableContainer sx={{ flex: 1, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-          <Table stickyHeader size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell className={classes.tableHead} padding="checkbox" />
-                <TableCell className={classes.tableHead}>#</TableCell>
-                <TableCell className={classes.tableHead}>Time</TableCell>
-                <TableCell className={classes.tableHead}>Device</TableCell>
-                <TableCell className={classes.tableHead}>Group</TableCell>
-                <TableCell className={classes.tableHead}>Assign ID</TableCell>
-                <TableCell className={classes.tableHead}>Address</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredData.map((row, idx) => (
-                <TableRow key={row.id} hover>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      size="small"
-                      checked={selected.includes(row.id)}
-                      onChange={() => handleToggle(row.id)}
-                    />
-                  </TableCell>
-                  <TableCell className={classes.tableCell}>{idx + 1}</TableCell>
-                  <TableCell className={classes.tableCell}>{row.time ? new Date(row.time).toLocaleString() : ''}</TableCell>
-                  <TableCell className={classes.tableCell}>{row.deviceName}</TableCell>
-                  <TableCell className={classes.tableCell}>
-                    <Chip
-                      label={row.group}
-                      size="small"
-                      sx={{ fontSize: '10px', height: '18px', backgroundColor: GROUP_COLORS[row.group] || '#9e9e9e', color: '#fff' }}
-                    />
-                  </TableCell>
-                  <TableCell className={classes.tableCell}>{row.assignId}</TableCell>
-                  <TableCell className={classes.tableCell}>{row.address || '—'}</TableCell>
-                </TableRow>
-              ))}
-              {filteredData.length === 0 && !loading && (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: '#999', fontSize: '12px' }}>
-                    No logbook entries. Select parameters and click Load.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      {/* ── Filter row (V1 parity) ── */}
+      <Box className={classes.filterRow}>
+        <Box className={classes.filterField}>
+          <span className="lbl">Object</span>
+          <CustomSelect value={filterDevice} onChange={setFilterDevice} options={deviceFilterOptions} style={{ width: 160 }} />
+        </Box>
+        <Box className={classes.filterField}>
+          <span className="lbl">Filter</span>
+          <CustomSelect value={filterPeriod} onChange={handleFilterChange} options={TIME_FILTERS} style={{ width: 140 }} />
+        </Box>
+        <Box className={classes.filterField}>
+          <span className="lbl">Time from</span>
+          <CustomInput type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ width: 120 }} />
+          <CustomSelect value={hourFrom} onChange={setHourFrom} options={HOURS} style={{ width: 55 }} />
+          <CustomSelect value={minuteFrom} onChange={setMinuteFrom} options={MINUTES} style={{ width: 55 }} />
+        </Box>
+        <Box className={classes.filterField}>
+          <span className="lbl">Time to</span>
+          <CustomInput type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ width: 120 }} />
+          <CustomSelect value={hourTo} onChange={setHourTo} options={HOURS} style={{ width: 55 }} />
+          <CustomSelect value={minuteTo} onChange={setMinuteTo} options={MINUTES} style={{ width: 55 }} />
+        </Box>
+      </Box>
+
+      {/* ── Group checkboxes (V1: Drivers / Passengers / Trailers) ── */}
+      <Box className={classes.checkboxGroup}>
+        <span className="cbx">
+          <CustomCheckbox checked={showDrivers} onChange={() => setShowDrivers((p) => !p)} />
+          Drivers
+        </span>
+        <span className="cbx">
+          <CustomCheckbox checked={showPassengers} onChange={() => setShowPassengers((p) => !p)} />
+          Passengers
+        </span>
+        <span className="cbx">
+          <CustomCheckbox checked={showTrailers} onChange={() => setShowTrailers((p) => !p)} />
+          Trailers
+        </span>
+      </Box>
+
+      {/* ── CustomTable (no add, no edit — delete only) ── */}
+      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+        <CustomTable
+          rows={filteredData}
+          columns={columns}
+          loading={loading}
+          selected={selected}
+          onToggleAll={onToggleAll}
+          onToggleRow={onToggleRow}
+          onEdit={() => {}}
+          onDelete={handleDeleteRow}
+          search={search}
+          onSearchChange={setSearch}
+          onAdd={handleLoad}
+          onRefresh={handleLoad}
+          onOpenSettings={() => {}}
+          onBulkDelete={handleBulkDelete}
+          hideEdit
+        />
       </DialogContent>
     </Dialog>
   );

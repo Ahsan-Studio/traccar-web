@@ -185,6 +185,7 @@ const ObjectControlDialog = ({ open, onClose, preselectedDeviceId }) => {
           className={classes.tabs}
         >
           <Tab label="GPRS" />
+          {/* <Tab label="SMS" /> */}
           <Tab label="Schedule" />
           <Tab label="Templates" />
         </Tabs>
@@ -199,16 +200,26 @@ const ObjectControlDialog = ({ open, onClose, preselectedDeviceId }) => {
             />
           )}
 
+          {/* SMS Tab (same as GPRS but with textChannel=true) */}
+          {currentTab === 1 && (
+            <GprsTab
+              classes={classes}
+              showNotification={showNotification}
+              preselectedDeviceId={preselectedDeviceId}
+              textChannel
+            />
+          )}
+
           {/* Schedule Tab */}
-          {currentTab === 1 && <ScheduleTab classes={classes} showNotification={showNotification} />}
+          {currentTab === 2 && <ScheduleTab classes={classes} showNotification={showNotification} />}
 
           {/* Templates Tab */}
-          {currentTab === 2 && (
+          {currentTab === 3 && (
             <TemplatesTab
               classes={classes}
               showNotification={showNotification}
             />
-          )}
+          )}}
         </DialogContent>
 
         <Snackbar

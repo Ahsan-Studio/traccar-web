@@ -1,22 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  CircularProgress,
-  Box,
-  Tooltip,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
-import { CustomButton, CustomCheckbox } from "../../common/components/custom";
+import { CustomTable } from "../../common/components/custom";
 import ScheduleFormDialog from "./ScheduleFormDialog";
 
 const ScheduleTab = ({ classes, showNotification }) => {
@@ -24,7 +8,8 @@ const ScheduleTab = ({ classes, showNotification }) => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [search, setSearch] = useState("");
 
   const devices = useSelector((state) => state.devices.items);
 
@@ -39,32 +24,20 @@ const ScheduleTab = ({ classes, showNotification }) => {
     }
     let days = [];
     try {
-      const raw = typeof s.recurringDays === "string"
-        ? JSON.parse(s.recurringDays)
-        : s.recurringDays;
+      const raw = typeof s.recurringDays === "string" ? JSON.parse(s.recurringDays) : s.recurringDays;
       days = Array.isArray(raw) ? raw : [];
-    } catch {
-      days = [];
-    }
+    } catch { days = []; }
     const dayStr = days.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ");
-    const timeStr =
-      s.recurringFrom && s.recurringTo
-        ? ` ${s.recurringFrom}–${s.recurringTo}`
-        : "";
+    const timeStr = s.recurringFrom && s.recurringTo ? ` ${s.recurringFrom}–${s.recurringTo}` : "";
     return `Recurring: ${dayStr}${timeStr}`;
   };
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/command-schedules", {
-        headers: { Accept: "application/json" },
-      });
-      if (res.ok) {
-        setSchedules(await res.json());
-      } else {
-        showNotification("Failed to load schedules", "error");
-      }
+      const res = await fetch("/api/command-schedules", { headers: { Accept: "application/json" } });
+      if (res.ok) setSchedules(await res.json());
+      else showNotification("Failed to load schedules", "error");
     } catch (err) {
       showNotification(`Error: ${err.message}`, "error");
     } finally {
@@ -72,201 +45,83 @@ const ScheduleTab = ({ classes, showNotification }) => {
     }
   }, [showNotification]);
 
-  useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+  useEffect(() => { fetchSchedules(); }, [fetchSchedules]);
 
-  const handleAdd = () => {
-    setEditingSchedule(null);
-    setDialogOpen(true);
-  };
+  const handleAdd = () => { setEditingSchedule(null); setDialogOpen(true); };
+  const handleEdit = (row) => { setEditingSchedule(row); setDialogOpen(true); };
 
-  const handleEdit = (schedule) => {
-    setEditingSchedule(schedule);
-    setDialogOpen(true);
-  };
-
-  const handleDelete = async (id) => {
+  const handleDelete = async (row) => {
     if (!window.confirm("Delete this schedule?")) return;
     try {
-      const res = await fetch(`/api/command-schedules/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        showNotification("Schedule deleted", "success");
-        fetchSchedules();
-      } else {
-        showNotification("Failed to delete", "error");
-      }
-    } catch (err) {
-      showNotification(`Error: ${err.message}`, "error");
-    }
+      const res = await fetch(`/api/command-schedules/${row.id}`, { method: "DELETE" });
+      if (res.ok) { showNotification("Schedule deleted", "success"); fetchSchedules(); }
+      else showNotification("Failed to delete", "error");
+    } catch (err) { showNotification(`Error: ${err.message}`, "error"); }
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedRows.length === 0) return;
-    if (!window.confirm(`Delete ${selectedRows.length} selected schedule(s)?`)) return;
+  const handleBulkDelete = async (ids) => {
     try {
-      await Promise.all(
-        selectedRows.map((id) =>
-          fetch(`/api/command-schedules/${id}`, { method: "DELETE" })
-        )
-      );
+      await Promise.all(ids.map((id) => fetch(`/api/command-schedules/${id}`, { method: "DELETE" })));
       showNotification("Selected schedules deleted", "success");
-      setSelectedRows([]);
+      setSelected([]);
       fetchSchedules();
-    } catch (err) {
-      showNotification(`Error: ${err.message}`, "error");
-    }
+    } catch (err) { showNotification(`Error: ${err.message}`, "error"); }
   };
 
-  const handleSaved = () => {
-    setDialogOpen(false);
-    fetchSchedules();
-  };
+  const handleSaved = () => { setDialogOpen(false); fetchSchedules(); };
 
-  const toggleRow = (id) => {
-    setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+  const onToggleAll = useCallback(() => {
+    setSelected((prev) => (prev.length === schedules.length ? [] : schedules.map((s) => s.id)));
+  }, [schedules]);
+  const onToggleRow = useCallback((id) => {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  /* Filtered rows */
+  const filteredSchedules = useMemo(() => {
+    if (!search) return schedules;
+    const q = search.toLowerCase();
+    return schedules.filter((s) =>
+      (s.name || "").toLowerCase().includes(q) ||
+      (getDeviceName(s.deviceId) || "").toLowerCase().includes(q) ||
+      (s.commandType || "").toLowerCase().includes(q)
     );
-  };
+  }, [schedules, search, devices]);
 
-  const toggleAll = (checked) => {
-    setSelectedRows(checked ? schedules.map((s) => s.id) : []);
-  };
+  /* CustomTable columns (V1: Name, Active, Schedule, Object, Gateway, Type, Command) */
+  const columns = useMemo(() => [
+    { key: "name", label: "Name" },
+    { key: "active", label: "Active", width: 60, render: (row) => (
+      <span style={{
+        display: "inline-block", width: 10, height: 10, borderRadius: "50%",
+        backgroundColor: row.active ? "#4caf50" : "#f44336",
+      }} />
+    )},
+    { key: "schedule", label: "Schedule", render: (row) => formatSchedule(row) },
+    { key: "deviceId", label: "Object", render: (row) => getDeviceName(row.deviceId) },
+    { key: "gateway", label: "Gateway", render: (row) => (row.gateway || "GPRS").toUpperCase() },
+    { key: "commandType", label: "Type" },
+    { key: "commandData", label: "Command", render: (row) => row.commandData || "—" },
+  ], [devices]);
 
   return (
-    <div className={classes.tabPanel} style={{ position: "relative", height: "100%" }}>
-      <TableContainer>
-        <Table className={classes.table}>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox" style={{ width: 32 }}>
-                <CustomCheckbox
-                  checked={schedules.length > 0 && selectedRows.length === schedules.length}
-                  indeterminate={
-                    selectedRows.length > 0 && selectedRows.length < schedules.length
-                  }
-                  onChange={(e) => toggleAll(e.target.checked)}
-                />
-              </TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Active</TableCell>
-              <TableCell>Schedule</TableCell>
-              <TableCell>Object</TableCell>
-              <TableCell>Gateway</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Command</TableCell>
-              <TableCell />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={9} align="center">
-                  <CircularProgress size={24} />
-                </TableCell>
-              </TableRow>
-            ) : schedules.length > 0 ? (
-              schedules.map((s) => (
-                <TableRow key={s.id} selected={selectedRows.includes(s.id)} hover>
-                  <TableCell padding="checkbox">
-                    <CustomCheckbox
-                      checked={selectedRows.includes(s.id)}
-                      onChange={() => toggleRow(s.id)}
-                    />
-                  </TableCell>
-                  <TableCell>{s.name}</TableCell>
-                  <TableCell>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        backgroundColor: s.active ? "#4caf50" : "#f44336",
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{formatSchedule(s)}</TableCell>
-                  <TableCell>{getDeviceName(s.deviceId)}</TableCell>
-                  <TableCell style={{ textTransform: "uppercase" }}>{s.gateway}</TableCell>
-                  <TableCell>{s.commandType}</TableCell>
-                  <TableCell>{s.commandData || "-"}</TableCell>
-                  <TableCell>
-                    <div className={classes.actionButtons}>
-                      <Tooltip title="Edit">
-                        <IconButton
-                          size="small"
-                          className={classes.iconButton}
-                          onClick={() => handleEdit(s)}
-                        >
-                          <EditIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          className={classes.iconButton}
-                          onClick={() => handleDelete(s.id)}
-                        >
-                          <DeleteIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={9} className={classes.emptyState}>
-                  No scheduled commands
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Box mt={2} display="flex" gap={1}>
-        <CustomButton
-          variant="contained"
-          color="primary"
-          icon={<AddIcon />}
-          iconPosition="left"
-          size="small"
-          onClick={handleAdd}
-        >
-          Add Schedule
-        </CustomButton>
-        {selectedRows.length > 0 && (
-          <CustomButton
-            variant="outlined"
-            size="small"
-            icon={<DeleteIcon />}
-            iconPosition="left"
-            onClick={handleDeleteSelected}
-          >
-            Delete Selected ({selectedRows.length})
-          </CustomButton>
-        )}
-      </Box>
-
-      <Tooltip title="Refresh">
-        <IconButton
-          onClick={fetchSchedules}
-          disabled={loading}
-          style={{
-            position: "absolute",
-            bottom: 16,
-            right: 16,
-            backgroundColor: "#fff",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-          }}
-          size="small"
-        >
-          <RefreshIcon sx={{ fontSize: 16 }} />
-        </IconButton>
-      </Tooltip>
+    <div className={classes.tabPanel} style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0 }}>
+      <CustomTable
+        rows={filteredSchedules}
+        columns={columns}
+        loading={loading}
+        selected={selected}
+        onToggleAll={onToggleAll}
+        onToggleRow={onToggleRow}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onRefresh={fetchSchedules}
+        onBulkDelete={handleBulkDelete}
+        search={search}
+        onSearchChange={setSearch}
+        onOpenSettings={() => {}}
+      />
 
       <ScheduleFormDialog
         classes={classes}

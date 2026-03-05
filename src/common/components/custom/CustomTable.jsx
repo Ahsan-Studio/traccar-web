@@ -210,6 +210,7 @@ const CustomTable = ({
   onExport,
   onBulkDelete,
   customActions,
+  hideEdit = false,
   showSearch = true,
   hideToolbar = false,
   hideTable = false,
@@ -406,8 +407,8 @@ const CustomTable = ({
                     );
                   })}
                   <TableCell className={classes.actionCell} sx={{ whiteSpace: 'nowrap', width: '60px', textAlign: 'right', paddingRight: '4px !important' }}>
-                    <IconButton size="small" onClick={() => onEdit(row)} sx={{ padding: '2px' }}><EditIcon sx={{ fontSize: 14 }} /></IconButton>
                     {customActions && customActions(row)}
+                    {!hideEdit && <IconButton size="small" onClick={() => onEdit(row)} sx={{ padding: '2px' }}><EditIcon sx={{ fontSize: 14 }} /></IconButton>}
                     <IconButton size="small" onClick={() => onDelete(row)} sx={{ padding: '2px' }}><DeleteIcon sx={{ fontSize: 14 }} /></IconButton>
                   </TableCell>
                 </TableRow>

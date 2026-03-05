@@ -1,18 +1,18 @@
 import {
-  useEffect, useState, useMemo, useCallback,
+  useEffect, useState, useMemo, useCallback, useRef,
 } from 'react';
 import {
   Dialog, DialogTitle, DialogContent,
   IconButton, Typography, Box, Tabs, Tab,
-  Table, TableBody, TableHead, TableRow, TableCell, TableContainer,
-  CircularProgress,
+  CircularProgress, Menu, MenuItem,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
-import FlashOnIcon from '@mui/icons-material/FlashOn';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SaveIcon from '@mui/icons-material/Save';
 import BuildIcon from '@mui/icons-material/Build';
+import SettingsIcon from '@mui/icons-material/Settings';
+import DescriptionIcon from '@mui/icons-material/Description';
+import DownloadIcon from '@mui/icons-material/Download';
 import { useSelector } from 'react-redux';
 import {
   CustomTable, CustomSelect, CustomCheckbox, CustomInput, CustomButton, CustomMultiSelect, BoolIcon,
@@ -203,6 +203,162 @@ const refetchReportData = async (gen) => {
   return allData;
 };
 
+/* ─────────── HTML report generator (V1 parity) ─────────── */
+const buildHtmlReport = (data, template, devices, dateFrom, dateTo) => {
+  const rt = REPORT_TYPE_MAP[template.type];
+  const reportLabel = rt?.label || template.type;
+  const deviceNames = (template.deviceIds || [])
+    .map((id) => devices.find((d) => d.id === id)?.name || `Device ${id}`)
+    .join(', ');
+  const periodFrom = fmtShort(dateFrom);
+  const periodTo = fmtShort(dateTo);
+
+  /* Determine columns for this type */
+  const columns = RESULT_COLUMNS[template.type] || RESULT_COLUMNS.summary;
+
+  /* Build data rows */
+  const dataRows = data.map((row, i) => {
+    const cells = columns.map((c) => {
+      const val = row[c.key];
+      const formatted = c.format ? c.format(val) : (val ?? '');
+      return `<td>${String(formatted)}</td>`;
+    }).join('');
+    return `<tr><td>${i + 1}</td>${cells}</tr>`;
+  }).join('\n');
+
+  const headerCells = columns.map((c) => `<th>${c.label}</th>`).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>GSI TRACKING - ${reportLabel}</title>
+<style>
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,600,300,700&subset=latin,latin-ext);
+html, body {
+  text-align: left;
+  margin: 10px;
+  padding: 0;
+  font-size: 11px;
+  font-family: 'Open Sans', Arial, sans-serif;
+  color: #444444;
+}
+.logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2a81d4;
+  margin-bottom: 4px;
+}
+h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+hr {
+  border-color: #eeeeee;
+  border-style: solid none none;
+  border-width: 1px 0 0;
+  height: 1px;
+  margin: 8px 0;
+}
+table.info td {
+  padding: 2px 8px 2px 0;
+}
+table.report {
+  border: 1px solid #eeeeee;
+  border-collapse: collapse;
+  width: 100%;
+}
+table.report th {
+  font-weight: 600;
+  padding: 4px 8px;
+  border: 1px solid #eeeeee;
+  background-color: #eeeeee;
+  font-size: 11px;
+  text-align: left;
+}
+table.report td {
+  padding: 3px 8px;
+  border: 1px solid #eeeeee;
+  font-size: 11px;
+}
+table.report tr:hover { background-color: #f8f8f8; }
+.footer { margin-top: 16px; font-size: 10px; color: #999; }
+</style>
+</head>
+<body>
+<div class="logo-text">GSI TRACKING</div>
+<hr/>
+<h3>${reportLabel}</h3>
+<table class="info">
+  <tr><td><strong>Object:</strong></td><td>${deviceNames}</td></tr>
+  <tr><td><strong>Period:</strong></td><td>${periodFrom} - ${periodTo}</td></tr>
+</table>
+<br/>
+<table class="report">
+  <thead><tr><th>#</th>${headerCells}</tr></thead>
+  <tbody>${dataRows}</tbody>
+</table>
+${data.length === 0 ? '<p style="color:#999;margin-top:8px">Nothing has been found on your request.</p>' : ''}
+<div class="footer">
+  Generated: ${new Date().toLocaleString()} | Records: ${data.length}
+</div>
+</body>
+</html>`;
+};
+
+/** Build filename base from template info */
+const buildFilenameBase = (name, dateFrom, dateTo) => {
+  const safeName = (name || 'report').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const from = (dateFrom || '').replace(/[^0-9]/g, '_');
+  const to = (dateTo || '').replace(/[^0-9]/g, '_');
+  return `${safeName}_${from}_${to}`;
+};
+
+/** Open report in a new browser tab — format-aware (html/pdf/xls) */
+const openReportInNewTab = (html, format) => {
+  if (format === 'pdf') {
+    // Open HTML in new tab with auto-print for PDF
+    const pdfHtml = html.replace('</body>', '<script>setTimeout(()=>window.print(),500)<\/script></body>');
+    const blob = new Blob([pdfHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } else {
+    // html and xls both open as HTML in new tab
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  }
+};
+
+/** Download report as a file — format-aware (html/pdf/xls) */
+const downloadReportFile = (html, name, dateFrom, dateTo, format) => {
+  const base = buildFilenameBase(name, dateFrom, dateTo);
+  let blob;
+  let filename;
+  if (format === 'xls') {
+    // XLS = HTML table wrapped with Excel-compatible headers
+    const xlsContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/></head>
+<body>${html.replace(/.*<body>/s, '').replace(/<\/body>.*/s, '')}</body></html>`;
+    blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    filename = `${base}.xls`;
+  } else if (format === 'pdf') {
+    // PDF = open HTML with print dialog as download
+    const pdfHtml = html.replace('</body>', '<script>setTimeout(()=>window.print(),500)<\/script></body>');
+    blob = new Blob([pdfHtml], { type: 'text/html;charset=utf-8' });
+    filename = `${base}.html`;
+  } else {
+    blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    filename = `${base}.html`;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 /* ─────────── date helpers ─────────── */
 const pad = (n) => String(n).padStart(2, '0');
 const fmtLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -289,19 +445,6 @@ const useStyles = makeStyles()((theme) => ({
     marginBottom: '8px',
     paddingBottom: '2px',
   },
-  /* ── Generated viewer table (V1 parity) ── */
-  viewTableHead: {
-    fontSize: '11px',
-    padding: '4px 8px',
-    whiteSpace: 'nowrap',
-    fontWeight: 600,
-    backgroundColor: '#f5f5f5',
-  },
-  viewTableCell: {
-    fontSize: '11px',
-    padding: '4px 8px',
-    whiteSpace: 'nowrap',
-  },
 }));
 
 /* ═══════════════════════════════════════════════════════════════
@@ -363,7 +506,14 @@ const ReportPropertiesDialog = ({
   };
 
   const handleSave = () => { onSave(form); onClose(); };
-  const handleGenerate = () => { onSave(form); onGenerate(form); onClose(); };
+  const handleGenerate = () => {
+    if (!form.deviceIds || form.deviceIds.length === 0) {
+      alert('Please select at least 1 object/device.');
+      return;
+    }
+    onGenerate({ ...form, format: 'html' });
+    onClose();
+  };
 
   const deviceOptions = useMemo(() => devices.map((d) => ({ value: d.id, label: d.name })), [devices]);
   const zoneOptions = useMemo(() => geofences.map((g) => ({ value: g.id, label: g.name })), [geofences]);
@@ -371,7 +521,7 @@ const ReportPropertiesDialog = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 680, maxHeight: '90vh' } }}>
       <DialogTitle className={classes.dialogTitle}>
-        <Typography variant="subtitle2">Report Properties</Typography>
+        <Typography variant="subtitle2" component="span">Report Properties</Typography>
         <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
       </DialogTitle>
       <DialogContent sx={{ p: 0, mt: 1 }}>
@@ -646,96 +796,6 @@ const RESULT_COLUMNS = {
   summary: SUMMARY_COLUMNS,
 };
 
-const GeneratedViewDialog = ({ open, onClose, report }) => {
-  const { classes } = useStyles();
-  if (!report) return null;
-  const columns = RESULT_COLUMNS[report.type] || RESULT_COLUMNS.summary;
-  const rows = report.data || [];
-
-  const handleExportCSV = () => {
-    const header = columns.map((c) => c.label).join(',');
-    const csvRows = rows.map((row) => columns.map((c) => {
-      const val = row[c.key];
-      const formatted = c.format ? c.format(val) : (val ?? '');
-      return `"${String(formatted).replace(/"/g, '""')}"`;
-    }).join(','));
-    const csv = [header, ...csvRows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `report_${report.name}_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExportPDF = () => {
-    const printWindow = window.open('', '_blank');
-    const tableHeader = columns.map((c) => `<th style="border:1px solid #ccc;padding:4px 8px;font-size:11px;background:#f5f5f5;text-align:left">${c.label}</th>`).join('');
-    const bodyRows = rows.map((row, i) => {
-      const cells = columns.map((c) => {
-        const val = c.format ? c.format(row[c.key]) : (row[c.key] ?? '');
-        return `<td style="border:1px solid #eee;padding:3px 6px;font-size:10px">${val}</td>`;
-      }).join('');
-      return `<tr><td style="border:1px solid #eee;padding:3px 6px;font-size:10px">${i + 1}</td>${cells}</tr>`;
-    }).join('');
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>${report.name}</title>
-      <style>body{font-family:Arial,sans-serif;margin:20px}table{border-collapse:collapse;width:100%}
-      @media print{button{display:none}}</style></head><body>
-      <h3 style="color:#2a81d4;margin-bottom:4px">${report.name} – ${REPORT_TYPE_MAP[report.type]?.label || report.type}</h3>
-      <p style="font-size:11px;color:#666">${rows.length} records | Generated ${new Date().toLocaleString()}</p>
-      <table><thead><tr><th style="border:1px solid #ccc;padding:4px 8px;font-size:11px;background:#f5f5f5">#</th>${tableHeader}</tr></thead>
-      <tbody>${bodyRows}</tbody></table>
-      <script>setTimeout(()=>window.print(),500)</script></body></html>`);
-    printWindow.document.close();
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 900, height: 550 } }}>
-      <DialogTitle className={classes.dialogTitle}>
-        <Typography variant="subtitle2">{report.name} – {REPORT_TYPE_MAP[report.type]?.label || report.type}</Typography>
-        <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ p: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', mt: 1 }}>
-        <TableContainer sx={{ flex: 1, overflow: 'auto', border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-          <Table stickyHeader size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell className={classes.viewTableHead}>#</TableCell>
-                {columns.map((c) => <TableCell key={c.key} className={classes.viewTableHead}>{c.label}</TableCell>)}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((row, i) => (
-                <TableRow key={i} hover>
-                  <TableCell className={classes.viewTableCell}>{i + 1}</TableCell>
-                  {columns.map((c) => (
-                    <TableCell key={c.key} className={classes.viewTableCell}>
-                      {c.format ? c.format(row[c.key]) : (row[c.key] ?? '')}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-              {rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={columns.length + 1} align="center" sx={{ py: 4, color: '#999', fontSize: '12px' }}>No data</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
-          <Typography variant="caption" color="text.secondary">{rows.length} record{rows.length !== 1 ? 's' : ''}</Typography>
-          <Box display="flex" gap={1}>
-            <CustomButton variant="outlined" onClick={handleExportCSV} size="small">Export CSV</CustomButton>
-            <CustomButton variant="outlined" onClick={handleExportPDF} size="small">Export PDF</CustomButton>
-          </Box>
-        </Box>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 /* ═══════════════════════════════════════════════════════════════
    Main ReportsDialog  – 2 tabs with CustomTable (V1 parity)
    ═══════════════════════════════════════════════════════════════ */
@@ -766,6 +826,10 @@ const ReportsDialog = ({ open, onClose }) => {
   /* Generated viewer dialog */
   const [viewReport, setViewReport] = useState(null);
   const [viewOpen, setViewOpen] = useState(false);
+
+  /* Gear dropdown menu (Reports tab quick-generate) */
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const menuTemplateRef = useRef(null);
 
   /* Load data on open */
   useEffect(() => {
@@ -845,6 +909,11 @@ const ReportsDialog = ({ open, onClose }) => {
     try {
       const allData = await refetchReportData(tpl);
 
+      /* Generate report + auto-open in new tab (format-aware) */
+      const fmt = tpl.format || 'html';
+      const html = buildHtmlReport(allData, tpl, deviceList, tpl.dateFrom, tpl.dateTo);
+      openReportInNewTab(html, fmt);
+
       // Save metadata to server (no raw data blob)
       const genMeta = {
         name: tpl.name || 'Untitled',
@@ -868,7 +937,17 @@ const ReportsDialog = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [deviceList]);
+
+  /* ── Quick Generate from gear dropdown (time filter) ── */
+  const handleQuickGenerate = useCallback(async (filterId) => {
+    const tpl = menuTemplateRef.current;
+    setMenuAnchor(null);
+    if (!tpl || !tpl.deviceIds || tpl.deviceIds.length === 0) return;
+    const { from, to } = applyTimeFilter(filterId);
+    const tplWithDates = { ...tpl, dateFrom: from, dateTo: to };
+    await handleGenerate(tplWithDates);
+  }, [handleGenerate]);
 
   const handleDeleteGenerated = useCallback(async (row) => {
     if (row?._serverId) {
@@ -902,18 +981,33 @@ const ReportsDialog = ({ open, onClose }) => {
   }, [generated]);
 
   const handleOpenGenerated = useCallback(async (report) => {
-    // Re-fetch data from Traccar API using stored params
+    // Re-fetch data from Traccar API and open in new tab (format-aware)
     setLoading(true);
     try {
+      const fmt = report.format || 'html';
       const data = await refetchReportData(report);
-      setViewReport({ ...report, data });
-      setViewOpen(true);
+      const html = buildHtmlReport(data, report, deviceList, report.dateFrom, report.dateTo);
+      openReportInNewTab(html, fmt);
     } catch (err) {
       console.error('Failed to open report:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [deviceList]);
+
+  const handleDownloadGenerated = useCallback(async (report) => {
+    setLoading(true);
+    try {
+      const fmt = report.format || 'html';
+      const data = await refetchReportData(report);
+      const html = buildHtmlReport(data, report, deviceList, report.dateFrom, report.dateTo);
+      downloadReportFile(html, report.name, report.dateFrom, report.dateTo, fmt);
+    } catch (err) {
+      console.error('Failed to download report:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [deviceList]);
 
   /* ── Toggle helpers ── */
   const onToggleTemplateAll = useCallback(() => {
@@ -940,7 +1034,7 @@ const ReportsDialog = ({ open, onClose }) => {
     <>
       <Dialog open={open} onClose={onClose} maxWidth={false} PaperProps={{ sx: { width: 900, height: 600 } }}>
         <DialogTitle className={classes.dialogTitle}>
-          <Typography variant="subtitle2">Reports</Typography>
+          <Typography variant="subtitle2" component="span">Reports</Typography>
           <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
         </DialogTitle>
 
@@ -977,18 +1071,21 @@ const ReportsDialog = ({ open, onClose }) => {
               customActions={(row) => (
                 <IconButton
                   size="small"
-                  onClick={() => handleGenerate(row)}
+                  onClick={(e) => {
+                    menuTemplateRef.current = row;
+                    setMenuAnchor(e.currentTarget);
+                  }}
                   title="Generate"
                   disabled={loading}
                   sx={{ padding: '2px' }}
                 >
-                  <FlashOnIcon sx={{ fontSize: 14, color: '#f57c00' }} />
+                  <SettingsIcon sx={{ fontSize: 14, color: '#4a90e2' }} />
                 </IconButton>
               )}
             />
           )}
 
-          {/* ════════ Tab 1: Generated – CustomTable ════════ */}
+          {/* ════════ Tab 1: Generated – CustomTable (V1: file icon + delete only) ════════ */}
           {tab === 1 && (
             <CustomTable
               rows={filteredGenerated}
@@ -997,7 +1094,6 @@ const ReportsDialog = ({ open, onClose }) => {
               selected={generatedSelected}
               onToggleAll={onToggleGeneratedAll}
               onToggleRow={onToggleGenerated}
-              onEdit={handleOpenGenerated}
               onDelete={handleDeleteGenerated}
               search={generatedSearch}
               onSearchChange={setGeneratedSearch}
@@ -1005,20 +1101,73 @@ const ReportsDialog = ({ open, onClose }) => {
               onRefresh={handleRefresh}
               onOpenSettings={() => {}}
               onBulkDelete={handleBulkDeleteGenerated}
+              hideEdit
               customActions={(row) => (
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpenGenerated(row)}
-                  title="Open Report"
-                  sx={{ padding: '2px' }}
-                >
-                  <OpenInNewIcon sx={{ fontSize: 14, color: '#1976d2' }} />
-                </IconButton>
+                <>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpenGenerated(row)}
+                    title="Open Report"
+                    disabled={loading}
+                    sx={{ padding: '2px' }}
+                  >
+                    <DescriptionIcon sx={{ fontSize: 14, color: '#4a90e2' }} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDownloadGenerated(row)}
+                    title="Download Report"
+                    disabled={loading}
+                    sx={{ padding: '2px' }}
+                  >
+                    <DownloadIcon sx={{ fontSize: 14, color: '#4a90e2' }} />
+                  </IconButton>
+                </>
               )}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ── Gear dropdown menu: time filter quick-generate (V1 parity) ── */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={() => setMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            elevation: 0,
+            sx: {
+              minWidth: 170,
+              borderRadius: 0,
+              backgroundColor: '#ffffff',
+              boxShadow: '3px 0 5px 0 #9b9b9b',
+              '& .MuiList-root': { padding: 0 },
+            },
+          },
+        }}
+      >
+        {TIME_FILTERS.filter((f) => f.id).map((f, i) => (
+          <MenuItem
+            key={f.id}
+            onClick={() => handleQuickGenerate(f.id)}
+            disabled={loading}
+            sx={{
+              borderTop: i === 0 ? '3px solid #2b82d4' : '1px solid #f5f5f5',
+              py: '5px',
+              px: '15px',
+              minHeight: 'auto',
+              '&:hover': { backgroundColor: '#f5f5f5' },
+            }}
+          >
+            <Typography sx={{ fontSize: '13px', color: '#444' }}>
+              {f.label}
+            </Typography>
+          </MenuItem>
+        ))}
+      </Menu>
 
       {/* ── Report Properties (Add/Edit) ── */}
       <ReportPropertiesDialog
@@ -1029,13 +1178,6 @@ const ReportsDialog = ({ open, onClose }) => {
         template={editTemplate}
         devices={deviceList}
         geofences={geofenceList}
-      />
-
-      {/* ── Generated Report Viewer ── */}
-      <GeneratedViewDialog
-        open={viewOpen}
-        onClose={() => setViewOpen(false)}
-        report={viewReport}
       />
     </>
   );

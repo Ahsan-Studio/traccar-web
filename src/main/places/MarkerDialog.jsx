@@ -266,7 +266,6 @@ const MarkerDialog = ({ open, onClose, marker, pickedLocation, onIconSelect }) =
       const payload = {
         name: formData.name,
         description: formData.description || "",
-        groupId: formData.groupId || 0,
         area: area,
         attributes: {
           type: "marker",
@@ -274,6 +273,11 @@ const MarkerDialog = ({ open, onClose, marker, pickedLocation, onIconSelect }) =
           visible: formData.visible,
         },
       };
+
+      // Only include groupId if a real group is selected (fixes null groupId API bug)
+      if (formData.groupId && formData.groupId !== 0) {
+        payload.groupId = formData.groupId;
+      }
 
       // Add ID for update
       if (marker?.id) {

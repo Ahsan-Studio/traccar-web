@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, IconButton, Typography, Box,
+  Dialog, DialogTitle, DialogContent,
+  Button, IconButton, Typography, Box,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import ClearIcon from '@mui/icons-material/Clear';
 import { map } from '../map/core/MapView';
 
 const useStyles = makeStyles()(() => ({
@@ -21,6 +23,41 @@ const useStyles = makeStyles()(() => ({
     color: 'white',
     padding: '4px',
     '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+  },
+  formRow: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '6px',
+  },
+  label: {
+    width: '30%',
+    fontSize: '13px',
+    color: '#333',
+    flexShrink: 0,
+  },
+  input: {
+    width: '70%',
+    padding: '4px 6px',
+    fontSize: '13px',
+    border: '1px solid #ccc',
+    borderRadius: '3px',
+    outline: 'none',
+    fontFamily: 'inherit',
+    '&:focus': {
+      borderColor: '#2a81d4',
+    },
+  },
+  buttonBar: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '8px 0 4px',
+  },
+  btn: {
+    textTransform: 'none',
+    fontSize: '12px',
+    padding: '3px 12px',
+    minWidth: 0,
   },
 }));
 
@@ -55,14 +92,12 @@ const ShowPointDialog = ({ open, onClose }) => {
       el.style.backgroundRepeat = 'no-repeat';
       el.style.cursor = 'pointer';
 
-      // Use maplibregl.Marker
       const maplibregl = window.maplibregl || (map.getCanvas && map.constructor);
       if (typeof maplibregl !== 'undefined' && maplibregl.Marker) {
         pointMarker = new maplibregl.Marker({ element: el })
           .setLngLat([lngNum, latNum])
           .addTo(map);
       } else {
-        // Fallback: use source/layer approach
         const id = 'show-point-marker';
         if (map.getLayer(id)) map.removeLayer(id);
         if (map.getSource(id)) map.removeSource(id);
@@ -97,44 +132,58 @@ const ShowPointDialog = ({ open, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth
+      PaperProps={{ sx: { maxWidth: 380 } }}
+    >
       <DialogTitle className={classes.dialogTitle}>
-        <Typography variant="subtitle2">Show Point</Typography>
+        <Typography variant="subtitle2">Show point</Typography>
         <IconButton size="small" className={classes.closeButton} onClick={onClose}>
-          <CloseIcon fontSize="small" />
+          <CloseIcon sx={{ fontSize: 16 }} />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ pt: 3, pb: 1 }}>
-        <Box display="flex" flexDirection="column" gap={2} mt={1}>
-          <TextField
-            label="Latitude"
+      <DialogContent sx={{ p: '12px 16px' }}>
+        <Box className={classes.formRow}>
+          <span className={classes.label}>Latitude</span>
+          <input
+            className={classes.input}
+            type="text"
             value={lat}
             onChange={(e) => setLat(e.target.value)}
-            placeholder="-6.200000"
-            size="small"
-            fullWidth
+            maxLength={15}
             autoFocus
           />
-          <TextField
-            label="Longitude"
+        </Box>
+        <Box className={classes.formRow}>
+          <span className={classes.label}>Longitude</span>
+          <input
+            className={classes.input}
+            type="text"
             value={lng}
             onChange={(e) => setLng(e.target.value)}
-            placeholder="106.816666"
-            size="small"
-            fullWidth
+            maxLength={15}
           />
         </Box>
+        <Box className={classes.buttonBar}>
+          <Button
+            variant="outlined"
+            size="small"
+            className={classes.btn}
+            startIcon={<VisibilityIcon sx={{ fontSize: 14 }} />}
+            onClick={handleShow}
+          >
+            Show
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            className={classes.btn}
+            startIcon={<ClearIcon sx={{ fontSize: 14 }} />}
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button variant="contained" onClick={handleShow} size="small"
-          sx={{ backgroundColor: '#2a81d4', textTransform: 'none' }}
-        >
-          Show
-        </Button>
-        <Button variant="outlined" onClick={onClose} size="small" sx={{ textTransform: 'none' }}>
-          Close
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };

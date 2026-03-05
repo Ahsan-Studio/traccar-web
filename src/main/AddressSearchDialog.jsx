@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, IconButton, Typography, Box, CircularProgress,
+  Dialog, DialogTitle, DialogContent,
+  Button, IconButton, Typography, Box,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { map } from '../map/core/MapView';
 
 const useStyles = makeStyles()(() => ({
@@ -21,6 +23,39 @@ const useStyles = makeStyles()(() => ({
     color: 'white',
     padding: '4px',
     '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
+  },
+  input: {
+    width: '100%',
+    padding: '4px 6px',
+    fontSize: '13px',
+    border: '1px solid #ccc',
+    borderRadius: '3px',
+    outline: 'none',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box',
+    '&:focus': {
+      borderColor: '#2a81d4',
+    },
+  },
+  buttonBar: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '10px 0 4px',
+  },
+  btn: {
+    textTransform: 'none',
+    fontSize: '12px',
+    padding: '3px 12px',
+    minWidth: 0,
+  },
+  resultItem: {
+    padding: '6px 8px',
+    cursor: 'pointer',
+    borderBottom: '1px solid #eee',
+    fontSize: '12px',
+    color: '#333',
+    '&:hover': { backgroundColor: '#f0f7ff' },
   },
 }));
 
@@ -41,7 +76,6 @@ const AddressSearchDialog = ({ open, onClose }) => {
       const data = await response.json();
       if (data.length > 0) {
         setResults(data);
-        // Fly to first result
         const first = data[0];
         if (map) {
           map.flyTo({
@@ -86,60 +120,62 @@ const AddressSearchDialog = ({ open, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth
+      PaperProps={{ sx: { maxWidth: 380 } }}
+    >
       <DialogTitle className={classes.dialogTitle}>
-        <Typography variant="subtitle2">Address Search</Typography>
+        <Typography variant="subtitle2">Address search</Typography>
         <IconButton size="small" className={classes.closeButton} onClick={onClose}>
-          <CloseIcon fontSize="small" />
+          <CloseIcon sx={{ fontSize: 16 }} />
         </IconButton>
       </DialogTitle>
-      <DialogContent sx={{ pt: 3, pb: 1 }}>
-        <Box display="flex" gap={1} mt={1}>
-          <TextField
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter address..."
-            size="small"
-            fullWidth
-            autoFocus
-          />
-          <Button
-            variant="contained"
-            onClick={handleSearch}
-            disabled={loading}
-            size="small"
-            sx={{ backgroundColor: '#2a81d4', textTransform: 'none', minWidth: '80px' }}
-          >
-            {loading ? <CircularProgress size={16} color="inherit" /> : 'Search'}
-          </Button>
-        </Box>
+      <DialogContent sx={{ p: '12px 16px' }}>
+        <input
+          className={classes.input}
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          onKeyDown={handleKeyDown}
+          maxLength={100}
+          autoFocus
+        />
 
         {results.length > 0 && (
-          <Box mt={2} sx={{ maxHeight: '200px', overflow: 'auto' }}>
+          <Box sx={{ maxHeight: '160px', overflowY: 'auto', mt: 1, border: '1px solid #eee', borderRadius: '3px' }}>
             {results.map((r, idx) => (
               <Box
                 key={idx}
+                className={classes.resultItem}
                 onClick={() => handleResultClick(r)}
-                sx={{
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid #eee',
-                  fontSize: '12px',
-                  '&:hover': { backgroundColor: '#f0f7ff' },
-                }}
               >
                 {r.display_name}
               </Box>
             ))}
           </Box>
         )}
+
+        <Box className={classes.buttonBar}>
+          <Button
+            variant="outlined"
+            size="small"
+            className={classes.btn}
+            startIcon={<SearchIcon sx={{ fontSize: 14 }} />}
+            onClick={handleSearch}
+            disabled={loading}
+          >
+            {loading ? 'Searching...' : 'Search'}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            className={classes.btn}
+            startIcon={<ClearIcon sx={{ fontSize: 14 }} />}
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button variant="outlined" onClick={onClose} size="small" sx={{ textTransform: 'none' }}>
-          Close
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };

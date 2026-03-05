@@ -12,13 +12,13 @@ import { makeStyles } from "tss-react/mui";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import {
   CustomInput,
   CustomButton,
   CustomCheckbox,
   CustomMultiSelect,
 } from "../../common/components/custom";
-import fetchOrThrow from "../../common/util/fetchOrThrow";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
@@ -75,11 +75,6 @@ const useStyles = makeStyles()((theme) => ({
     marginLeft: "8px",
     flex: 1,
   },
-  twoColumns: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: theme.spacing(2),
-  },
   twoColumnsContainer: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
@@ -101,6 +96,15 @@ const useStyles = makeStyles()((theme) => ({
     justifyContent: "center",
     gap: theme.spacing(1),
     borderTop: `1px solid ${theme.palette.divider}`,
+  },
+  urlRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  copyButton: {
+    padding: "4px",
+    minWidth: "auto",
   },
 }));
 
@@ -150,63 +154,50 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
 
   const [accessViaUrl, setAccessViaUrl] = useState({
     active: false,
+    token: "",
     desktop: "",
     mobile: "",
   });
+
+  // Build URL from token
+  const buildUrls = (token) => {
+    if (!token) return { desktop: "", mobile: "" };
+    const baseUrl = window.location.origin;
+    return {
+      desktop: `${baseUrl}/?au=${token}`,
+      mobile: `${baseUrl}/?au=${token}&m=true`,
+    };
+  };
 
   // Fetch markers, routes, zones, and objects on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch markers (CIRCLE geofences)
-        const markersResponse = await fetch('/api/markers');
-        if (markersResponse.ok) {
-          const markersData = await markersResponse.json();
-          setMarkerOptions(
-            markersData.map((marker) => ({
-              value: marker.id,
-              label: marker.name,
-            }))
-          );
-        }
+        const [markersRes, routesRes, zonesRes, devicesRes] = await Promise.all([
+          fetch("/api/markers"),
+          fetch("/api/routes"),
+          fetch("/api/zones"),
+          fetch("/api/devices"),
+        ]);
 
-        // Fetch routes (LINESTRING geofences)
-        const routesResponse = await fetch('/api/routes');
-        if (routesResponse.ok) {
-          const routesData = await routesResponse.json();
-          setRouteOptions(
-            routesData.map((route) => ({
-              value: route.id,
-              label: route.name,
-            }))
-          );
+        if (markersRes.ok) {
+          const data = await markersRes.json();
+          setMarkerOptions(data.map((m) => ({ value: m.id, label: m.name })));
         }
-
-        // Fetch zones (POLYGON geofences)
-        const zonesResponse = await fetch('/api/zones');
-        if (zonesResponse.ok) {
-          const zonesData = await zonesResponse.json();
-          setZoneOptions(
-            zonesData.map((zone) => ({
-              value: zone.id,
-              label: zone.name,
-            }))
-          );
+        if (routesRes.ok) {
+          const data = await routesRes.json();
+          setRouteOptions(data.map((r) => ({ value: r.id, label: r.name })));
         }
-
-        // Fetch devices/objects
-        const devicesResponse = await fetch('/api/devices');
-        if (devicesResponse.ok) {
-          const devicesData = await devicesResponse.json();
-          setObjectOptions(
-            devicesData.map((device) => ({
-              value: device.id,
-              label: device.name,
-            }))
-          );
+        if (zonesRes.ok) {
+          const data = await zonesRes.json();
+          setZoneOptions(data.map((z) => ({ value: z.id, label: z.name })));
+        }
+        if (devicesRes.ok) {
+          const data = await devicesRes.json();
+          setObjectOptions(data.map((d) => ({ value: d.id, label: d.name })));
         }
       } catch (error) {
-        console.error('Failed to fetch data:', error);
+        console.error("Failed to fetch data:", error);
       }
     };
 
@@ -218,10 +209,12 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
   useEffect(() => {
     if (subAccount) {
       // Edit mode - populate with existing data
-      // Parse markerAccess, zoneAccess, routeAccess from comma-separated strings
       const parseAccess = (accessString) => {
         if (!accessString) return [];
-        return accessString.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+        return accessString
+          .split(",")
+          .map((id) => parseInt(id.trim()))
+          .filter((id) => !isNaN(id));
       };
 
       setFormData({
@@ -239,11 +232,37 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
         limitCommands: subAccount.limitCommands || false,
         fixedEmail: subAccount.fixedEmail || false,
         expirationTime: subAccount.expirationTime || null,
-        objects: [],
+        objects: parseAccess(subAccount.deviceAccess),
         markers: parseAccess(subAccount.markerAccess),
         routes: parseAccess(subAccount.routeAccess),
         zones: parseAccess(subAccount.zoneAccess),
         attributes: subAccount.attributes || {},
+      });
+
+      // Permissions from sub account fields
+      setPermissions({
+        dashboard: subAccount.dashboard || false,
+        history: subAccount.history || false,
+        reports: subAccount.reports || false,
+        tasks: subAccount.tasks || false,
+        rfidIButton: subAccount.rilogbook || false,
+        dtc: subAccount.dtc || false,
+        maintenance: subAccount.maintenance || false,
+        expenses: subAccount.expenses || false,
+        objectControl: subAccount.objectControl || false,
+        imageGallery: subAccount.imageGallery || false,
+        chat: subAccount.chat || false,
+      });
+
+      // Access via URL
+      const auActive = subAccount.autoUrlActive || false;
+      const auToken = subAccount.autoUrlToken || "";
+      const urls = buildUrls(auToken);
+      setAccessViaUrl({
+        active: auActive,
+        token: auToken,
+        desktop: auActive ? urls.desktop : "",
+        mobile: auActive ? urls.mobile : "",
       });
     } else {
       // Create mode - reset form
@@ -268,10 +287,31 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
         zones: [],
         attributes: {},
       });
+      setPermissions({
+        dashboard: false,
+        history: false,
+        reports: false,
+        tasks: false,
+        rfidIButton: false,
+        dtc: false,
+        maintenance: false,
+        expenses: false,
+        objectControl: false,
+        imageGallery: false,
+        chat: false,
+      });
+      setAccessViaUrl({
+        active: false,
+        token: "",
+        desktop: "",
+        mobile: "",
+      });
     }
   }, [subAccount, open]);
 
-  const handleInputChange = (field) => (value) => {
+  // CustomInput passes native event, extract value
+  const handleInputChange = (field) => (e) => {
+    const value = e?.target ? e.target.value : e;
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -283,97 +323,126 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     setPermissions((prev) => ({ ...prev, [field]: checked }));
   };
 
-  const handleAccessUrlChange = (field) => (value) => {
-    setAccessViaUrl((prev) => ({ ...prev, [field]: value }));
+  const handleAccessUrlActiveChange = (checked) => {
+    if (checked) {
+      // Generate a token immediately when activating
+      const token = generateLocalToken();
+      const urls = buildUrls(token);
+      setAccessViaUrl({
+        active: true,
+        token,
+        desktop: urls.desktop,
+        mobile: urls.mobile,
+      });
+    } else {
+      setAccessViaUrl({
+        active: false,
+        token: "",
+        desktop: "",
+        mobile: "",
+      });
+    }
+  };
+
+  const generateLocalToken = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let token = "";
+    for (let i = 0; i < 32; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
   };
 
   const handleSave = async () => {
+    // Validate required fields
+    if (!formData.name?.trim()) {
+      alert("Username is required");
+      return;
+    }
+    if (!subAccount && !formData.password?.trim()) {
+      alert("Password is required for new sub account");
+      return;
+    }
+
     try {
-      // Use legacy endpoint with form data format
-      const formDataToSend = new URLSearchParams();
-      
-      // Required fields
-      formDataToSend.append('cmd', subAccount ? 'update' : 'create');
-      if (subAccount?.id) {
-        formDataToSend.append('subaccount_id', subAccount.id);
-      }
-      formDataToSend.append('active', !formData.disabled ? '1' : '0');
-      formDataToSend.append('username', formData.name || '');
-      formDataToSend.append('email', formData.email || '');
-      
-      // Optional password (only if provided)
+      // Use JSON API (POST for create, PUT for update)
+      const isUpdate = !!subAccount?.id;
+
+      const body = {
+        ...(isUpdate ? { id: subAccount.id } : {}),
+        disabled: formData.disabled,
+        name: formData.name,
+        email: formData.email || "",
+        phone: formData.phone || "",
+        sendCredentials: formData.sendCredentials,
+        expirationTime: formData.expirationTime || null,
+        parentUserId: 0, // Backend fills this from session
+
+        // Permissions
+        dashboard: permissions.dashboard,
+        history: permissions.history,
+        reports: permissions.reports,
+        tasks: permissions.tasks,
+        rilogbook: permissions.rfidIButton,
+        dtc: permissions.dtc,
+        maintenance: permissions.maintenance,
+        expenses: permissions.expenses,
+        objectControl: permissions.objectControl,
+        imageGallery: permissions.imageGallery,
+        chat: permissions.chat,
+
+        // Access
+        deviceAccess: formData.objects.join(","),
+        markerAccess: formData.markers.join(","),
+        routeAccess: formData.routes.join(","),
+        zoneAccess: formData.zones.join(","),
+
+        // Auto URL
+        autoUrlActive: accessViaUrl.active,
+        autoUrlToken: accessViaUrl.token || "",
+
+        // Attributes
+        attributes: formData.attributes || {},
+      };
+
+      // Only set password if provided
       if (formData.password) {
-        formDataToSend.append('password', formData.password);
-      }
-      
-      // Send credentials
-      formDataToSend.append('send', formData.sendCredentials ? '1' : '0');
-      
-      // Expiration
-      if (formData.expirationTime) {
-        formDataToSend.append('account_expire', '1');
-        formDataToSend.append('account_expire_dt', formData.expirationTime);
-      } else {
-        formDataToSend.append('account_expire', '0');
-      }
-      
-      // Permissions
-      formDataToSend.append('dashboard', permissions.dashboard ? '1' : '0');
-      formDataToSend.append('history', permissions.history ? '1' : '0');
-      formDataToSend.append('reports', permissions.reports ? '1' : '0');
-      formDataToSend.append('tasks', permissions.tasks ? '1' : '0');
-      formDataToSend.append('rilogbook', permissions.rfidIButton ? '1' : '0');
-      formDataToSend.append('dtc', permissions.dtc ? '1' : '0');
-      formDataToSend.append('maintenance', permissions.maintenance ? '1' : '0');
-      formDataToSend.append('expenses', permissions.expenses ? '1' : '0');
-      formDataToSend.append('object_control', permissions.objectControl ? '1' : '0');
-      formDataToSend.append('image_gallery', permissions.imageGallery ? '1' : '0');
-      formDataToSend.append('chat', permissions.chat ? '1' : '0');
-      
-      // Objects/Devices (IMEIs) - comma separated
-      if (formData.objects && formData.objects.length > 0) {
-        formDataToSend.append('imei', formData.objects.join(','));
-      }
-      
-      // Markers - comma separated
-      if (formData.markers && formData.markers.length > 0) {
-        formDataToSend.append('marker', formData.markers.join(','));
-      }
-      
-      // Routes - comma separated
-      if (formData.routes && formData.routes.length > 0) {
-        formDataToSend.append('route', formData.routes.join(','));
-      }
-      
-      // Zones - comma separated
-      if (formData.zones && formData.zones.length > 0) {
-        formDataToSend.append('zone', formData.zones.join(','));
-      }
-      
-      // Access via URL
-      formDataToSend.append('au_active', accessViaUrl.active ? '1' : '0');
-      if (accessViaUrl.desktop) {
-        formDataToSend.append('au', accessViaUrl.desktop);
+        body.password = formData.password;
       }
 
-      const response = await fetchOrThrow('/api/subaccounts/legacy', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
+      let url;
+      let method;
+
+      if (isUpdate) {
+        url = `/api/subaccounts/${subAccount.id}`;
+        method = "PUT";
+      } else {
+        url = "/api/subaccounts";
+        method = "POST";
+      }
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: formDataToSend.toString(),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
-        onClose(true); // Pass true to indicate save was successful
+        onClose(true);
       } else {
         const errorText = await response.text();
-        throw new Error(errorText || 'Failed to save sub account');
+        throw new Error(errorText || "Failed to save sub account");
       }
     } catch (error) {
-      console.error('Failed to save sub account:', error);
-      alert('Failed to save sub account. Please try again.');
+      console.error("Failed to save sub account:", error);
+      alert(`Failed to save sub account: ${error.message}`);
     }
   };
 
@@ -381,12 +450,20 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
     onClose(false);
   };
 
-
   return (
-    <Dialog open={open} onClose={onClose} className={classes.dialog} maxWidth={false}>
+    <Dialog
+      open={open}
+      onClose={() => onClose(false)}
+      className={classes.dialog}
+      maxWidth={false}
+    >
       <DialogTitle className={classes.dialogTitle}>
         Sub account properties
-        <IconButton onClick={onClose} className={classes.closeButton} size="small">
+        <IconButton
+          onClick={() => onClose(false)}
+          className={classes.closeButton}
+          size="small"
+        >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -394,7 +471,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
       <DialogContent className={classes.dialogContent}>
         {/* Sub Account Section - Two Columns */}
         <Typography className={classes.sectionTitle}>Sub account</Typography>
-        
+
         <Box className={classes.twoColumnsContainer}>
           {/* Left Column */}
           <Box className={classes.columnBox}>
@@ -403,7 +480,9 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               <Box className={classes.inputWrapper}>
                 <CustomCheckbox
                   checked={!formData.disabled}
-                  onChange={(checked) => handleCheckboxChange("disabled")(!checked)}
+                  onChange={(checked) =>
+                    handleCheckboxChange("disabled")(!checked)
+                  }
                 />
               </Box>
             </Box>
@@ -438,7 +517,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                   type="password"
                   value={formData.password}
                   onChange={handleInputChange("password")}
-                  placeholder="Enter password"
+                  placeholder={subAccount ? "Leave empty to keep" : "Enter password"}
                 />
               </Box>
             </Box>
@@ -452,13 +531,28 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 />
               </Box>
             </Box>
+
             <Box className={classes.formRow}>
               <Typography className={classes.label}>Expire on</Typography>
               <Box className={classes.inputWrapper}>
                 <CustomInput
                   type="datetime-local"
-                  value={formData.expirationTime ? new Date(formData.expirationTime).toISOString().slice(0, 16) : ""}
-                  onChange={(value) => handleInputChange("expirationTime")(value ? new Date(value).toISOString() : null)}
+                  value={
+                    formData.expirationTime
+                      ? new Date(formData.expirationTime)
+                          .toISOString()
+                          .slice(0, 16)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const val = e?.target ? e.target.value : e;
+                    setFormData((prev) => ({
+                      ...prev,
+                      expirationTime: val
+                        ? new Date(val).toISOString()
+                        : null,
+                    }));
+                  }}
                 />
               </Box>
             </Box>
@@ -469,9 +563,11 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 <CustomMultiSelect
                   options={objectOptions}
                   value={formData.objects}
-                  onChange={handleInputChange("objects")}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, objects: val }))
+                  }
                   placeholder="Nothing selected"
-                  searchable={true}
+                  searchable
                 />
               </Box>
             </Box>
@@ -482,9 +578,11 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 <CustomMultiSelect
                   options={markerOptions}
                   value={formData.markers}
-                  onChange={handleInputChange("markers")}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, markers: val }))
+                  }
                   placeholder="Nothing selected"
-                  searchable={true}
+                  searchable
                 />
               </Box>
             </Box>
@@ -495,9 +593,11 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 <CustomMultiSelect
                   options={routeOptions}
                   value={formData.routes}
-                  onChange={handleInputChange("routes")}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, routes: val }))
+                  }
                   placeholder="Nothing selected"
-                  searchable={true}
+                  searchable
                 />
               </Box>
             </Box>
@@ -508,135 +608,174 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 <CustomMultiSelect
                   options={zoneOptions}
                   value={formData.zones}
-                  onChange={handleInputChange("zones")}
+                  onChange={(val) =>
+                    setFormData((prev) => ({ ...prev, zones: val }))
+                  }
                   placeholder="Nothing selected"
-                  searchable={true}
+                  searchable
                 />
               </Box>
             </Box>
           </Box>
 
-          {/* Right Column */}
+          {/* Right Column - Permissions */}
           <Box className={classes.columnBox}>
-            <Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.dashboard}
-                  onChange={handlePermissionChange("dashboard")}
-                />
-                <Typography className={classes.checkboxLabel}>Dashboard</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.history}
-                  onChange={handlePermissionChange("history")}
-                />
-                <Typography className={classes.checkboxLabel}>History</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.reports}
-                  onChange={handlePermissionChange("reports")}
-                />
-                <Typography className={classes.checkboxLabel}>Reports</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.tasks}
-                  onChange={handlePermissionChange("tasks")}
-                />
-                <Typography className={classes.checkboxLabel}>Tasks</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.rfidIButton}
-                  onChange={handlePermissionChange("rfidIButton")}
-                />
-                <Typography className={classes.checkboxLabel}>RFID and iButton logbook</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.dtc}
-                  onChange={handlePermissionChange("dtc")}
-                />
-                <Typography className={classes.checkboxLabel}>DTC (Diagnostic Trouble Codes)</Typography>
-              </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.dashboard}
+                onChange={handlePermissionChange("dashboard")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                Dashboard
+              </Typography>
             </Box>
-
-            <Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.maintenance}
-                  onChange={handlePermissionChange("maintenance")}
-                />
-                <Typography className={classes.checkboxLabel}>Maintenance</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.expenses}
-                  onChange={handlePermissionChange("expenses")}
-                />
-                <Typography className={classes.checkboxLabel}>Expenses</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.objectControl}
-                  onChange={handlePermissionChange("objectControl")}
-                />
-                <Typography className={classes.checkboxLabel}>Object control</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.imageGallery}
-                  onChange={handlePermissionChange("imageGallery")}
-                />
-                <Typography className={classes.checkboxLabel}>Image gallery</Typography>
-              </Box>
-              <Box className={classes.checkboxRow}>
-                <CustomCheckbox
-                  checked={permissions.chat}
-                  onChange={handlePermissionChange("chat")}
-                />
-                <Typography className={classes.checkboxLabel}>Chat</Typography>
-              </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.history}
+                onChange={handlePermissionChange("history")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                History
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.reports}
+                onChange={handlePermissionChange("reports")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                Reports
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.tasks}
+                onChange={handlePermissionChange("tasks")}
+              />
+              <Typography className={classes.checkboxLabel}>Tasks</Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.rfidIButton}
+                onChange={handlePermissionChange("rfidIButton")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                RFID and iButton logbook
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.dtc}
+                onChange={handlePermissionChange("dtc")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                DTC (Diagnostic Trouble Codes)
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.maintenance}
+                onChange={handlePermissionChange("maintenance")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                Maintenance
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.expenses}
+                onChange={handlePermissionChange("expenses")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                Expenses
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.objectControl}
+                onChange={handlePermissionChange("objectControl")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                Object control
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.imageGallery}
+                onChange={handlePermissionChange("imageGallery")}
+              />
+              <Typography className={classes.checkboxLabel}>
+                Image gallery
+              </Typography>
+            </Box>
+            <Box className={classes.checkboxRow}>
+              <CustomCheckbox
+                checked={permissions.chat}
+                onChange={handlePermissionChange("chat")}
+              />
+              <Typography className={classes.checkboxLabel}>Chat</Typography>
             </Box>
           </Box>
         </Box>
+
         {/* Access via URL Section */}
         <Typography className={classes.sectionTitle}>Access via URL</Typography>
+
         <Box className={classes.formRow}>
           <Typography className={classes.label}>Active</Typography>
           <Box className={classes.inputWrapper}>
             <CustomCheckbox
               checked={accessViaUrl.active}
-              onChange={(checked) => handleAccessUrlChange("active")(checked)}
+              onChange={handleAccessUrlActiveChange}
             />
           </Box>
         </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>URL desktop</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomInput
-              value={accessViaUrl.desktop}
-              onChange={handleAccessUrlChange("desktop")}
-              placeholder="Desktop URL"
-              disabled
-            />
-          </Box>
-        </Box>
+        {accessViaUrl.active && (
+          <>
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>URL desktop</Typography>
+              <Box className={classes.inputWrapper}>
+                <Box className={classes.urlRow}>
+                  <CustomInput
+                    value={accessViaUrl.desktop}
+                    readOnly
+                    style={{ flex: 1 }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={() => copyToClipboard(accessViaUrl.desktop)}
+                    className={classes.copyButton}
+                    disabled={!accessViaUrl.desktop}
+                  >
+                    <ContentCopyIcon style={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Box>
 
-        <Box className={classes.formRow}>
-          <Typography className={classes.label}>URL mobile</Typography>
-          <Box className={classes.inputWrapper}>
-            <CustomInput
-              value={accessViaUrl.mobile}
-              onChange={handleAccessUrlChange("mobile")}
-              placeholder="Mobile URL"
-              disabled
-            />
-          </Box>
-        </Box>
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>URL mobile</Typography>
+              <Box className={classes.inputWrapper}>
+                <Box className={classes.urlRow}>
+                  <CustomInput
+                    value={accessViaUrl.mobile}
+                    readOnly
+                    style={{ flex: 1 }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={() => copyToClipboard(accessViaUrl.mobile)}
+                    className={classes.copyButton}
+                    disabled={!accessViaUrl.mobile}
+                  >
+                    <ContentCopyIcon style={{ fontSize: 16 }} />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Box>
+          </>
+        )}
       </DialogContent>
 
       <DialogActions className={classes.dialogActions}>

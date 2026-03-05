@@ -7,7 +7,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   CustomSelect,
   CustomCheckbox,
@@ -15,6 +15,7 @@ import {
   CustomInput,
   CustomMultiSelect,
 } from "../../common/components/custom";
+import { sessionActions } from "../../store/session";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
@@ -164,6 +165,7 @@ const useStyles = makeStyles()((theme) => ({
 const UserInterfaceTab = ({ onSave }) => {
   const { classes } = useStyles();
   const user = useSelector((state) => state.session.user);
+  const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -178,7 +180,7 @@ const UserInterfaceTab = ({ onSave }) => {
 
   // Map
   const [mapStartupPosition, setMapStartupPosition] = useState("Fit objects");
-  const [mapIconSize, setMapIconSize] = useState("100%");
+  const [mapIconSize, setMapIconSize] = useState(1);
   const [historyRouteColor, setHistoryRouteColor] = useState("FF0000");
   const [historyRouteHighlightColor, setHistoryRouteHighlightColor] = useState("0000FF");
   const [objectDetailsPopup, setObjectDetailsPopup] = useState(true);
@@ -269,7 +271,7 @@ const UserInterfaceTab = ({ onSave }) => {
         
         // Map
         setMapStartupPosition(attrs.map?.startupPosition || "Fit objects");
-        setMapIconSize(attrs.map?.iconSize || "100%");
+        setMapIconSize(Number(attrs.map?.iconSize) || 1);
         setHistoryRouteColor(attrs.map?.routeColor || "FF0000");
         setHistoryRouteHighlightColor(attrs.map?.routeHistoryColor || "0000FF");
         setObjectDetailsPopup(attrs.map?.isObjectDetailPopupOnMouseHover !== false);
@@ -408,6 +410,8 @@ const UserInterfaceTab = ({ onSave }) => {
       });
 
       if (response.ok) {
+        const updatedUser = await response.json();
+        dispatch(sessionActions.updateUser(updatedUser));
         setSuccessMessage('User interface settings saved successfully');
         if (onSave) {
           onSave();
@@ -532,13 +536,13 @@ const UserInterfaceTab = ({ onSave }) => {
             <Typography className={classes.label}>Map icon size</Typography>
             <CustomSelect
               value={mapIconSize}
-              onChange={(value) => setMapIconSize(value)}
+              onChange={(value) => setMapIconSize(Number(value))}
               options={[
-                "50%",
-                "75%",
-                "100%",
-                "125%",
-                "150%"
+                { value: 1, label: "100%" },
+                { value: 1.25, label: "125%" },
+                { value: 1.5, label: "150%" },
+                { value: 1.75, label: "175%" },
+                { value: 2, label: "200%" },
               ]}
             />
           </Box>
@@ -549,14 +553,14 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="color"
                 value={`#${historyRouteColor}`} 
-                onChange={(value) => setHistoryRouteColor(value.replace('#', '').toUpperCase())} 
+                onChange={(e) => setHistoryRouteColor(e.target.value.replace('#', '').toUpperCase())} 
                 size="small"
                 style={{ width: '50px' }}
               />
               <CustomInput 
                 type="text"
                 value={historyRouteColor} 
-                onChange={(value) => setHistoryRouteColor(value.toUpperCase())} 
+                onChange={(e) => setHistoryRouteColor(e.target.value.toUpperCase())} 
                 maxLength={6}
                 placeholder="FF0000"
                 size="small"
@@ -571,14 +575,14 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="color"
                 value={`#${historyRouteHighlightColor}`} 
-                onChange={(value) => setHistoryRouteHighlightColor(value.replace('#', '').toUpperCase())} 
+                onChange={(e) => setHistoryRouteHighlightColor(e.target.value.replace('#', '').toUpperCase())} 
                 size="small"
                 style={{ width: '50px' }}
               />
               <CustomInput 
                 type="text"
                 value={historyRouteHighlightColor} 
-                onChange={(value) => setHistoryRouteHighlightColor(value.toUpperCase())} 
+                onChange={(e) => setHistoryRouteHighlightColor(e.target.value.toUpperCase())} 
                 maxLength={6}
                 placeholder="0000FF"
                 size="small"
@@ -654,14 +658,14 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="color"
                 value={`#${noConnectionColor}`} 
-                onChange={(value) => setNoConnectionColor(value.replace('#', '').toUpperCase())} 
+                onChange={(e) => setNoConnectionColor(e.target.value.replace('#', '').toUpperCase())} 
                 size="small"
                 style={{ width: '50px' }}
               />
               <CustomInput 
                 type="text"
                 value={noConnectionColor} 
-                onChange={(value) => setNoConnectionColor(value.toUpperCase())} 
+                onChange={(e) => setNoConnectionColor(e.target.value.toUpperCase())} 
                 maxLength={6}
                 placeholder="FFAEAE"
                 size="small"
@@ -680,14 +684,14 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="color"
                 value={`#${stoppedColor}`} 
-                onChange={(value) => setStoppedColor(value.replace('#', '').toUpperCase())} 
+                onChange={(e) => setStoppedColor(e.target.value.replace('#', '').toUpperCase())} 
                 size="small"
                 style={{ width: '50px' }}
               />
               <CustomInput 
                 type="text"
                 value={stoppedColor} 
-                onChange={(value) => setStoppedColor(value.toUpperCase())} 
+                onChange={(e) => setStoppedColor(e.target.value.toUpperCase())} 
                 maxLength={6}
                 placeholder="FFAEAE"
                 size="small"
@@ -706,14 +710,14 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="color"
                 value={`#${movingColor}`} 
-                onChange={(value) => setMovingColor(value.replace('#', '').toUpperCase())} 
+                onChange={(e) => setMovingColor(e.target.value.replace('#', '').toUpperCase())} 
                 size="small"
                 style={{ width: '50px' }}
               />
               <CustomInput 
                 type="text"
                 value={movingColor} 
-                onChange={(value) => setMovingColor(value.toUpperCase())} 
+                onChange={(e) => setMovingColor(e.target.value.toUpperCase())} 
                 maxLength={6}
                 placeholder="B0E57C"
                 size="small"
@@ -732,14 +736,14 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="color"
                 value={`#${engineIdleColor}`} 
-                onChange={(value) => setEngineIdleColor(value.replace('#', '').toUpperCase())} 
+                onChange={(e) => setEngineIdleColor(e.target.value.replace('#', '').toUpperCase())} 
                 size="small"
                 style={{ width: '50px' }}
               />
               <CustomInput 
                 type="text"
                 value={engineIdleColor} 
-                onChange={(value) => setEngineIdleColor(value.toUpperCase())} 
+                onChange={(e) => setEngineIdleColor(e.target.value.toUpperCase())} 
                 maxLength={6}
                 placeholder="FFF0AA"
                 size="small"
@@ -875,7 +879,7 @@ const UserInterfaceTab = ({ onSave }) => {
             <CustomInput 
               type="text"
               value={currency} 
-              onChange={(value) => setCurrency(value)} 
+              onChange={(e) => setCurrency(e.target.value)} 
               size="small"
               style={{ width: '100px' }}
             />
@@ -908,7 +912,7 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="time"
                 value={dstStart} 
-                onChange={(value) => setDstStart(value)}
+                onChange={(e) => setDstStart(e.target.value)}
                 size="small"
                 style={{ width: '80px', textAlign: 'center' }}
               />
@@ -920,7 +924,7 @@ const UserInterfaceTab = ({ onSave }) => {
               <CustomInput 
                 type="time"
                 value={dstEnd} 
-                onChange={(value) => setDstEnd(value)}
+                onChange={(e) => setDstEnd(e.target.value)}
                 size="small"
                 style={{ width: '80px', textAlign: 'center' }}
               />

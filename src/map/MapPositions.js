@@ -40,7 +40,9 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
 
   const theme = useTheme();
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
-  const iconScale = useAttributePreference('iconScale', desktop ? 0.75 : 1);
+  const baseIconScale = desktop ? 0.75 : 1;
+  const iconSizeMultiplier = useSelector((state) => state.session.user?.attributes?.map?.iconSize || 1);
+  const iconScale = baseIconScale * iconSizeMultiplier;
 
   const devices = useSelector((state) => state.devices.items);
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
@@ -254,6 +256,27 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
       });
     };
   }, [mapCluster, clusters, onMarkerClickCallback, onClusterClick]);
+
+  // Reactively update icon sizes when user changes the icon size setting
+  useEffect(() => {
+    const customIconSize = (desktop ? 0.2 : 0.25) * iconSizeMultiplier;
+    [id, selected].forEach((source) => {
+      if (map.getLayer(source)) {
+        map.setLayoutProperty(source, 'icon-size', [
+          'case',
+          ['==', ['get', 'color'], ''],
+          customIconSize,
+          iconScale,
+        ]);
+      }
+      if (map.getLayer(`direction-${source}`)) {
+        map.setLayoutProperty(`direction-${source}`, 'icon-size', iconScale);
+      }
+    });
+    if (map.getLayer(clusters)) {
+      map.setLayoutProperty(clusters, 'icon-size', iconScale);
+    }
+  }, [iconScale, iconSizeMultiplier, id, selected, clusters, desktop]);
 
   useEffect(() => {
     const applyUpdate = async () => {

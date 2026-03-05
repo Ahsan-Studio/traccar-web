@@ -21,19 +21,15 @@ const TemplatesTab = () => {
     (async () => {
       try {
         setLoading(true);
-        const params = new URLSearchParams();
-        if (search && search.trim().length > 0) params.set("name", search.trim());
-        const url = `/api/user-templates${params.toString() ? `?${params.toString()}` : ""}`;
-        const response = await fetchOrThrow(url, { headers: { Accept: "application/json" } });
+        const response = await fetchOrThrow('/api/user-templates', { headers: { Accept: 'application/json' } });
         const data = await response.json();
         if (!cancelled) {
           setItems(Array.isArray(data) ? data : []);
-          // Remove selections that no longer exist
           setSelected((prev) => prev.filter((id) => (Array.isArray(data) ? data : []).some((r) => r.id === id)));
         }
       } catch (e) {
         if (!cancelled) setItems([]);
-        console.error("Error fetching templates:", e);
+        console.error('Error fetching templates:', e);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -41,11 +37,15 @@ const TemplatesTab = () => {
     return () => {
       cancelled = true;
     };
-  }, [search, refreshVersion]);
+  }, [refreshVersion]);
 
   const rows = useMemo(() => {
+    if (!search) return items;
     const q = search.toLowerCase();
-    return items.filter((it) => (it.name || "").toLowerCase().includes(q));
+    return items.filter((it) =>
+      (it.name || '').toLowerCase().includes(q)
+      || (it.description || '').toLowerCase().includes(q)
+    );
   }, [items, search]);
 
   const columns = [

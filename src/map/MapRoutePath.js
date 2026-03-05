@@ -27,6 +27,12 @@ const MapRoutePath = ({ positions }) => {
   const mapLineWidth = useAttributePreference('mapLineWidth', 2);
   const mapLineOpacity = useAttributePreference('mapLineOpacity', 1);
 
+  // Read user's history route color preference
+  const userRouteColor = useSelector((state) => {
+    const rc = state.session.user?.attributes?.map?.routeColor;
+    return rc ? `#${rc}` : null;
+  });
+
   useEffect(() => {
     map.addSource(id, {
       type: 'geojson',
@@ -75,7 +81,7 @@ const MapRoutePath = ({ positions }) => {
           coordinates: [[positions[i].longitude, positions[i].latitude], [positions[i + 1].longitude, positions[i + 1].latitude]],
         },
         properties: {
-          color: reportColor || getSpeedColor(
+          color: reportColor || userRouteColor || getSpeedColor(
             positions[i + 1].speed,
             minSpeed,
             maxSpeed,
@@ -89,7 +95,7 @@ const MapRoutePath = ({ positions }) => {
       type: 'FeatureCollection',
       features,
     });
-  }, [theme, positions, reportColor, mapLineWidth, mapLineOpacity]);
+  }, [theme, positions, reportColor, userRouteColor, mapLineWidth, mapLineOpacity]);
 
   return null;
 };

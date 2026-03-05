@@ -25,159 +25,149 @@ const useStyles = makeStyles()((theme) => ({
     padding: theme.spacing(2),
   },
   section: {
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(1),
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 600,
     color: "#2b82d4",
-    paddingBottom: '5px',
-    marginBottom: '10px',
-    borderBottom: `1px solid #f5f5f5`,
+    paddingBottom: "6px",
+    marginBottom: "12px",
+    borderBottom: "1px solid #e0e0e0",
   },
   formRow: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '3px',
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "8px",
   },
   label: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 400,
-    color: '#444444',
-    width: '200px',
+    color: "#444444",
+    width: "220px",
     flexShrink: 0,
   },
   checkboxContainer: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  select: {
-    padding: '6px 12px',
-    fontSize: 13,
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    backgroundColor: 'white',
-    minWidth: '200px',
-    height: '32px',
-    cursor: 'pointer',
-    '&:focus': {
-      outline: 'none',
-      borderColor: '#2196f3',
-    },
-  },
-  linkHeader: {
-    color: '#2b82d4',
-    fontSize: 12,
-    fontWeight: 600,
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1),
+    display: "flex",
+    alignItems: "center",
   },
   helpText: {
     fontSize: 11,
-    color: '#666',
-    marginBottom: theme.spacing(1.5),
+    color: "#666",
+    marginBottom: "12px",
     lineHeight: 1.5,
   },
   queueRow: {
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
     gap: theme.spacing(1),
   },
-  queueInput: {
-    padding: '6px 12px',
-    fontSize: 13,
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    width: '80px',
-    height: '32px',
-    backgroundColor: '#f5f5f5',
-    color: '#999',
-    textAlign: 'center',
+  queueValue: {
+    fontSize: 12,
+    color: "#444",
+    minWidth: "40px",
+  },
+  identifierInput: {
+    "& input": {
+      backgroundColor: "#f5f5f5",
+      color: "#666",
+    },
   },
   loading: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     padding: theme.spacing(4),
   },
 }));
 
+const GATEWAY_TYPE_OPTIONS = [
+  { value: "app", label: "Mobile application" },
+  { value: "http", label: "HTTP" },
+];
+
 const SMSTab = ({ onSave }) => {
   const { classes } = useStyles();
   const user = useSelector((state) => state.session.user);
-  
+
   const [loading, setLoading] = useState(true);
   const [smsConfig, setSmsConfig] = useState(null);
   const [enabled, setEnabled] = useState(false);
-  const [identifier, setIdentifier] = useState('');
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const queue = 0;
+  const [gatewayType, setGatewayType] = useState("app");
+  const [identifier, setIdentifier] = useState("");
+  const [gatewayUrl, setGatewayUrl] = useState("");
+  const [queue, setQueue] = useState(0);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  // Fetch SMS configuration on component mount
   useEffect(() => {
-    fetchSMSConfig();
+    fetchConfig();
   }, []);
 
-  const fetchSMSConfig = async () => {
+  const fetchConfig = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/user-sms-configs');
+      const response = await fetch("/api/user-sms-configs");
       if (response.ok) {
         const configs = await response.json();
         if (configs && configs.length > 0) {
           const config = configs[0];
           setSmsConfig(config);
           setEnabled(config.enabled || false);
-          // Assuming identifier is stored in one of the fields
-          setIdentifier(config.httpUser || '');
+          setGatewayType(config.gatewayType || "app");
+          setIdentifier(config.httpUser || "");
+          setGatewayUrl(config.httpUrl || "");
+          setQueue(config.queueCount || 0);
         }
       }
     } catch (err) {
-      console.error('Error fetching SMS config:', err);
-      setError('Failed to load SMS configuration');
+      console.error("Error fetching WhatsApp config:", err);
+      setError("Failed to load WhatsApp configuration");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleClearQueue = async () => {
+    try {
+      if (smsConfig?.id) {
+        await fetch(`/api/user-sms-configs/${smsConfig.id}/clear-queue`, { method: "POST" });
+        setQueue(0);
+      }
+    } catch (err) {
+      console.error("Error clearing queue:", err);
+    }
+  };
+
   const handleSave = async () => {
-    console.log('SMS Tab handleSave called');
-    console.log('Current state:', { enabled, identifier, smsConfig });
-    
-    setError('');
-    setSuccessMessage('');
+    setError("");
+    setSuccessMessage("");
 
     try {
       const data = {
         userId: user?.id,
-        enabled: enabled,
+        enabled,
+        gatewayType,
         httpUser: identifier,
-        httpUrl: '',
-        httpAuthorizationHeader: '',
-        httpAuthorization: '',
-        httpTemplate: '',
-        awsAccess: '',
-        awsRegion: '',
+        httpUrl: gatewayUrl,
+        httpAuthorizationHeader: "",
+        httpAuthorization: "",
+        httpTemplate: "",
+        awsAccess: "",
+        awsRegion: "",
       };
 
       let response;
-      if (smsConfig && smsConfig.id) {
-        // Update existing configuration
+      if (smsConfig?.id) {
         response = await fetch(`/api/user-sms-configs/${smsConfig.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...data, id: smsConfig.id }),
         });
       } else {
-        // Create new configuration
-        response = await fetch('/api/user-sms-configs', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        response = await fetch("/api/user-sms-configs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
       }
@@ -185,28 +175,22 @@ const SMSTab = ({ onSave }) => {
       if (response.ok) {
         const updatedConfig = await response.json();
         setSmsConfig(updatedConfig);
-        setSuccessMessage('SMS configuration saved successfully');
-        if (onSave) {
-          onSave();
-        }
+        setSuccessMessage("WhatsApp configuration saved successfully");
+        onSave?.();
       } else {
         const errorText = await response.text();
-        throw new Error(errorText || 'Failed to save SMS configuration');
+        throw new Error(errorText || "Failed to save");
       }
     } catch (err) {
-      console.error('Error saving SMS config:', err);
-      setError(err.message || 'Failed to save SMS configuration');
+      console.error("Error saving WhatsApp config:", err);
+      setError(err.message || "Failed to save WhatsApp configuration");
     }
   };
 
-  // Expose handleSave to parent component via window object
   useEffect(() => {
     window.smsTabSave = handleSave;
-    
-    return () => {
-      delete window.smsTabSave;
-    };
-  }, [enabled, identifier, smsConfig, user]);
+    return () => { delete window.smsTabSave; };
+  }, [enabled, gatewayType, identifier, gatewayUrl, smsConfig, user]);
 
   if (loading) {
     return (
@@ -219,73 +203,98 @@ const SMSTab = ({ onSave }) => {
   return (
     <Box className={classes.container}>
       <Box className={classes.body}>
+        {/* Section 1: WhatsApp Gateway */}
         <Box className={classes.section}>
-          <Typography className={classes.sectionTitle}>SMS Gateway</Typography>
-          
+          <Typography className={classes.sectionTitle}>WhatsApp Gateway</Typography>
+
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>Enable SMS Gateway</Typography>
+            <Typography className={classes.label}>Enable WhatsApp Gateway</Typography>
             <Box className={classes.checkboxContainer}>
               <CustomCheckbox
-                checked={enabled} 
-                onChange={(e) => setEnabled(e.target.checked)} 
+                checked={enabled}
+                onChange={(val) => setEnabled(val)}
               />
             </Box>
           </Box>
 
           <Box className={classes.formRow}>
-            <Typography className={classes.label}>SMS Gateway type</Typography>
+            <Typography className={classes.label}>WhatsApp Gateway type</Typography>
             <CustomSelect
-              value="HTTP"
-              onChange={() => {}}
-              options={[{ value: "HTTP", label: "HTTP" }]}
+              value={gatewayType}
+              onChange={(e) => setGatewayType(e.target.value)}
+              options={GATEWAY_TYPE_OPTIONS}
             />
           </Box>
         </Box>
 
-        <Box className={classes.section}>
-          <Typography className={classes.linkHeader}>HTTP</Typography>
-          <Typography className={classes.helpText}>
-            HTTP gateway is used to send SMS through HTTP API. Below SMS Gateway identifier should be configured in your HTTP endpoint settings.
-          </Typography>
+        {/* Section 2: Mobile application (shown when type = app) */}
+        {gatewayType === "app" && (
+          <Box className={classes.section}>
+            <Typography className={classes.sectionTitle}>Mobile application</Typography>
+            <Typography className={classes.helpText}>
+              Mobile application should be used which allows to use mobile device as WhatsApp Gateway. Below WhatsApp Gateway identifier should be entered in mobile application settings.
+            </Typography>
 
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>SMS Gateway identifier</Typography>
-            <CustomInput
-              value={identifier} 
-              onChange={(e) => setIdentifier(e.target.value)} 
-              placeholder="Enter identifier"
-            />
-          </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>Total SMS in queue to send</Typography>
-            <Box className={classes.queueRow}>
-              <input 
-                type="text"
-                className={classes.queueInput}
-                value={queue} 
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>WhatsApp Gateway identifier</Typography>
+              <CustomInput
+                value={identifier}
                 disabled
-                readOnly
+                className={classes.identifierInput}
               />
-              <CustomButton 
-                variant="outlined" 
-                disabled
-              >
-                Clear
-              </CustomButton>
+            </Box>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>Total WhatsApp in queue to send</Typography>
+              <Box className={classes.queueRow}>
+                <Typography className={classes.queueValue}>{queue}</Typography>
+                <CustomButton variant="outlined" onClick={handleClearQueue}>
+                  Clear
+                </CustomButton>
+              </Box>
             </Box>
           </Box>
-        </Box>
+        )}
+
+        {/* Section 3: HTTP (shown when type = http) */}
+        {gatewayType === "http" && (
+          <Box className={classes.section}>
+            <Typography className={classes.sectionTitle}>HTTP</Typography>
+            <Typography className={classes.helpText}>
+              HTTP gateway is used to send WhatsApp messages through HTTP API. Configure the URL below with the appropriate parameters.
+            </Typography>
+            <Typography className={classes.helpText}>
+              Example: https://api.example.com/send?phone=%NUMBER%&amp;text=%TEXT%
+            </Typography>
+
+            <Box className={classes.formRow}>
+              <Typography className={classes.label}>WhatsApp Gateway URL</Typography>
+              <CustomInput
+                value={gatewayUrl}
+                onChange={(e) => setGatewayUrl(e.target.value)}
+                multiline
+                rows={3}
+                placeholder="Example: https://api.example.com/send?phone=%NUMBER%&text=%TEXT%"
+                style={{ flex: 1 }}
+              />
+            </Box>
+
+            <Box className={classes.section} style={{ marginTop: 16 }}>
+              <Typography className={classes.sectionTitle}>Variables</Typography>
+              <Typography className={classes.helpText}>%NUMBER% - Phone number</Typography>
+              <Typography className={classes.helpText}>%TEXT% - Message text</Typography>
+            </Box>
+          </Box>
+        )}
       </Box>
 
-      {/* Success/Error Messages */}
       <Snackbar
         open={!!successMessage}
         autoHideDuration={3000}
-        onClose={() => setSuccessMessage('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        onClose={() => setSuccessMessage("")}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert severity="success" onClose={() => setSuccessMessage('')}>
+        <Alert severity="success" onClose={() => setSuccessMessage("")}>
           {successMessage}
         </Alert>
       </Snackbar>
@@ -293,10 +302,10 @@ const SMSTab = ({ onSave }) => {
       <Snackbar
         open={!!error}
         autoHideDuration={5000}
-        onClose={() => setError('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        onClose={() => setError("")}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert severity="error" onClose={() => setError('')}>
+        <Alert severity="error" onClose={() => setError("")}>
           {error}
         </Alert>
       </Snackbar>

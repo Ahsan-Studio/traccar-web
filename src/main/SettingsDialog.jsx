@@ -235,7 +235,7 @@ const SettingsDialog = ({ open, onClose }) => {
             <Tab label="Object" />
             <Tab label="Events" />
             <Tab label="Template" />
-            <Tab label="SMS" />
+            <Tab label="WhatsApp" />
             <Tab label="User interface" />
             <Tab label="My account" />
             <Tab label="Sub akun" />

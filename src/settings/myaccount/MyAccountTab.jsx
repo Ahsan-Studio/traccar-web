@@ -8,8 +8,9 @@ import {
   IconButton,
 } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { CustomInput, CustomButton } from "../../common/components/custom";
+import { sessionActions } from "../../store/session";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
@@ -74,6 +75,7 @@ const useStyles = makeStyles()((theme) => ({
 const MyAccountTab = ({ onSave }) => {
   const { classes } = useStyles();
   const user = useSelector((state) => state.session.user);
+  const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -215,6 +217,8 @@ const MyAccountTab = ({ onSave }) => {
       });
 
       if (response.ok) {
+        const updatedUser = await response.json();
+        dispatch(sessionActions.updateUser(updatedUser));
         setSuccessMessage('Account information saved successfully');
         setNewPassword('');
         setRepeatPassword('');
@@ -305,7 +309,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={name}
-                onChange={(value) => setName(value)}
+                onChange={(e) => setName(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -318,7 +322,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={company}
-                onChange={(value) => setCompany(value)}
+                onChange={(e) => setCompany(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -331,7 +335,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={address}
-                onChange={(value) => setAddress(value)}
+                onChange={(e) => setAddress(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -344,7 +348,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={postCode}
-                onChange={(value) => setPostCode(value)}
+                onChange={(e) => setPostCode(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -357,7 +361,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={city}
-                onChange={(value) => setCity(value)}
+                onChange={(e) => setCity(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -370,7 +374,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={countryState}
-                onChange={(value) => setCountryState(value)}
+                onChange={(e) => setCountryState(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -383,7 +387,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={phone1}
-                onChange={(value) => setPhone1(value)}
+                onChange={(e) => setPhone1(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -396,7 +400,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="text"
                 value={phone2}
-                onChange={(value) => setPhone2(value)}
+                onChange={(e) => setPhone2(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -409,7 +413,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="email"
                 value={email}
-                onChange={(value) => setEmail(value)}
+                onChange={(e) => setEmail(e.target.value)}
                 size="small"
                 fullWidth
               />
@@ -427,7 +431,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="password"
                 value={newPassword}
-                onChange={(value) => setNewPassword(value)}
+                onChange={(e) => setNewPassword(e.target.value)}
                 size="small"
                 fullWidth
                 autoComplete="new-password"
@@ -441,7 +445,7 @@ const MyAccountTab = ({ onSave }) => {
               <CustomInput
                 type="password"
                 value={repeatPassword}
-                onChange={(value) => setRepeatPassword(value)}
+                onChange={(e) => setRepeatPassword(e.target.value)}
                 size="small"
                 fullWidth
                 autoComplete="new-password"

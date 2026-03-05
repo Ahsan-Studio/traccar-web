@@ -52,19 +52,6 @@ const GROUP_COLORS = {
   trailer: '#9c27b0',
 };
 
-const STORAGE_KEY = 'gps_logbook';
-
-const loadLogbook = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-};
-
-const saveLogbook = (data) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
-
 const LogbookDialog = ({ open, onClose }) => {
   const { classes } = useStyles();
   const devices = useSelector((state) => state.devices.items);
@@ -95,45 +82,81 @@ const LogbookDialog = ({ open, onClose }) => {
     setLoading(true);
     setSelected([]);
     try {
-      // Try loading from events (driverChanged events)
-      const from = new Date(dateFrom).toISOString();
-      const to = new Date(dateTo).toISOString();
-      let url = `/api/reports/events?from=${from}&to=${to}&type=driverChanged`;
-      if (selectedDeviceId) url += `&deviceId=${selectedDeviceId}`;
+      // Build API query parameters
+      let url = '/api/logbook?';
+      const params = [];
+      if (selectedDeviceId) params.push(`deviceId=${selectedDeviceId}`);
+
+      // Build group filter
+      const groups = [];
+      if (showDrivers) groups.push('driver');
+      if (showPassengers) groups.push('passenger');
+      if (showTrailers) groups.push('trailer');
+
+      url += params.join('&');
 
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
       let entries = [];
+
       if (res.ok) {
-        const events = await res.json();
-        entries = events.map((e) => {
-          const device = devices[e.deviceId];
-          return {
-            id: e.id,
-            time: e.eventTime || e.serverTime,
-            deviceName: device?.name || `ID: ${e.deviceId}`,
-            group: 'driver',
-            assignId: e.attributes?.driverUniqueId || 'Unknown',
-            address: '',
-          };
-        });
+        const apiData = await res.json();
+        const fromTime = dateFrom ? new Date(dateFrom).getTime() : 0;
+        const toTime = dateTo ? new Date(dateTo).getTime() : Infinity;
+
+        entries = apiData
+          .filter((entry) => {
+            const t = new Date(entry.eventTime || entry.serverTime).getTime();
+            return t >= fromTime && t <= toTime;
+          })
+          .map((entry) => {
+            const device = devices[entry.deviceId];
+            return {
+              id: entry.id,
+              _serverId: entry.id,
+              time: entry.eventTime || entry.serverTime,
+              deviceName: device?.name || `ID: ${entry.deviceId}`,
+              group: entry.entryGroup || 'driver',
+              assignId: entry.assignId || 'Unknown',
+              address: entry.address || '',
+              latitude: entry.latitude,
+              longitude: entry.longitude,
+            };
+          });
       }
 
-      // Merge with localStorage entries
-      const stored = loadLogbook();
-      const fromTime = new Date(dateFrom).getTime();
-      const toTime = new Date(dateTo).getTime();
-      const filteredStored = stored.filter((s) => {
-        const t = new Date(s.time).getTime();
-        if (t < fromTime || t > toTime) return false;
-        if (selectedDeviceId && s.deviceId !== selectedDeviceId) return false;
-        return true;
-      });
+      // Also try loading from driverChanged events as fallback/supplement
+      try {
+        const from = new Date(dateFrom).toISOString();
+        const to = new Date(dateTo).toISOString();
+        let eventsUrl = `/api/reports/events?from=${from}&to=${to}&type=driverChanged`;
+        if (selectedDeviceId) eventsUrl += `&deviceId=${selectedDeviceId}`;
 
-      setData([...entries, ...filteredStored].sort((a, b) => new Date(b.time) - new Date(a.time)));
+        const eventsRes = await fetch(eventsUrl, { headers: { Accept: 'application/json' } });
+        if (eventsRes.ok) {
+          const events = await eventsRes.json();
+          const eventEntries = events
+            .filter((e) => !entries.some((existing) => existing.id === e.id))
+            .map((e) => {
+              const device = devices[e.deviceId];
+              return {
+                id: `event-${e.id}`,
+                time: e.eventTime || e.serverTime,
+                deviceName: device?.name || `ID: ${e.deviceId}`,
+                group: 'driver',
+                assignId: e.attributes?.driverUniqueId || 'Unknown',
+                address: '',
+              };
+            });
+          entries = [...entries, ...eventEntries];
+        }
+      } catch {
+        // Events API optional — ignore if fails
+      }
+
+      setData(entries.sort((a, b) => new Date(b.time) - new Date(a.time)));
     } catch (err) {
       console.error('Failed to load logbook:', err);
-      // Fallback to localStorage only
-      setData(loadLogbook());
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -150,12 +173,21 @@ const LogbookDialog = ({ open, onClose }) => {
     setSelected((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
-  const handleDeleteSelected = () => {
-    const updatedData = data.filter((d) => !selected.includes(d.id));
-    setData(updatedData);
-    // Also update localStorage entries
-    const stored = loadLogbook().filter((d) => !selected.includes(d.id));
-    saveLogbook(stored);
+  const handleDeleteSelected = async () => {
+    // Delete from API for server entries
+    const serverIds = selected.filter((id) => typeof id === 'number');
+    try {
+      await Promise.all(
+        serverIds.map((id) =>
+          fetch(`/api/logbook/${id}`, { method: 'DELETE' })
+        )
+      );
+    } catch (err) {
+      console.error('Failed to delete logbook entries:', err);
+    }
+
+    // Remove from local state
+    setData((prev) => prev.filter((d) => !selected.includes(d.id)));
     setSelected([]);
   };
 

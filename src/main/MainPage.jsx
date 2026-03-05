@@ -54,6 +54,7 @@ import MaintenanceDialog from "./MaintenanceDialog";
 import ExpensesDialog from "./ExpensesDialog";
 import GalleryDialog from "./GalleryDialog";
 import ChatDialog from "./ChatDialog";
+import ShareDialog from "./ShareDialog";
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -263,6 +264,7 @@ const MainPage = () => {
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [historyRoute, setHistoryRoute] = useState(null);
   const [historyTrigger, setHistoryTrigger] = useState(null); // { deviceId, period }
@@ -624,6 +626,13 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          <IconButton className={classes.navButton} onClick={() => setShareOpen(true)}>
+            <img
+              src="/img/top-nav/share.svg"
+              border="0"
+              style={{ width: "16px", height: "16px" }}
+            />
+          </IconButton>
 
           {/* Right section */}
           <div className={classes.rightSection}>
@@ -831,6 +840,7 @@ const MainPage = () => {
       <ExpensesDialog open={expensesOpen} onClose={() => setExpensesOpen(false)} />
       <GalleryDialog open={galleryOpen} onClose={() => setGalleryOpen(false)} />
       <ChatDialog open={chatOpen} onClose={() => setChatOpen(false)} />
+      <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} />
       {selectedDeviceId && (
         <DeviceInfoPanel
           deviceId={selectedDeviceId}

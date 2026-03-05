@@ -1,5 +1,7 @@
 import { Box } from "@mui/material";
 import { makeStyles } from "tss-react/mui";
+import { useSelector } from "react-redux";
+import { useMemo } from "react";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
@@ -100,6 +102,8 @@ const useStyles = makeStyles()((theme) => ({
 
 const AccuracyTab = ({ formData, onFormDataChange }) => {
   const { classes } = useStyles();
+  const devices = useSelector((state) => state.devices.items);
+  const deviceList = useMemo(() => Object.values(devices), [devices]);
 
   const handleAccurationAttributeChange = (field) => (event) => {
     const value = event.target.value;
@@ -332,6 +336,136 @@ const AccuracyTab = ({ formData, onFormDataChange }) => {
               min="0"
               step="0.1"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Virtual ACC Section */}
+      <div className={classes.row}>
+        <div className={classes.titleBlock}>Virtual ACC</div>
+
+        <div className={classes.row2}>
+          <div className={classes.width40}>Enable virtual ACC parameter depending on voltage (parameter &quot;accvirt&quot;)</div>
+          <div className={classes.width60}>
+            <div className={classes.checkboxWrapper}>
+              <input
+                type="checkbox"
+                className={classes.checkbox}
+                checked={formData.attributes?.accuration?.accvirtEnabled || false}
+                onChange={handleAccurationCheckboxChange("accvirtEnabled")}
+              />
+              <span style={{ fontSize: '11px', color: '#686868' }}>
+                {formData.attributes?.accuration?.accvirtEnabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {formData.attributes?.accuration?.accvirtEnabled && (
+          <>
+            <div className={classes.row2}>
+              <div className={classes.width40}>Voltage parameter name</div>
+              <div className={classes.width60}>
+                <input
+                  className={`${classes.inputbox} ${classes.width100}`}
+                  type="text"
+                  value={formData.attributes?.accuration?.accvirtParam || ""}
+                  onChange={handleAccurationInputChange("accvirtParam")}
+                  placeholder="e.g. power, io66, adc1"
+                />
+              </div>
+            </div>
+
+            <div className={classes.row2}>
+              <div className={classes.width40}>ACC = ON when parameter</div>
+              <div className={classes.width60}>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <select
+                    className={classes.select}
+                    style={{ width: '60px' }}
+                    value={formData.attributes?.accuration?.accvirtOnCondition || "gr"}
+                    onChange={handleAccurationAttributeChange("accvirtOnCondition")}
+                  >
+                    <option value="eq">=</option>
+                    <option value="gr">&gt;</option>
+                    <option value="lw">&lt;</option>
+                  </select>
+                  <input
+                    className={classes.inputbox}
+                    type="number"
+                    style={{ flex: 1 }}
+                    value={formData.attributes?.accuration?.accvirtOnValue ?? "12"}
+                    onChange={handleAccurationInputChange("accvirtOnValue")}
+                    step="0.1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className={classes.row2}>
+              <div className={classes.width40}>ACC = OFF when parameter</div>
+              <div className={classes.width60}>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <select
+                    className={classes.select}
+                    style={{ width: '60px' }}
+                    value={formData.attributes?.accuration?.accvirtOffCondition || "lw"}
+                    onChange={handleAccurationAttributeChange("accvirtOffCondition")}
+                  >
+                    <option value="eq">=</option>
+                    <option value="gr">&gt;</option>
+                    <option value="lw">&lt;</option>
+                  </select>
+                  <input
+                    className={classes.inputbox}
+                    type="number"
+                    style={{ flex: 1 }}
+                    value={formData.attributes?.accuration?.accvirtOffValue ?? "10"}
+                    onChange={handleAccurationInputChange("accvirtOffValue")}
+                    step="0.1"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Object Forwarding Section */}
+      <div className={classes.row}>
+        <div className={classes.titleBlock}>Object Forwarding</div>
+
+        <div className={classes.row2}>
+          <div className={classes.width40}>Forward this object&apos;s location data to another object</div>
+          <div className={classes.width60}>
+            <div className={classes.checkboxWrapper}>
+              <input
+                type="checkbox"
+                className={classes.checkbox}
+                checked={formData.attributes?.accuration?.forwardEnabled || false}
+                onChange={handleAccurationCheckboxChange("forwardEnabled")}
+              />
+              {formData.attributes?.accuration?.forwardEnabled ? (
+                <select
+                  className={`${classes.select}`}
+                  style={{ flex: 1 }}
+                  value={formData.attributes?.accuration?.forwardDeviceId || ""}
+                  onChange={handleAccurationAttributeChange("forwardDeviceId")}
+                >
+                  <option value="">-- Select target device --</option>
+                  {deviceList
+                    .filter((d) => d.id !== formData.id)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.uniqueId})
+                      </option>
+                    ))
+                  }
+                </select>
+              ) : (
+                <span style={{ fontSize: '11px', color: '#686868' }}>Disabled</span>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -5,15 +5,23 @@ import { map } from './core/MapView';
 import { findFonts } from './core/mapUtil';
 import { useAttributePreference } from '../common/util/preferences';
 
-const MapRouteCoordinates = ({ name, coordinates, deviceId, isHistoryRoute }) => {
+const MapRouteCoordinates = ({ name, coordinates, deviceId, isHistoryRoute, isHighlightedSegment }) => {
   const id = useId();
 
   const theme = useTheme();
 
+  const user = useSelector((state) => state.session.user);
+
   const reportColor = useSelector((state) => {
-    // For history routes, always use red
+    // For highlighted segments, use routeHistoryColor (default blue, like V1's map_rhc)
+    if (isHighlightedSegment) {
+      const historyColor = user?.attributes?.map?.routeHistoryColor;
+      return historyColor ? `#${historyColor}` : '#0000FF';
+    }
+    // For history routes, use user's route color setting (default red)
     if (isHistoryRoute) {
-      return '#FF0000';
+      const userRouteColor = user?.attributes?.map?.routeColor;
+      return userRouteColor ? `#${userRouteColor}` : '#FF0000';
     }
     
     const attributes = state.devices.items[deviceId]?.attributes;
@@ -29,8 +37,13 @@ const MapRouteCoordinates = ({ name, coordinates, deviceId, isHistoryRoute }) =>
   const mapLineWidth = useAttributePreference('mapLineWidth', 2);
   const mapLineOpacity = useAttributePreference('mapLineOpacity', 1);
   
-  // Use thicker line for history routes
-  const lineWidth = isHistoryRoute ? mapLineWidth + 1 : mapLineWidth;
+  // Use thicker line for history routes, even thicker for highlighted segments
+  let lineWidth = mapLineWidth;
+  if (isHighlightedSegment) {
+    lineWidth = mapLineWidth + 3;
+  } else if (isHistoryRoute) {
+    lineWidth = mapLineWidth + 1;
+  }
 
   useEffect(() => {
     map.addSource(id, {

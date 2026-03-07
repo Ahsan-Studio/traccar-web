@@ -1,7 +1,7 @@
 import {
   useState, useMemo, useEffect, useRef, useCallback,
 } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   TextField,
@@ -149,6 +149,11 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   const [pickedLocation, setPickedLocation] = useState(null);
   const [selectedIcon, setSelectedIcon] = useState('pin-1.svg');
   const [expandedGroups, setExpandedGroups] = useState({});
+
+  // Read user's group collapsed preference for markers
+  const groupsDefaultCollapsed = useSelector(
+    (state) => !!state.session.user?.attributes?.groupCollapsed?.markers
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [totalPages, setTotalPages] = useState(0);
@@ -221,7 +226,10 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   }, [refreshVersion]);
 
   const toggleGroup = (groupId) => {
-    setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+    setExpandedGroups((prev) => {
+      const currentlyExpanded = groupId in prev ? prev[groupId] : !groupsDefaultCollapsed;
+      return { ...prev, [groupId]: !currentlyExpanded };
+    });
   };
 
   const handleGroupVisibilityToggle = (ids, event) => {
@@ -260,21 +268,21 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
     const result = [];
     if (ungrouped.length > 0) {
       const gId = 'ungrouped';
-      const expanded = expandedGroups[gId] !== false;
+      const expanded = gId in expandedGroups ? expandedGroups[gId] : !groupsDefaultCollapsed;
       result.push({
         type: 'header', groupId: gId, content: 'Ungrouped', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((m) => m.id),
       });
       if (expanded) ungrouped.forEach((m) => result.push({ type: 'item', content: m }));
     }
     Object.entries(markerGroups).forEach(([gId, group]) => {
-      const expanded = expandedGroups[gId] !== false;
+      const expanded = gId in expandedGroups ? expandedGroups[gId] : !groupsDefaultCollapsed;
       result.push({
         type: 'header', groupId: gId, content: group.name, count: group.markers.length, isExpanded: expanded, itemIds: group.markers.map((m) => m.id),
       });
       if (expanded) group.markers.forEach((m) => result.push({ type: 'item', content: m }));
     });
     return result;
-  }, [items, groups, search, expandedGroups]);
+  }, [items, groups, search, expandedGroups, groupsDefaultCollapsed]);
 
   const handleToggleVisibility = (id) => {
     const nowVisible = !visibleItems.includes(id);

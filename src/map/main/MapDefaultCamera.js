@@ -4,22 +4,65 @@ import { useSelector } from 'react-redux';
 import { usePreference } from '../../common/util/preferences';
 import { map } from '../core/MapView';
 
+const MAP_POS_KEY = 'gs_map_last_position';
+
 const MapDefaultCamera = ({ mapReady }) => {
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const positions = useSelector((state) => state.session.positions);
+  const user = useSelector((state) => state.session.user);
 
   const defaultLatitude = usePreference('latitude');
   const defaultLongitude = usePreference('longitude');
   const defaultZoom = usePreference('zoom', 0);
 
+  const startupPosition = user?.attributes?.map?.startupPosition || 'Fit objects';
+
   const [initialized, setInitialized] = useState(false);
+
+  /* Persist map position for "Last position" mode */
+  useEffect(() => {
+    if (!mapReady || startupPosition !== 'Last position') return;
+    const onMoveEnd = () => {
+      const c = map.getCenter();
+      try {
+        localStorage.setItem(MAP_POS_KEY, JSON.stringify({ lng: c.lng, lat: c.lat, zoom: map.getZoom() }));
+      } catch { /* ignore */ }
+    };
+    map.on('moveend', onMoveEnd);
+    return () => { map.off('moveend', onMoveEnd); };
+  }, [mapReady, startupPosition]);
 
   useEffect(() => {
     if (!mapReady) return;
     if (selectedDeviceId) {
       setInitialized(true);
     } else if (!initialized) {
-      if (defaultLatitude && defaultLongitude) {
+      /* ── Last position: restore from localStorage ── */
+      if (startupPosition === 'Last position') {
+        try {
+          const saved = JSON.parse(localStorage.getItem(MAP_POS_KEY));
+          if (saved?.lng != null && saved?.lat != null) {
+            map.jumpTo({ center: [saved.lng, saved.lat], zoom: saved.zoom || 10 });
+            setInitialized(true);
+            return;
+          }
+        } catch { /* fall through to default */ }
+      }
+
+      /* ── Custom / Default: use server-configured lat/lng ── */
+      if (startupPosition === 'Custom' || startupPosition === 'Default') {
+        if (defaultLatitude && defaultLongitude) {
+          map.jumpTo({
+            center: [defaultLongitude, defaultLatitude],
+            zoom: defaultZoom,
+          });
+          setInitialized(true);
+          return;
+        }
+      }
+
+      /* ── Fit objects (default): fit all device positions ── */
+      if (defaultLatitude && defaultLongitude && startupPosition !== 'Fit objects') {
         map.jumpTo({
           center: [defaultLongitude, defaultLatitude],
           zoom: defaultZoom,
@@ -45,7 +88,7 @@ const MapDefaultCamera = ({ mapReady }) => {
         }
       }
     }
-  }, [selectedDeviceId, initialized, defaultLatitude, defaultLongitude, defaultZoom, positions, mapReady]);
+  }, [selectedDeviceId, initialized, defaultLatitude, defaultLongitude, defaultZoom, positions, mapReady, startupPosition]);
 
   return null;
 };

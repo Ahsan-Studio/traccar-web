@@ -25,7 +25,7 @@ import MapPlaybackMarker from '../map/MapPlaybackMarker';
 import MapRouteArrows from '../map/MapRouteArrows';
 import MapRouteDataPoints from '../map/MapRouteDataPoints';
 
-const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRoute, playbackPosition, routeToggles }) => {
+const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRoute, highlightedSegment, playbackPosition, routeToggles }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
 
@@ -71,6 +71,14 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRo
             )}
             {routeToggles?.dataPoints && (
               <MapRouteDataPoints positions={historyRoute.positions} />
+            )}
+            {highlightedSegment && highlightedSegment.length >= 2 && (
+              <MapRouteCoordinates
+                name="Highlighted Segment"
+                coordinates={highlightedSegment}
+                deviceId={historyRoute.deviceId}
+                isHighlightedSegment
+              />
             )}
             <MapCamera 
               key={`history-${historyRoute.deviceId}-${historyRoute.coordinates.length}`}

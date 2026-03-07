@@ -16,6 +16,7 @@ import {
   CustomMultiSelect,
 } from "../../common/components/custom";
 import { sessionActions } from "../../store/session";
+import { savePersistedState } from "../../common/util/usePersistedState";
 
 const useStyles = makeStyles()((theme) => ({
   container: {
@@ -181,6 +182,9 @@ const UserInterfaceTab = ({ onSave }) => {
   // Map
   const [mapStartupPosition, setMapStartupPosition] = useState("Fit objects");
   const [mapIconSize, setMapIconSize] = useState(1);
+  const [defaultMapLayer, setDefaultMapLayer] = useState("locationIqStreets");
+  const [googleApiKey, setGoogleApiKey] = useState("");
+  const [activeMapStyles, setActiveMapStyles] = useState("locationIqStreets,locationIqDark,openFreeMap");
   const [historyRouteColor, setHistoryRouteColor] = useState("FF0000");
   const [historyRouteHighlightColor, setHistoryRouteHighlightColor] = useState("0000FF");
   const [objectDetailsPopup, setObjectDetailsPopup] = useState(true);
@@ -272,6 +276,9 @@ const UserInterfaceTab = ({ onSave }) => {
         // Map
         setMapStartupPosition(attrs.map?.startupPosition || "Fit objects");
         setMapIconSize(Number(attrs.map?.iconSize) || 1);
+        setDefaultMapLayer(attrs.map?.defaultLayer || "locationIqStreets");
+        setGoogleApiKey(attrs.googleKey || "");
+        setActiveMapStyles(attrs.activeMapStyles || "locationIqStreets,locationIqDark,openFreeMap");
         setHistoryRouteColor(attrs.map?.routeColor || "FF0000");
         setHistoryRouteHighlightColor(attrs.map?.routeHistoryColor || "0000FF");
         setObjectDetailsPopup(attrs.map?.isObjectDetailPopupOnMouseHover !== false);
@@ -352,10 +359,17 @@ const UserInterfaceTab = ({ onSave }) => {
         map: {
           startupPosition: mapStartupPosition,
           iconSize: mapIconSize,
+          defaultLayer: defaultMapLayer,
           routeColor: historyRouteColor,
           routeHistoryColor: historyRouteHighlightColor,
           isObjectDetailPopupOnMouseHover: objectDetailsPopup,
         },
+        
+        // Google API key (top-level for useAttributePreference('googleKey'))
+        googleKey: googleApiKey || undefined,
+        
+        // Active map styles (top-level for useAttributePreference('activeMapStyles'))
+        activeMapStyles: activeMapStyles,
         
         // Groups
         groupCollapsed: {
@@ -412,6 +426,8 @@ const UserInterfaceTab = ({ onSave }) => {
       if (response.ok) {
         const updatedUser = await response.json();
         dispatch(sessionActions.updateUser(updatedUser));
+        // Persist selected map style to localStorage so MapView picks it up
+        savePersistedState('selectedMapStyle', defaultMapLayer);
         setSuccessMessage('User interface settings saved successfully');
         if (onSave) {
           onSave();
@@ -435,7 +451,8 @@ const UserInterfaceTab = ({ onSave }) => {
     };
   }, [
     pushNotifications, chatSound, openAfterLogin, mapStartupPosition,
-    mapIconSize, historyRouteColor, historyRouteHighlightColor, objectDetailsPopup,
+    mapIconSize, defaultMapLayer, googleApiKey, activeMapStyles,
+    historyRouteColor, historyRouteHighlightColor, objectDetailsPopup,
     collapsedObjects, collapsedMarkers, collapsedRoutes, collapsedZones,
     objectListDetails, noConnectionColor, noConnectionColorEnabled, stoppedColor,
     stoppedColorEnabled, movingColor, movingColorEnabled, engineIdleColor,
@@ -544,6 +561,56 @@ const UserInterfaceTab = ({ onSave }) => {
                 { value: 1.75, label: "175%" },
                 { value: 2, label: "200%" },
               ]}
+            />
+          </Box>
+
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Default map layer</Typography>
+            <CustomSelect
+              value={defaultMapLayer}
+              onChange={(value) => setDefaultMapLayer(value)}
+              options={[
+                { value: "openFreeMap", label: "OpenFreeMap" },
+                { value: "locationIqStreets", label: "LocationIQ Streets" },
+                { value: "locationIqDark", label: "LocationIQ Dark" },
+                { value: "osm", label: "OpenStreetMap" },
+                { value: "openTopoMap", label: "OpenTopoMap" },
+                { value: "carto", label: "Carto" },
+                { value: "googleRoad", label: "Google Road" },
+                { value: "googleSatellite", label: "Google Satellite" },
+                { value: "googleHybrid", label: "Google Hybrid" },
+              ]}
+            />
+          </Box>
+
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Active map layers</Typography>
+            <CustomMultiSelect
+              value={activeMapStyles.split(',').filter(Boolean)}
+              onChange={(values) => setActiveMapStyles(values.join(','))}
+              options={[
+                { value: "openFreeMap", label: "OpenFreeMap" },
+                { value: "locationIqStreets", label: "LocationIQ Streets" },
+                { value: "locationIqDark", label: "LocationIQ Dark" },
+                { value: "osm", label: "OpenStreetMap" },
+                { value: "openTopoMap", label: "OpenTopoMap" },
+                { value: "carto", label: "Carto" },
+                { value: "googleRoad", label: "Google Road" },
+                { value: "googleSatellite", label: "Google Satellite" },
+                { value: "googleHybrid", label: "Google Hybrid" },
+              ]}
+            />
+          </Box>
+
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>Google Maps API Key</Typography>
+            <CustomInput
+              type="text"
+              value={googleApiKey}
+              onChange={(e) => setGoogleApiKey(e.target.value)}
+              placeholder="Enter Google Maps API key (optional)"
+              size="small"
+              style={{ width: '300px' }}
             />
           </Box>
 

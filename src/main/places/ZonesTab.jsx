@@ -1,7 +1,7 @@
 import {
   useState, useMemo, useEffect, useRef, useCallback,
 } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   TextField,
@@ -144,6 +144,12 @@ const ZonesTab = ({ onFocusLocation, onCountChange }) => {
   const [editing, setEditing] = useState(null);
   const [groupsDialogOpen, setGroupsDialogOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({});
+
+  // Read user's group collapsed preference for zones
+  const groupsDefaultCollapsed = useSelector(
+    (state) => !!state.session.user?.attributes?.groupCollapsed?.zones
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [totalPages, setTotalPages] = useState(0);
@@ -213,7 +219,10 @@ const ZonesTab = ({ onFocusLocation, onCountChange }) => {
   }, [refreshVersion]);
 
   const toggleGroup = (groupId) => {
-    setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+    setExpandedGroups((prev) => {
+      const currentlyExpanded = groupId in prev ? prev[groupId] : !groupsDefaultCollapsed;
+      return { ...prev, [groupId]: !currentlyExpanded };
+    });
   };
 
   const handleGroupVisibilityToggle = (ids, event) => {
@@ -252,21 +261,21 @@ const ZonesTab = ({ onFocusLocation, onCountChange }) => {
     const result = [];
     if (ungrouped.length > 0) {
       const gId = 'ungrouped';
-      const expanded = expandedGroups[gId] !== false;
+      const expanded = gId in expandedGroups ? expandedGroups[gId] : !groupsDefaultCollapsed;
       result.push({
         type: 'header', groupId: gId, content: 'Ungrouped', count: ungrouped.length, isExpanded: expanded, itemIds: ungrouped.map((z) => z.id),
       });
       if (expanded) ungrouped.forEach((z) => result.push({ type: 'item', content: z }));
     }
     Object.entries(zoneGroups).forEach(([gId, group]) => {
-      const expanded = expandedGroups[gId] !== false;
+      const expanded = gId in expandedGroups ? expandedGroups[gId] : !groupsDefaultCollapsed;
       result.push({
         type: 'header', groupId: gId, content: group.name, count: group.zones.length, isExpanded: expanded, itemIds: group.zones.map((z) => z.id),
       });
       if (expanded) group.zones.forEach((z) => result.push({ type: 'item', content: z }));
     });
     return result;
-  }, [items, groups, search, expandedGroups]);
+  }, [items, groups, search, expandedGroups, groupsDefaultCollapsed]);
 
   const handleToggleVisibility = (id) => {
     const nowVisible = !visibleItems.includes(id);

@@ -9,7 +9,7 @@ import { useAttributePreference } from '../common/util/preferences';
 import { speedFromKnots, altitudeFromMeters, distanceFromMeters } from '../common/util/converter';
 import { map } from '../map/core/MapView';
 
-const HistoryTab = ({ onRouteChange, historyTrigger }) => {
+const HistoryTab = ({ onRouteChange, onSegmentHighlight, historyTrigger }) => {
   const devices = useSelector((state) => state.devices.items);
   
   const speedUnit = useAttributePreference('speedUnit', 'kmh');
@@ -198,6 +198,9 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
     setRouteData([]);
     setStops([]);
     setSelectedPosition(null);
+    if (onSegmentHighlight) {
+      onSegmentHighlight(null);
+    }
     if (onRouteChange) {
       onRouteChange(null);
     }
@@ -705,6 +708,20 @@ const HistoryTab = ({ onRouteChange, historyTrigger }) => {
                             zoom: Math.max(map.getZoom(), 14),
                             duration: 1000,
                           });
+                        }
+                        // Highlight segment on map (like V1's historyRouteShowDrive)
+                        if (onSegmentHighlight && routeData.length > 0) {
+                          const startIdx = originalIndex;
+                          const endIdx = segment.segmentEndIndex != null ? segment.segmentEndIndex : originalIndex;
+                          const segCoords = [];
+                          for (let si = startIdx; si <= Math.min(endIdx, routeData.length - 1); si += 1) {
+                            segCoords.push([routeData[si].longitude, routeData[si].latitude]);
+                          }
+                          if (segCoords.length >= 2) {
+                            onSegmentHighlight(segCoords);
+                          } else {
+                            onSegmentHighlight(null);
+                          }
                         }
                       }}
                       onMouseEnter={(e) => {

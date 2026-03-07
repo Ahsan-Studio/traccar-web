@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { makeStyles } from "tss-react/mui";
 import { useTranslation } from '../common/components/LocalizationProvider';
-import { formatSpeed } from '../common/util/formatter';
+import { formatSpeed, formatTime } from '../common/util/formatter';
 import {
   IconButton,
   Tooltip,
@@ -209,6 +209,18 @@ const DeviceRow = ({
   const devicePrimary = useAttributePreference("devicePrimary", "name");
   const speedUnit = useAttributePreference('speedUnit', 'kmh');
 
+  // Determine secondary text based on objectList.detail setting
+  const secondaryText = useMemo(() => {
+    const detailType = objectListSettings.detail || 'deviceStatus';
+    if (detailType === 'deviceTime' && position?.deviceTime) {
+      return formatTime(position.deviceTime, 'seconds');
+    }
+    if (detailType === 'serverTime' && position?.serverTime) {
+      return formatTime(position.serverTime, 'seconds');
+    }
+    return deviceStatus.text;
+  }, [objectListSettings.detail, position?.deviceTime, position?.serverTime, deviceStatus.text]);
+
   return (
     <div style={style}>
       <ListItemButton
@@ -293,7 +305,7 @@ const DeviceRow = ({
         <Box sx={{ flex: 1 }}>
           <ListItemText
             primary={item[devicePrimary]}
-            secondary={deviceStatus.text}
+            secondary={secondaryText}
             slots={{
               primary: Typography,
               secondary: Typography,

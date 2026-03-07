@@ -46,6 +46,11 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
   const visibility = useSelector((state) => state.devices.visibility);
   const focused = useSelector((state) => state.devices.focused);
 
+  // Read user's group collapsed preference for objects
+  const groupsDefaultCollapsed = useSelector(
+    (state) => !!state.session.user?.attributes?.groupCollapsed?.objects
+  );
+
   const [, setTime] = useState(Date.now());
   const [expandedGroups, setExpandedGroups] = useState({});
 
@@ -57,11 +62,11 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
   }, []);
 
   const toggleGroup = useCallback((groupId) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId]
-    }));
-  }, []);
+    setExpandedGroups(prev => {
+      const currentlyExpanded = groupId in prev ? prev[groupId] : !groupsDefaultCollapsed;
+      return { ...prev, [groupId]: !currentlyExpanded };
+    });
+  }, [groupsDefaultCollapsed]);
 
   const handleGroupVisibilityToggle = useCallback((deviceIds, event) => {
     event.stopPropagation();
@@ -179,7 +184,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
     // Add ungrouped section
     if (ungrouped.length > 0) {
       const groupId = 'ungrouped';
-      const isExpanded = expandedGroups[groupId] !== false; // Default expanded
+      const isExpanded = groupId in expandedGroups ? expandedGroups[groupId] : !groupsDefaultCollapsed;
       
       result.push({ 
         type: 'header', 
@@ -198,7 +203,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
 
     // Add grouped sections
     Object.entries(deviceGroups).forEach(([groupId, group]) => {
-      const isExpanded = expandedGroups[groupId] !== false; // Default expanded
+      const isExpanded = groupId in expandedGroups ? expandedGroups[groupId] : !groupsDefaultCollapsed;
       
       result.push({ 
         type: 'header', 
@@ -217,7 +222,7 @@ const DeviceList = ({ devices, onShowHistory, onShowSendCommand }) => {
     });
 
     return result;
-  }, [devices, groups, expandedGroups]);
+  }, [devices, groups, expandedGroups, groupsDefaultCollapsed]);
 
   // Row heights: header 23px, device 33px
 

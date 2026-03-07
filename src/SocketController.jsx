@@ -23,6 +23,11 @@ const SocketController = () => {
   const authenticated = useSelector((state) => Boolean(state.session.user));
   const includeLogs = useSelector((state) => state.session.includeLogs);
 
+  // Desktop push notification setting
+  const enablePushNotif = useSelector(
+    (state) => !!state.session.user?.attributes?.enablePushNotif
+  );
+
   const socketRef = useRef();
 
   const [notifications, setNotifications] = useState([]);
@@ -32,6 +37,15 @@ const SocketController = () => {
 
   const features = useFeatures();
 
+  // Request browser notification permission when push notifications are enabled
+  useEffect(() => {
+    if (authenticated && enablePushNotif && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, [authenticated, enablePushNotif]);
+
   const handleEvents = useCallback((events) => {
     if (!features.disableEvents) {
       dispatch(eventsActions.add(events));
@@ -40,12 +54,27 @@ const SocketController = () => {
         || (e.type === 'alarm' && soundAlarms.includes(e.attributes.alarm)))) {
       new Audio(alarm).play();
     }
+    // Show desktop push notifications if enabled and permission granted
+    if (enablePushNotif && 'Notification' in window && Notification.permission === 'granted') {
+      events.forEach((event) => {
+        const message = event.attributes?.message || event.type || 'New event';
+        try {
+          new Notification('GPS Tracking Event', {
+            body: message,
+            icon: '/favicon.ico',
+            tag: `event-${event.id}`,
+          });
+        } catch {
+          // Notifications may not be available in all contexts
+        }
+      });
+    }
     setNotifications(events.map((event) => ({
       id: event.id,
       message: event.attributes.message,
       show: true,
     })));
-  }, [features, dispatch, soundEvents, soundAlarms]);
+  }, [features, dispatch, soundEvents, soundAlarms, enablePushNotif]);
 
   const connectSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

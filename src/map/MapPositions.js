@@ -4,6 +4,7 @@ import {
 import { useSelector } from 'react-redux';
 import { useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import maplibregl from 'maplibre-gl';
 import { map } from './core/MapView';
 import { formatTime, getStatusColor } from '../common/util/formatter';
 import { mapIconKey } from './core/preloadImages';
@@ -50,6 +51,12 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
 
   const mapCluster = useAttributePreference('mapCluster', true);
   const directionType = useAttributePreference('mapDirection', 'selected');
+
+  // Cluster hover popup setting
+  const clusterPopupEnabled = useSelector(
+    (state) => !!state.session.user?.attributes?.map?.isObjectDetailPopupOnMouseHover
+  );
+  const clusterPopupRef = useRef(null);
 
   const createFeature = useCallback((devices, position, selectedPositionId) => {
     const device = devices[position.deviceId];
@@ -127,6 +134,46 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
       zoom,
     });
   }, [clusters]);
+
+  // Cluster hover popup handlers
+  const onClusterMouseEnter = useCallback(async (event) => {
+    if (!clusterPopupEnabled) return;
+    const features = map.queryRenderedFeatures(event.point, { layers: [clusters] });
+    if (!features.length) return;
+    const clusterId = features[0].properties.cluster_id;
+    const coordinates = features[0].geometry.coordinates.slice();
+
+    try {
+      const leaves = await new Promise((resolve, reject) => {
+        map.getSource(id).getClusterLeaves(clusterId, 20, 0, (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        });
+      });
+
+      const names = leaves.map((f) => f.properties.name || 'Unknown').join('<br/>');
+      const html = `<div style="font-size:11px;max-height:200px;overflow:auto;padding:2px 4px">${names}</div>`;
+
+      // Remove existing popup
+      if (clusterPopupRef.current) {
+        clusterPopupRef.current.remove();
+      }
+
+      clusterPopupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
+        .setLngLat(coordinates)
+        .setHTML(html)
+        .addTo(map);
+    } catch {
+      // ignore errors
+    }
+  }, [clusterPopupEnabled, clusters, id]);
+
+  const onClusterMouseLeave = useCallback(() => {
+    if (clusterPopupRef.current) {
+      clusterPopupRef.current.remove();
+      clusterPopupRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     map.addSource(id, {
@@ -227,12 +274,16 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
     map.on('mouseenter', clusters, onMouseEnter);
     map.on('mouseleave', clusters, onMouseLeave);
     map.on('click', clusters, onClusterClick);
+    map.on('mouseenter', clusters, onClusterMouseEnter);
+    map.on('mouseleave', clusters, onClusterMouseLeave);
     map.on('click', onMapClickCallback);
 
     return () => {
       map.off('mouseenter', clusters, onMouseEnter);
       map.off('mouseleave', clusters, onMouseLeave);
       map.off('click', clusters, onClusterClick);
+      map.off('mouseenter', clusters, onClusterMouseEnter);
+      map.off('mouseleave', clusters, onClusterMouseLeave);
       map.off('click', onMapClickCallback);
 
       if (map.getLayer(clusters)) {
@@ -255,7 +306,7 @@ const MapPositions = ({ positions, onMapClick, onMarkerClick, showStatus, select
         }
       });
     };
-  }, [mapCluster, clusters, onMarkerClickCallback, onClusterClick]);
+  }, [mapCluster, clusters, onMarkerClickCallback, onClusterClick, onClusterMouseEnter, onClusterMouseLeave]);
 
   // Reactively update icon sizes when user changes the icon size setting
   useEffect(() => {

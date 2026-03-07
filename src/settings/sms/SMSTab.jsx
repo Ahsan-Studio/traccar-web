@@ -221,7 +221,7 @@ const SMSTab = ({ onSave }) => {
             <Typography className={classes.label}>WhatsApp Gateway type</Typography>
             <CustomSelect
               value={gatewayType}
-              onChange={(e) => setGatewayType(e.target.value)}
+              onChange={(val) => setGatewayType(val)}
               options={GATEWAY_TYPE_OPTIONS}
             />
           </Box>
@@ -261,28 +261,36 @@ const SMSTab = ({ onSave }) => {
           <Box className={classes.section}>
             <Typography className={classes.sectionTitle}>HTTP</Typography>
             <Typography className={classes.helpText}>
-              HTTP gateway is used to send WhatsApp messages through HTTP API. Configure the URL below with the appropriate parameters.
+              WhatsApp Gateway, which can send messages via HTTP GET should be used.
             </Typography>
             <Typography className={classes.helpText}>
-              Example: https://api.example.com/send?phone=%NUMBER%&amp;text=%TEXT%
+              WhatsApp Gateway URL example: http://WHATSAPP_GATEWAY/sendsms.php?username=USER&amp;password=PASSWORD&amp;number=%NUMBER%&amp;message=%MESSAGE%
             </Typography>
 
             <Box className={classes.formRow}>
               <Typography className={classes.label}>WhatsApp Gateway URL</Typography>
-              <CustomInput
+              <textarea
                 value={gatewayUrl}
                 onChange={(e) => setGatewayUrl(e.target.value)}
-                multiline
-                rows={3}
-                placeholder="Example: https://api.example.com/send?phone=%NUMBER%&text=%TEXT%"
-                style={{ flex: 1 }}
+                placeholder="ex. http://full_address_here"
+                style={{
+                  flex: 1,
+                  height: '75px',
+                  fontSize: '12px',
+                  fontFamily: 'inherit',
+                  border: '1px solid #ccc',
+                  padding: '6px 8px',
+                  resize: 'vertical',
+                  borderRadius: '2px',
+                }}
+                maxLength={2048}
               />
             </Box>
 
             <Box className={classes.section} style={{ marginTop: 16 }}>
               <Typography className={classes.sectionTitle}>Variables</Typography>
-              <Typography className={classes.helpText}>%NUMBER% - Phone number</Typography>
-              <Typography className={classes.helpText}>%TEXT% - Message text</Typography>
+              <Typography className={classes.helpText}>%NUMBER% - phone number, where WhatsApp message will be sent</Typography>
+              <Typography className={classes.helpText}>%MESSAGE% - text of WhatsApp message</Typography>
             </Box>
           </Box>
         )}

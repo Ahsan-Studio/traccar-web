@@ -223,6 +223,7 @@ const MainPage = () => {
 
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const positions = useSelector((state) => state.session.positions);
+  const user = useSelector((state) => state.session.user);
   const [filteredPositions, setFilteredPositions] = useState([]);
   const selectedPosition = useMemo(
     () => filteredPositions.find(
@@ -254,6 +255,14 @@ const MainPage = () => {
   const [objectControlDeviceId, setObjectControlDeviceId] = useState(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
+
+  // Auto-open dashboard on login if user setting enabled
+  useEffect(() => {
+    const attrs = user?.attributes;
+    if (attrs?.openDashboardAfterLogin) {
+      setDashboardOpen(true);
+    }
+  }, []); // run once on mount
   const [showPointOpen, setShowPointOpen] = useState(false);
   const [addressSearchOpen, setAddressSearchOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -267,6 +276,7 @@ const MainPage = () => {
   const [shareOpen, setShareOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [historyRoute, setHistoryRoute] = useState(null);
+  const [highlightedSegment, setHighlightedSegment] = useState(null);
   const [historyTrigger, setHistoryTrigger] = useState(null); // { deviceId, period }
   const [routeToggles, setRouteToggles] = useState({ route: true, stops: true, events: true, arrows: false, dataPoints: false, snap: false });
   const [snappedCoordinates, setSnappedCoordinates] = useState(null);
@@ -326,6 +336,7 @@ const MainPage = () => {
   useEffect(() => {
     if (!historyRoute) {
       setPlaybackPosition(null);
+      setHighlightedSegment(null);
       setSnappedCoordinates(null);
       snapCacheRef.current = null;
       setRouteToggles({ route: true, stops: true, events: true, arrows: false, dataPoints: false, snap: false });
@@ -783,6 +794,7 @@ const MainPage = () => {
           {currentTab === 3 && (
             <HistoryTab
               onRouteChange={setHistoryRoute}
+              onSegmentHighlight={setHighlightedSegment}
               historyTrigger={historyTrigger}
             />
           )}
@@ -796,6 +808,7 @@ const MainPage = () => {
               selectedPosition={selectedPosition}
               onEventsClick={onEventsClick}
               historyRoute={effectiveHistoryRoute}
+              highlightedSegment={highlightedSegment}
               playbackPosition={playbackPosition}
               routeToggles={routeToggles}
             />

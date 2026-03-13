@@ -4,5 +4,9 @@
 			"path": ".."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"Codegeex.SidebarUI.LanguagePreference": "English",
+		"Codegeex.CommitMessage.LanguagePreference": "English",
+		"Codegeex.RepoIndex": true
+	}
 }

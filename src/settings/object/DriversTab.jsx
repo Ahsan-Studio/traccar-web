@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { Snackbar, Alert } from "@mui/material";
 import { CustomTable } from "../../common/components/custom";
 import EditDriverDialog from "./EditDriverDialog";
 import RemoveDialog from "../../common/components/RemoveDialog";
 import { driversActions } from "../../store";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
+import { exportConfig, importConfig } from "../../common/util/configExport";
 
 const DriversTab = () => {
   const dispatch = useDispatch();
@@ -14,6 +16,8 @@ const DriversTab = () => {
   const [editingDriver, setEditingDriver] = useState(null);
   const [removingId, setRemovingId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const importRef = useRef(null);
 
   const drivers = useSelector((state) => state.drivers.items);
 
@@ -96,8 +100,33 @@ const DriversTab = () => {
     setEditingDriver(null);
   };
 
+  const handleExport = async () => {
+    try {
+      await exportConfig('odr');
+      setSnackbar({ open: true, message: 'Drivers exported', severity: 'success' });
+    } catch (err) {
+      setSnackbar({ open: true, message: `Export failed: ${err.message}`, severity: 'error' });
+    }
+  };
+
+  const handleImport = () => importRef.current?.click();
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const result = await importConfig('odr', file);
+      setSnackbar({ open: true, message: `Imported ${result.imported} drivers`, severity: 'success' });
+      await handleRefresh();
+    } catch (err) {
+      setSnackbar({ open: true, message: `Import failed: ${err.message}`, severity: 'error' });
+    }
+    e.target.value = '';
+  };
+
   return (
     <>
+      <input type="file" ref={importRef} style={{ display: 'none' }} accept=".odr,.json" onChange={handleImportFile} />
       <CustomTable
         rows={filteredDrivers}
         columns={columns}
@@ -108,6 +137,8 @@ const DriversTab = () => {
         onDelete={handleDelete}
         onAdd={handleAdd}
         onRefresh={handleRefresh}
+        onExport={handleExport}
+        onImport={handleImport}
         loading={loading}
         showSearch={true}
         search={searchTerm}
@@ -136,6 +167,9 @@ const DriversTab = () => {
           }
         }}
       />
+      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} variant="filled" sx={{ fontSize: '12px' }}>{snackbar.message}</Alert>
+      </Snackbar>
     </>
   );
 };

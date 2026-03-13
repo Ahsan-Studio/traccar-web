@@ -1,8 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import {
+ useState, useMemo, useEffect, useRef 
+} from "react";
+import { Snackbar, Alert } from "@mui/material";
 import { CustomTable } from "../../common/components/custom";
 import TemplateDialog from "./TemplateDialog";
 import fetchOrThrow from "../../common/util/fetchOrThrow";
 import RemoveDialog from "../../common/components/RemoveDialog";
+import { exportConfig, importConfig } from "../../common/util/configExport";
 
 const TemplatesTab = () => {
   const [items, setItems] = useState([]);
@@ -14,6 +18,8 @@ const TemplatesTab = () => {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removing, setRemoving] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const importRef = useRef(null);
 
   // Fetch templates from API
   useEffect(() => {
@@ -121,6 +127,18 @@ const TemplatesTab = () => {
 
   return (
     <>
+      <input type="file" ref={importRef} style={{ display: 'none' }} accept=".tem,.json" onChange={async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          const result = await importConfig('tem', file);
+          setSnackbar({ open: true, message: `Imported ${result.imported} templates`, severity: 'success' });
+          setRefreshVersion((v) => v + 1);
+        } catch (err) {
+          setSnackbar({ open: true, message: `Import failed: ${err.message}`, severity: 'error' });
+        }
+        e.target.value = '';
+      }} />
       <CustomTable
         rows={rows}
         columns={columns}
@@ -133,6 +151,15 @@ const TemplatesTab = () => {
         search={search}
         onSearchChange={setSearch}
         onAdd={onAdd}
+        onExport={async () => {
+          try {
+            await exportConfig('tem');
+            setSnackbar({ open: true, message: 'Templates exported', severity: 'success' });
+          } catch (err) {
+            setSnackbar({ open: true, message: `Export failed: ${err.message}`, severity: 'error' });
+          }
+        }}
+        onImport={() => importRef.current?.click()}
         onOpenSettings={() => {}}
       />
       <TemplateDialog
@@ -151,6 +178,9 @@ const TemplatesTab = () => {
           if (ok) setRefreshVersion((v) => v + 1);
         }}
       />
+      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setSnackbar(s => ({ ...s, open: false }))} severity={snackbar.severity} variant="filled" sx={{ fontSize: '12px' }}>{snackbar.message}</Alert>
+      </Snackbar>
     </>
   );
 };

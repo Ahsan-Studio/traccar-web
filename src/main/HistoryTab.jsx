@@ -233,6 +233,41 @@ const HistoryTab = ({ onRouteChange, onSegmentHighlight, historyTrigger }) => {
     window.location.assign(`/api/reports/route/xlsx?${query.toString()}`);
   };
 
+//   const handleExportGpx = () => {
+//     if (!routeData.length) {
+//       alert('No route data to export. Please load a route first.');
+//       return;
+//     }
+//     const deviceName = devices[selectedDevice]?.name || `Device_${selectedDevice}`;
+//     const gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+// <gpx version="1.1" creator="GSI Tracking"
+//   xmlns="http://www.topografix.com/GPX/1/1"
+//   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+//   xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+//   <metadata>
+//     <name>${deviceName} Route</name>
+//     <time>${new Date().toISOString()}</time>
+//   </metadata>
+//   <trk>
+//     <name>${deviceName}</name>
+//     <trkseg>
+// ${routeData.map((p) => `      <trkpt lat="${p.latitude}" lon="${p.longitude}">
+//         <ele>${p.altitude || 0}</ele>
+//         <time>${p.fixTime}</time>
+//         <speed>${(p.speed * 0.514444).toFixed(2)}</speed>
+//       </trkpt>`).join('\n')}
+//     </trkseg>
+//   </trk>
+// </gpx>`;
+//     const blob = new Blob([gpxContent], { type: 'application/gpx+xml' });
+//     const url = URL.createObjectURL(blob);
+//     const a = document.createElement('a');
+//     a.href = url;
+//     a.download = `${deviceName}_${dateFrom}_${dateTo}.gpx`;
+//     a.click();
+//     URL.revokeObjectURL(url);
+//   };
+
   // Helper function to determine row type and icon
   const getRowType = (position, index, allPositions) => {
     if (!position) {
@@ -665,6 +700,14 @@ const HistoryTab = ({ onRouteChange, onSegmentHighlight, historyTrigger }) => {
           >
             Import/Export
           </CustomButton>
+          {/* <CustomButton
+            variant="outlined"
+            onClick={handleExportGpx}
+            style={{ width: '80px' }}
+            disabled={!routeData.length}
+          >
+            GPX
+          </CustomButton> */}
         </div>
       </div>
 

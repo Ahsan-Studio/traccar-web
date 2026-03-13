@@ -55,6 +55,8 @@ import ExpensesDialog from "./ExpensesDialog";
 import GalleryDialog from "./GalleryDialog";
 import ChatDialog from "./ChatDialog";
 import ShareDialog from "./ShareDialog";
+import BillingDialog from "./BillingDialog";
+import CpanelDialog from "./CpanelDialog";
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -224,6 +226,9 @@ const MainPage = () => {
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const positions = useSelector((state) => state.session.positions);
   const user = useSelector((state) => state.session.user);
+
+  // Active theme brand colors from palette
+  const brandColors = theme.palette.brand;
   const [filteredPositions, setFilteredPositions] = useState([]);
   const selectedPosition = useMemo(
     () => filteredPositions.find(
@@ -255,14 +260,25 @@ const MainPage = () => {
   const [objectControlDeviceId, setObjectControlDeviceId] = useState(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [billingOpen, setBillingOpen] = useState(false);
+  const [cpanelOpen, setCpanelOpen] = useState(false);
+  const [cpanelShownOnce, setCpanelShownOnce] = usePersistedState('cpanelShownOnce', false);
 
-  // Auto-open dashboard on login if user setting enabled
+  // Auto-open CPanel for admin only once per session, or dashboard if user setting enabled
   useEffect(() => {
-    const attrs = user?.attributes;
-    if (attrs?.openDashboardAfterLogin) {
-      setDashboardOpen(true);
+    if (user?.administrator) {
+      // Only open cpanel if it hasn't been shown yet in this session
+      if (!cpanelShownOnce) {
+        setCpanelOpen(true);
+        setCpanelShownOnce(true);
+      }
+    } else {
+      const attrs = user?.attributes;
+      if (attrs?.openDashboardAfterLogin) {
+        setDashboardOpen(true);
+      }
     }
-  }, []); // run once on mount
+  }, [user, cpanelShownOnce, setCpanelShownOnce]);
   const [showPointOpen, setShowPointOpen] = useState(false);
   const [addressSearchOpen, setAddressSearchOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -292,6 +308,49 @@ const MainPage = () => {
   const handleShowSendCommand = useCallback((deviceId) => {
     setObjectControlDeviceId(deviceId);
     setObjectControlOpen(true);
+  }, []);
+
+  // Context menu handlers for MapContextMenu
+  const handleMapShowPoint = useCallback((lat, lng) => {
+    if (map) {
+      map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 16), duration: 1000 });
+    }
+  }, []);
+
+  const handleMapNewMarker = useCallback((lat, lng) => {
+    setCurrentTab(2); // Places tab
+    setPlacesTab(0);  // Markers sub-tab
+    // Store coordinates for marker creation
+    window.__pendingMarker = { lat, lng };
+    window.dispatchEvent(new CustomEvent('newMarkerFromMap', { detail: { lat, lng } }));
+  }, []);
+
+  const handleMapNewRoute = useCallback((lat, lng) => {
+    setCurrentTab(2); // Places tab
+    setPlacesTab(1);  // Routes sub-tab
+    window.__pendingRoute = { lat, lng };
+    window.dispatchEvent(new CustomEvent('newRouteFromMap', { detail: { lat, lng } }));
+  }, []);
+
+  const handleMapNewZone = useCallback((lat, lng) => {
+    setCurrentTab(2); // Places tab
+    setPlacesTab(2);  // Zones sub-tab
+    window.__pendingZone = { lat, lng };
+    window.dispatchEvent(new CustomEvent('newZoneFromMap', { detail: { lat, lng } }));
+  }, []);
+
+  const handleMapNewTask = useCallback((lat, lng) => {
+    // Store the coordinates so TasksDialog can pick them up
+    window.__pendingTaskLocation = { lat, lng };
+    setTasksOpen(true);
+    // Trigger a new-task event after a short delay so the dialog opens first
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('newTaskFromMap', { detail: { lat, lng } }));
+    }, 300);
+  }, []);
+
+  const handleMapRouteBetweenPoints = useCallback(() => {
+    // Route between points is handled entirely within MapContextMenu (opens Google Maps)
   }, []);
 
   // Auto-select device when history route is loaded so DeviceInfoPanel shows
@@ -522,7 +581,15 @@ const MainPage = () => {
   return (
     <div className={classes.root}>
       {/* Navbar */}
-      <div className={classes.navbar}>
+      <div
+        className={classes.navbar}
+        style={brandColors ? {
+          backgroundColor: brandColors.topPanel,
+          borderBottomColor: brandColors.topBorder,
+          borderBottomWidth: 1,
+          borderBottomStyle: 'solid',
+        } : undefined}
+      >
         <Toolbar className={classes.toolbar}>
           {/* Left section */}
           <IconButton className={classes.navButton}>
@@ -539,6 +606,19 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          {/* <IconButton
+            className={classes.navButton}
+            onClick={() => {
+              const helpUrl = user?.attributes?.helpUrl || 'https://www.gps-server.net/getting-started-with-gps-tracking';
+              window.open(helpUrl, '_blank');
+            }}
+          >
+            <img
+              src="/img/top-nav/help.svg"
+              border="0"
+              style={{ width: "16px", height: "16px" }}
+            />
+          </IconButton> */}
           <IconButton
             className={classes.navButton}
             onClick={() => setSettingsOpen(true)}
@@ -549,6 +629,13 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          {/* <IconButton className={classes.navButton} onClick={() => setBillingOpen(true)}>
+            <img
+              src="/img/top-nav/billing.svg"
+              border="0"
+              style={{ width: "16px", height: "16px" }}
+            />
+          </IconButton> */}
           <IconButton className={classes.navButton} onClick={() => setDashboardOpen(true)}>
             <img
               src="/img/top-nav/dashboard.svg"
@@ -652,6 +739,15 @@ const MainPage = () => {
               flexItem
               className={classes.divider}
             />
+          {user?.administrator && (
+            <IconButton className={classes.navButton} onClick={() => setCpanelOpen(true)}>
+              <img
+                src="/img/top-nav/cpanel.svg"
+                border="0"
+                style={{ width: "16px", height: "16px" }}
+              />
+            </IconButton>
+          )}
             {/* <Tooltip title="Logout"> */}
             <IconButton
               className={classes.navButton}
@@ -811,6 +907,12 @@ const MainPage = () => {
               highlightedSegment={highlightedSegment}
               playbackPosition={playbackPosition}
               routeToggles={routeToggles}
+              onShowPoint={handleMapShowPoint}
+              onNewMarker={handleMapNewMarker}
+              onNewRoute={handleMapNewRoute}
+              onNewZone={handleMapNewZone}
+              onNewTask={handleMapNewTask}
+              onRouteBetweenPoints={handleMapRouteBetweenPoints}
             />
             {historyRoute && (
               <HistoryControls
@@ -854,6 +956,8 @@ const MainPage = () => {
       <GalleryDialog open={galleryOpen} onClose={() => setGalleryOpen(false)} />
       <ChatDialog open={chatOpen} onClose={() => setChatOpen(false)} />
       <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} />
+      <BillingDialog open={billingOpen} onClose={() => setBillingOpen(false)} />
+      <CpanelDialog open={cpanelOpen} onClose={() => setCpanelOpen(false)} />
       {selectedDeviceId && (
         <DeviceInfoPanel
           deviceId={selectedDeviceId}

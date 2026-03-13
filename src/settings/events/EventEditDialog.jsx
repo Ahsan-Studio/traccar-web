@@ -14,56 +14,15 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-
-// ──────────────────────────── Constants ────────────────────────────
-
-const EVENT_TYPES = [
-  { value: 'sos', label: 'SOS' },
-  { value: 'bracon', label: 'Bracelet On' },
-  { value: 'bracoff', label: 'Bracelet Off' },
-  { value: 'dismount', label: 'Dismount' },
-  { value: 'disassem', label: 'Disassemble' },
-  { value: 'door', label: 'Door' },
-  { value: 'mandown', label: 'Man Down' },
-  { value: 'shock', label: 'Shock' },
-  { value: 'tow', label: 'Tow' },
-  { value: 'pwrcut', label: 'Power Cut' },
-  { value: 'gpsantcut', label: 'GPS Antenna Cut' },
-  { value: 'jamming', label: 'Signal Jamming' },
-  { value: 'lowdc', label: 'Low DC' },
-  { value: 'lowbat', label: 'Low Battery' },
-  { value: 'connyes', label: 'Connection Yes' },
-  { value: 'connno', label: 'Connection No' },
-  { value: 'gpsyes', label: 'GPS Yes' },
-  { value: 'gpsno', label: 'GPS No' },
-  { value: 'stopped', label: 'Stopped' },
-  { value: 'moving', label: 'Moving' },
-  { value: 'engidle', label: 'Engine Idle' },
-  { value: 'overspeed', label: 'Overspeed' },
-  { value: 'underspeed', label: 'Underspeed' },
-  { value: 'haccel', label: 'Harsh Acceleration' },
-  { value: 'hbrake', label: 'Harsh Braking' },
-  { value: 'hcorn', label: 'Harsh Cornering' },
-  { value: 'driverch', label: 'Driver Change' },
-  { value: 'trailerch', label: 'Trailer Change' },
-  { value: 'param', label: 'Parameter' },
-  { value: 'sensor', label: 'Sensor' },
-  { value: 'service', label: 'Service' },
-  { value: 'dtc', label: 'Diagnostic Trouble Codes' },
-  { value: 'proximity', label: 'Proximity' },
-  { value: 'route_in', label: 'Route In' },
-  { value: 'route_out', label: 'Route Out' },
-  { value: 'zone_in', label: 'Zone In' },
-  { value: 'zone_out', label: 'Zone Out' },
-];
-
-// Type groups for conditional field visibility
-const TYPES_WITH_TIME_PERIOD = ['connno', 'gpsno', 'stopped', 'moving', 'engidle'];
-const TYPES_WITH_SPEED_LIMIT = ['overspeed', 'underspeed'];
-const TYPES_WITH_DISTANCE = ['proximity'];
-const TYPES_WITH_CONDITIONS = ['param', 'sensor'];
-const TYPES_ROUTE_ONLY = ['route_in', 'route_out'];
-const TYPES_ZONE_ONLY = ['zone_in', 'zone_out'];
+import {
+  CUSTOM_EVENT_TYPES as EVENT_TYPES,
+  TYPES_WITH_TIME_PERIOD,
+  TYPES_WITH_SPEED_LIMIT,
+  TYPES_WITH_DISTANCE,
+  TYPES_WITH_CONDITIONS,
+  TYPES_ROUTE_ONLY,
+  TYPES_ZONE_ONLY,
+} from '../../common/constants/eventTypes';
 
 
 const CONDITION_OPERATORS = [

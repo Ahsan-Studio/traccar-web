@@ -1,8 +1,10 @@
 import {
- useState, useEffect, useCallback, useMemo 
+ useState, useEffect, useCallback, useMemo, useRef 
 } from "react";
+import { Snackbar, Alert } from "@mui/material";
 import { CustomTable } from "../../common/components/custom";
 import TemplateFormDialog from "./TemplateFormDialog";
+import { exportConfig, importConfig } from "../../common/util/configExport";
 
 const TemplatesTab = ({ classes, showNotification }) => {
   const [templates, setTemplates] = useState([]);
@@ -11,6 +13,8 @@ const TemplatesTab = ({ classes, showNotification }) => {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const importRef = useRef(null);
   const [templateForm, setTemplateForm] = useState({
     description: "", type: "custom", textChannel: false,
     data: "", protocol: "", encoding: "ascii",
@@ -166,6 +170,34 @@ const TemplatesTab = ({ classes, showNotification }) => {
         search={search}
         onSearchChange={setSearch}
         onOpenSettings={() => {}}
+        onExport={async () => {
+          try {
+            await exportConfig('cte');
+            setSnackbar({ open: true, message: 'Command templates exported', severity: 'success' });
+          } catch (err) {
+            setSnackbar({ open: true, message: `Export failed: ${err.message}`, severity: 'error' });
+          }
+        }}
+        onImport={() => importRef.current?.click()}
+      />
+
+      <input
+        type="file"
+        ref={importRef}
+        accept=".cte,.json"
+        style={{ display: 'none' }}
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          try {
+            const result = await importConfig('cte', file);
+            setSnackbar({ open: true, message: `Imported ${result.imported} command template(s)`, severity: 'success' });
+            fetchTemplates();
+          } catch (err) {
+            setSnackbar({ open: true, message: `Import failed: ${err.message}`, severity: 'error' });
+          }
+          e.target.value = '';
+        }}
       />
 
       <TemplateFormDialog
@@ -178,6 +210,17 @@ const TemplatesTab = ({ classes, showNotification }) => {
         loading={loading}
         onSave={handleSave}
       />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar((s) => ({ ...s, open: false }))} severity={snackbar.severity} variant="filled" sx={{ fontSize: 12 }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

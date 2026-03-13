@@ -1,67 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import {
+ useState, useEffect, useCallback, useRef 
+} from 'react';
 import { Chip, Snackbar, Alert } from '@mui/material';
 import { CustomTable, BoolIcon } from '../../common/components/custom';
 import EventEditDialog from './EventEditDialog';
-
-const EVENT_TYPE_LABELS = {
-  sos: 'SOS',
-  bracon: 'Bracelet On',
-  bracoff: 'Bracelet Off',
-  dismount: 'Dismount',
-  disassem: 'Disassemble',
-  door: 'Door',
-  mandown: 'Man Down',
-  shock: 'Shock',
-  tow: 'Tow',
-  pwrcut: 'Power Cut',
-  gpsantcut: 'GPS Antenna Cut',
-  jamming: 'Signal Jamming',
-  lowdc: 'Low DC',
-  lowbat: 'Low Battery',
-  connyes: 'Connection Yes',
-  connno: 'Connection No',
-  gpsyes: 'GPS Yes',
-  gpsno: 'GPS No',
-  stopped: 'Stopped',
-  moving: 'Moving',
-  engidle: 'Engine Idle',
-  overspeed: 'Overspeed',
-  underspeed: 'Underspeed',
-  haccel: 'Harsh Acceleration',
-  hbrake: 'Harsh Braking',
-  hcorn: 'Harsh Cornering',
-  driverch: 'Driver Change',
-  trailerch: 'Trailer Change',
-  param: 'Parameter',
-  sensor: 'Sensor',
-  service: 'Service',
-  dtc: 'Diagnostic Trouble Codes',
-  proximity: 'Proximity',
-  route_in: 'Route In',
-  route_out: 'Route Out',
-  zone_in: 'Zone In',
-  zone_out: 'Zone Out',
-  // Legacy Traccar types (for backward compatibility)
-  deviceOnline: 'Device Online',
-  deviceUnknown: 'Device Unknown',
-  deviceOffline: 'Device Offline',
-  deviceInactive: 'Device Inactive',
-  deviceMoving: 'Device Moving',
-  deviceStopped: 'Device Stopped',
-  deviceOverspeed: 'Overspeed',
-  deviceFuelDrop: 'Fuel Drop',
-  deviceFuelIncrease: 'Fuel Increase',
-  geofenceEnter: 'Geofence Enter',
-  geofenceExit: 'Geofence Exit',
-  alarm: 'Alarm',
-  ignitionOn: 'Ignition On',
-  ignitionOff: 'Ignition Off',
-  maintenance: 'Maintenance',
-  textMessage: 'Text Message',
-  driverChanged: 'Driver Changed',
-  media: 'Media',
-  commandResult: 'Command Result',
-};
+import { EVENT_TYPE_LABELS } from '../../common/constants/eventTypes';
+import { importConfig } from '../../common/util/configExport';
 
 const EventsTab = () => {
   const [items, setItems] = useState([]);
@@ -71,6 +15,7 @@ const EventsTab = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const importRef = useRef(null);
 
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -199,8 +144,35 @@ const EventsTab = () => {
     showSnackbar(isEdit ? 'Event updated successfully' : 'Event created successfully');
   };
 
+  // const handleExport = async () => {
+  //   try {
+  //     await exportConfig('evt');
+  //     showSnackbar('Events exported successfully');
+  //   } catch (err) {
+  //     showSnackbar(`Export failed: ${err.message}`, 'error');
+  //   }
+  // };
+
+  // const handleImport = () => {
+  //   importRef.current?.click();
+  // };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const result = await importConfig('evt', file);
+      showSnackbar(`Imported ${result.imported} events${result.errors.length ? `, ${result.errors.length} errors` : ''}`);
+      await fetchItems();
+    } catch (err) {
+      showSnackbar(`Import failed: ${err.message}`, 'error');
+    }
+    e.target.value = '';
+  };
+
   return (
     <>
+      <input type="file" ref={importRef} style={{ display: 'none' }} accept=".evt,.json" onChange={handleImportFile} />
       <CustomTable
         rows={rows}
         columns={columns}
@@ -214,6 +186,8 @@ const EventsTab = () => {
         onSearchChange={setSearch}
         onAdd={onAdd}
         onRefresh={fetchItems}
+        // onExport={handleExport}
+        // onImport={handleImport}
         onOpenSettings={() => {}}
       />
       <EventEditDialog

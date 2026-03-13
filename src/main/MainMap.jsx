@@ -24,8 +24,11 @@ import MapRouteMarkers from '../map/MapRouteMarkers';
 import MapPlaybackMarker from '../map/MapPlaybackMarker';
 import MapRouteArrows from '../map/MapRouteArrows';
 import MapRouteDataPoints from '../map/MapRouteDataPoints';
+import MapContextMenu from '../map/MapContextMenu';
 
-const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRoute, highlightedSegment, playbackPosition, routeToggles }) => {
+const MainMap = ({
+ filteredPositions, selectedPosition, onEventsClick, historyRoute, highlightedSegment, playbackPosition, routeToggles, onShowPoint, onNewMarker, onNewRoute, onNewZone, onNewTask, onRouteBetweenPoints 
+}) => {
   const theme = useTheme();
   const dispatch = useDispatch();
 
@@ -94,6 +97,14 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick, historyRo
       <MapScale />
       <MapCurrentLocation />
       <MapGeocoder />
+      <MapContextMenu
+        onShowPoint={onShowPoint}
+        onNewMarker={onNewMarker}
+        onNewRoute={onNewRoute}
+        onNewZone={onNewZone}
+        onNewTask={onNewTask}
+        onRouteBetweenPoints={onRouteBetweenPoints}
+      />
       {!features.disableEvents && (
         <MapNotification enabled={eventsAvailable} onClick={onEventsClick} />
       )}

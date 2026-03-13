@@ -26,6 +26,7 @@ import { makeStyles } from 'tss-react/mui';
 import dayjs from 'dayjs';
 import fetchOrThrow from '../common/util/fetchOrThrow';
 import { EVENTS_HISTORY_PERIOD } from '../common/config/constants';
+import { getEventTypeLabel } from '../common/constants/eventTypes';
 import { devicesActions } from '../store';
 import { map } from '../map/core/MapView';
 
@@ -199,30 +200,9 @@ const EventsList = () => {
   const [pageSize, setPageSize] = useState(25);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Memoized event type mapping
+  // Memoized event type mapping — uses unified constants
   const getEventDescription = useCallback((event) => {
-    const eventTypeMap = {
-      deviceOnline: 'Device Online',
-      deviceOffline: 'Device Offline',
-      deviceUnknown: 'Unknown Status',
-      deviceInactive: 'Device Inactive',
-      deviceMoving: 'Device Moving',
-      deviceStopped: 'Device Stopped',
-      geofenceEnter: 'Geofence Enter',
-      geofenceExit: 'Geofence Exit',
-      deviceOverspeed: 'Overspeed',
-      deviceFuelDrop: 'Fuel Drop',
-      deviceFuelIncrease: 'Fuel Increase',
-      ignitionOn: 'Ignition On',
-      ignitionOff: 'Ignition Off',
-      alarm: 'Alarm',
-      maintenance: 'Maintenance',
-      driverChanged: 'Driver Changed',
-      commandResult: 'Command Result',
-      media: 'Media Received',
-    };
-    
-    return eventTypeMap[event.type] || event.type || 'Unknown event';
+    return getEventTypeLabel(event.type);
   }, []);
 
   // Memoized filtered events to avoid recalculating on every render

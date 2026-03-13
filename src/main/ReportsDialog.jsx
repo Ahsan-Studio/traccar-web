@@ -191,6 +191,12 @@ const refetchReportData = async (gen) => {
   if (!rt || !gen.deviceIds?.length || !gen.dateFrom || !gen.dateTo) return [];
   const from = new Date(gen.dateFrom).toISOString();
   const to = new Date(gen.dateTo).toISOString();
+
+  // RAG reports need route data to compute scores
+  if (gen.type === 'rag' || gen.type === 'rag_driver') {
+    return computeRagReport(gen.deviceIds, from, to);
+  }
+
   const allData = [];
   for (const devId of gen.deviceIds) {
     const url = `${rt.endpoint}?deviceId=${devId}&from=${from}&to=${to}`;
@@ -201,6 +207,77 @@ const refetchReportData = async (gen) => {
     }
   }
   return allData;
+};
+
+/** Compute RAG (Red/Amber/Green) driver behavior scores from route + event data */
+const computeRagReport = async (deviceIds, from, to) => {
+  const results = [];
+
+  for (const devId of deviceIds) {
+    // Fetch summary for distance
+    const summaryUrl = `/api/reports/summary?deviceId=${devId}&from=${from}&to=${to}`;
+    const summaryResp = await fetch(summaryUrl, { headers: { Accept: 'application/json' } });
+    const summaryData = summaryResp.ok ? await summaryResp.json() : [];
+
+    // Fetch route data for overspeed analysis
+    const routeUrl = `/api/reports/route?deviceId=${devId}&from=${from}&to=${to}`;
+    const routeResp = await fetch(routeUrl, { headers: { Accept: 'application/json' } });
+    const routeData = routeResp.ok ? await routeResp.json() : [];
+
+    // Fetch events for harsh acceleration/braking/cornering
+    const eventsUrl = `/api/reports/events?deviceId=${devId}&from=${from}&to=${to}`;
+    const eventsResp = await fetch(eventsUrl, { headers: { Accept: 'application/json' } });
+    const eventsData = eventsResp.ok ? await eventsResp.json() : [];
+
+    const summary = summaryData[0] || {};
+    const distanceKm = (summary.distance || 0) / 1000; // meters to km
+
+    // Compute overspeed duration (seconds where speed > speedLimit)
+    let overspeedMs = 0;
+    for (let i = 0; i < routeData.length - 1; i += 1) {
+      const pos = routeData[i];
+      const nextPos = routeData[i + 1];
+      const speedLimit = pos.attributes?.speedLimit || 0;
+      if (speedLimit > 0 && pos.speed > speedLimit) {
+        overspeedMs += new Date(nextPos.fixTime).getTime() - new Date(pos.fixTime).getTime();
+      }
+    }
+
+    // Count harsh events from alarms
+    let haccelCount = 0;
+    let hbrakeCount = 0;
+    let hcornCount = 0;
+    eventsData.forEach((ev) => {
+      const alarm = ev.attributes?.alarm || ev.type || '';
+      if (alarm.includes('hardAcceleration') || alarm.includes('haccel')) haccelCount += 1;
+      if (alarm.includes('hardBraking') || alarm.includes('hbrake')) hbrakeCount += 1;
+      if (alarm.includes('hardCornering') || alarm.includes('hcorn')) hcornCount += 1;
+    });
+
+    // Compute scores (V1 formula)
+    const overspeedScore = distanceKm > 0 ? ((overspeedMs / 10000) / distanceKm) * 100 : 0;
+    const haccelScore = distanceKm > 0 ? (haccelCount / distanceKm) * 100 : 0;
+    const hbrakeScore = distanceKm > 0 ? (hbrakeCount / distanceKm) * 100 : 0;
+    const hcornScore = distanceKm > 0 ? (hcornCount / distanceKm) * 100 : 0;
+    const ragScore = overspeedScore + haccelScore + hbrakeScore + hcornScore;
+
+    results.push({
+      deviceId: devId,
+      deviceName: summary.deviceName || `Device ${devId}`,
+      distance: summary.distance || 0,
+      _overspeedDuration: overspeedMs,
+      _overspeedScore: overspeedScore,
+      _haccelCount: haccelCount,
+      _haccelScore: haccelScore,
+      _hbrakeCount: hbrakeCount,
+      _hbrakeScore: hbrakeScore,
+      _hcornCount: hcornCount,
+      _hcornScore: hcornScore,
+      _ragScore: ragScore,
+    });
+  }
+
+  return results;
 };
 
 /* ─────────── HTML report generator (V1 parity) ─────────── */
@@ -754,12 +831,35 @@ const SUMMARY_COLUMNS = [
   { key: 'spentFuel', label: 'Fuel Used', format: (v) => (v ? `${v.toFixed(2)} L` : '') },
 ];
 
+// RAG (Red/Amber/Green) Driver Behavior columns
+const RAG_COLUMNS = [
+  { key: 'deviceName', label: 'Object' },
+  { key: 'distance', label: 'Route Length', format: formatDistance },
+  { key: '_overspeedDuration', label: 'Overspeed Duration', format: formatDuration },
+  { key: '_overspeedScore', label: 'Overspeed Score', format: (v) => (v != null ? v.toFixed(2) : '0.00') },
+  { key: '_haccelCount', label: 'Harsh Accel Count' },
+  { key: '_haccelScore', label: 'Harsh Accel Score', format: (v) => (v != null ? v.toFixed(2) : '0.00') },
+  { key: '_hbrakeCount', label: 'Harsh Brake Count' },
+  { key: '_hbrakeScore', label: 'Harsh Brake Score', format: (v) => (v != null ? v.toFixed(2) : '0.00') },
+  { key: '_hcornCount', label: 'Harsh Corner Count' },
+  { key: '_hcornScore', label: 'Harsh Corner Score', format: (v) => (v != null ? v.toFixed(2) : '0.00') },
+  {
+ key: '_ragScore', label: 'RAG', format: (v) => {
+    if (v == null) return '';
+    const score = parseFloat(v);
+    if (score <= 2.5) return `<span style="background:#00FF00;padding:2px 8px;font-weight:bold">GREEN (${score.toFixed(2)})</span>`;
+    if (score <= 5) return `<span style="background:#FFFF00;padding:2px 8px;font-weight:bold">AMBER (${score.toFixed(2)})</span>`;
+    return `<span style="background:#FF0000;color:white;padding:2px 8px;font-weight:bold">RED (${score.toFixed(2)})</span>`;
+  }, html: true 
+},
+];
+
 const RESULT_COLUMNS = {
   general: SUMMARY_COLUMNS, general_merged: SUMMARY_COLUMNS, object_info: SUMMARY_COLUMNS,
   current_position: SUMMARY_COLUMNS, current_position_off: SUMMARY_COLUMNS,
   mileage_daily: SUMMARY_COLUMNS, service: SUMMARY_COLUMNS,
   fuelfillings: SUMMARY_COLUMNS, fuelthefts: SUMMARY_COLUMNS,
-  rag: SUMMARY_COLUMNS, rag_driver: SUMMARY_COLUMNS, tasks: SUMMARY_COLUMNS, expenses: SUMMARY_COLUMNS,
+  rag: RAG_COLUMNS, rag_driver: RAG_COLUMNS, tasks: SUMMARY_COLUMNS, expenses: SUMMARY_COLUMNS,
   route: ROUTE_COLUMNS, route_data_sensors: ROUTE_COLUMNS,
   overspeed: ROUTE_COLUMNS, overspeed_count: ROUTE_COLUMNS,
   underspeed: ROUTE_COLUMNS, underspeed_count: ROUTE_COLUMNS, logic_sensors: ROUTE_COLUMNS,

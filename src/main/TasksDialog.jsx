@@ -4,10 +4,12 @@ import {
 import {
   Dialog, DialogTitle, DialogContent,
   IconButton, Typography, Box,
+  Snackbar, Alert,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
+import SendIcon from '@mui/icons-material/Send';
 import { useSelector } from 'react-redux';
 import {
   CustomTable, CustomSelect, CustomInput, CustomButton,
@@ -447,6 +449,25 @@ const TasksDialog = ({ open, onClose }) => {
     if (open) loadTasks();
   }, [open, loadTasks]);
 
+  /* Listen for newTaskFromMap event to auto-open add dialog with coordinates */
+  useEffect(() => {
+    const handler = (e) => {
+      const { lat, lng } = e.detail || {};
+      if (lat && lng) {
+        const addressStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        setEditTask({
+          ...emptyTask(),
+          startAddress: addressStr,
+          startLat: lat,
+          startLng: lng,
+        });
+        setPropsOpen(true);
+      }
+    };
+    window.addEventListener('newTaskFromMap', handler);
+    return () => window.removeEventListener('newTaskFromMap', handler);
+  }, []);
+
   /* Filter period change */
   const handleFilterChange = useCallback((val) => {
     setFilterPeriod(val);
@@ -562,6 +583,54 @@ const TasksDialog = ({ open, onClose }) => {
     URL.revokeObjectURL(url);
   }, [filteredTasks, getDeviceName]);
 
+  /* Snackbar for notifications */
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  /* Send task to device — delivers via custom command to the assigned device */
+  const handleSendToDevice = useCallback(async (row) => {
+    if (!row.deviceId) {
+      setSnackbar({ open: true, message: 'Task has no assigned device', severity: 'warning' });
+      return;
+    }
+    try {
+      const taskPayload = [
+        `Task: ${row.name || 'Untitled'}`,
+        row.startAddress ? `Start: ${row.startAddress}` : '',
+        row.endAddress ? `Destination: ${row.endAddress}` : '',
+        row.description ? `Description: ${row.description}` : '',
+        `Priority: ${PRIORITY_LABELS[row.priority] || row.priority}`,
+      ].filter(Boolean).join('\n');
+
+      const cmd = {
+        deviceId: parseInt(row.deviceId, 10),
+        type: 'custom',
+        attributes: {
+          data: taskPayload,
+        },
+      };
+
+      const res = await fetch('/api/commands/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cmd),
+      });
+
+      if (res.ok) {
+        // Mark task as delivered (status = 1 = In Progress)
+        if (row._serverId && String(row.status) === '0') {
+          await saveTaskApi({ ...row, status: '1' });
+          loadTasks();
+        }
+        setSnackbar({ open: true, message: `Task "${row.name}" sent to device`, severity: 'success' });
+      } else {
+        const errText = await res.text();
+        setSnackbar({ open: true, message: `Send failed: ${errText || res.statusText}`, severity: 'error' });
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: `Error: ${err.message}`, severity: 'error' });
+    }
+  }, [loadTasks]);
+
   /* Toggle helpers */
   const onToggleAll = useCallback(() => {
     setSelected((prev) => (prev.length === filteredTasks.length ? [] : filteredTasks.map((t) => t.id)));
@@ -584,10 +653,22 @@ const TasksDialog = ({ open, onClose }) => {
           <IconButton size="small" className={classes.closeButton} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
         </DialogTitle>
 
-        {/* ── Toolbar: Delete all, Export to CSV, Show ── */}
+        {/* ── Toolbar: Delete all, Export to CSV, Send to Device, Show ── */}
         <Box className={classes.toolbarButtons}>
           <CustomButton variant="outlined" onClick={handleDeleteAll} size="small">Delete all</CustomButton>
           <CustomButton variant="outlined" onClick={handleExportCSV} size="small">Export to CSV</CustomButton>
+          <CustomButton
+            variant="outlined"
+            icon={<SendIcon style={{ width: 14, height: 14 }} />}
+            onClick={() => {
+              const selTask = tasks.find((t) => selected.includes(t.id));
+              if (selTask) handleSendToDevice(selTask);
+              else setSnackbar({ open: true, message: 'Select a task first', severity: 'warning' });
+            }}
+            size="small"
+          >
+            Send to Device
+          </CustomButton>
           <CustomButton variant="outlined" onClick={loadTasks} size="small">Show</CustomButton>
         </Box>
 
@@ -647,6 +728,22 @@ const TasksDialog = ({ open, onClose }) => {
         task={editTask}
         devices={deviceList}
       />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ fontSize: 12 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

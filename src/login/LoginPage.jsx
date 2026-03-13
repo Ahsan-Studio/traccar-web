@@ -40,6 +40,7 @@ import { useCatch } from "../reactHelper";
 import QrCodeDialog from "../common/components/QrCodeDialog";
 import fetchOrThrow from "../common/util/fetchOrThrow";
 import useLoginStyles from "./useLoginStyles";
+import { getActiveTheme } from "../common/theme/activeTheme";
 
 const useStyles = makeStyles()((theme) => ({
   options: {
@@ -103,6 +104,13 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   const t = useTranslation();
+  const server = useSelector((state) => state.session.server);
+  const { active: themeActive, theme: activeTheme } = getActiveTheme(server);
+
+  // Dynamic login button style from active theme accent color 1
+  const loginButtonStyle = themeActive && activeTheme.ui_accent_color_1
+    ? { backgroundColor: activeTheme.ui_accent_color_1 }
+    : {};
 
   const { languages, language, setLanguage } = useLocalization();
   const languageList = useMemo(
@@ -197,6 +205,31 @@ const LoginPage = () => {
   };
 
   useEffect(() => nativePostMessage("authentication"), []);
+
+  // Auto-login via URL token (?au=TOKEN) — V1 parity
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const auToken = params.get('au');
+    if (auToken) {
+      (async () => {
+        try {
+          const response = await fetch(`/api/session/auto-login?au=${encodeURIComponent(auToken)}`);
+          if (response.ok) {
+            const user = await response.json();
+            dispatch(sessionActions.updateUser(user));
+            navigate('/', { replace: true });
+          } else {
+            console.error('Auto-login failed:', response.status);
+            // Remove the au param from URL so login page loads normally
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        } catch (error) {
+          console.error('Auto-login error:', error);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      })();
+    }
+  }, [dispatch, navigate]);
 
   useEffect(() => {
     const listener = (token) => handleTokenLogin(token);
@@ -334,6 +367,7 @@ const LoginPage = () => {
               variant="contained"
               fullWidth
               className={classes.loginButton}
+              style={loginButtonStyle}
             >
               {t('loginLogin')}
             </Button>

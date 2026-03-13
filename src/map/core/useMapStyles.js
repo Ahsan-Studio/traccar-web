@@ -215,6 +215,56 @@ export default () => {
       available: true,
     },
     {
+      id: 'yandexMap',
+      title: 'Yandex Map',
+      style: styleCustom({
+        tiles: ['https://core-renderer-tiles.maps.yandex.net/tiles?l=map&x={x}&y={y}&z={z}&scale=1&lang=en_US'],
+        maxZoom: 19,
+        attribution: '© Yandex',
+      }),
+      available: true,
+    },
+    {
+      id: 'yandexSatellite',
+      title: 'Yandex Satellite',
+      style: styleCustom({
+        tiles: ['https://core-sat.maps.yandex.net/tiles?l=sat&x={x}&y={y}&z={z}&scale=1&lang=en_US'],
+        maxZoom: 19,
+        attribution: '© Yandex',
+      }),
+      available: true,
+    },
+    {
+      id: 'esriStreets',
+      title: 'ESRI Streets',
+      style: styleCustom({
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'],
+        maxZoom: 19,
+        attribution: '© Esri, HERE, Garmin, USGS, NGA',
+      }),
+      available: true,
+    },
+    {
+      id: 'esriSatellite',
+      title: 'ESRI Satellite',
+      style: styleCustom({
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        maxZoom: 19,
+        attribution: '© Esri, Maxar, Earthstar Geographics',
+      }),
+      available: true,
+    },
+    {
+      id: 'esriTopo',
+      title: 'ESRI Topographic',
+      style: styleCustom({
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'],
+        maxZoom: 19,
+        attribution: '© Esri, HERE, Garmin, USGS, NGA',
+      }),
+      available: true,
+    },
+    {
       id: 'ordnanceSurvey',
       title: t('mapOrdnanceSurvey'),
       style: 'https://api.os.uk/maps/vector/v1/vts/resources/styles?key=EAZ8p83u72FTGiLjLC2MsTAl1ko6XQHC',

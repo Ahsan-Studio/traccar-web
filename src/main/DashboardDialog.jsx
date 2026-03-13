@@ -289,15 +289,42 @@ const DashboardDialog = ({ open, onClose }) => {
   const fetchMaintenance = useCallback(async () => {
     setLoadingMaintenance(true);
     try {
-      const res = await fetch('/api/services', { headers: { Accept: 'application/json' } });
+      const res = await fetch('/api/maintenance', { headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error();
       const data = await res.json();
 
+      // Compute valid vs expired based on device positions
+      const posList = Object.values(positions);
+      const posMap = {};
+      posList.forEach((p) => { posMap[p.deviceId] = p; });
+
       let valid = 0;
       let expired = 0;
-      data.forEach((s) => {
-        const st = (s.status || '').toLowerCase();
-        if (st.includes('expired') || st.includes('overdue')) expired += 1;
+      data.forEach((m) => {
+        // Check if any linked device has exceeded the maintenance threshold
+        const mType = m.type || 'totalDistance';
+        const mStart = m.start || 0;
+        const mPeriod = m.period || 0;
+        if (mPeriod <= 0) { valid += 1; return; }
+
+        // For global maintenance (no specific device), check all positions
+        const relevantPositions = Object.values(posMap);
+        let isExpired = false;
+
+        relevantPositions.forEach((pos) => {
+          let currentValue = 0;
+          if (mType === 'totalDistance') currentValue = pos.attributes?.totalDistance || 0;
+          else if (mType === 'hours') currentValue = pos.attributes?.hours || 0;
+          else if (mType === 'date') currentValue = new Date().getTime();
+          else currentValue = pos.attributes?.[mType] || 0;
+
+          if (currentValue > 0 && mPeriod > 0) {
+            const threshold = mStart + mPeriod;
+            if (currentValue >= threshold) isExpired = true;
+          }
+        });
+
+        if (isExpired) expired += 1;
         else valid += 1;
       });
 
@@ -310,17 +337,19 @@ const DashboardDialog = ({ open, onClose }) => {
     } finally {
       setLoadingMaintenance(false);
     }
-  }, []);
+  }, [positions]);
 
-  /* ─────────── 4. Tasks card (localStorage) ─────────── */
-  const fetchTasks = useCallback((/* period */) => {
+  /* ─────────── 4. Tasks card (API via user-templates) ─────────── */
+  const fetchTasks = useCallback(async (/* period */) => {
     try {
-      const raw = localStorage.getItem('gps_tasks');
-      const tasks = raw ? JSON.parse(raw) : [];
+      const res = await fetch('/api/user-templates', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const tasks = data.filter((t) => t.subject === 'task');
 
       const counts = { New: 0, 'In Progress': 0, Completed: 0, Failed: 0 };
       tasks.forEach((t) => {
-        const st = String(t.status || t.state || '');
+        const st = String(t.message || '0');
         if (st === '0' || st.toLowerCase() === 'new') counts.New += 1;
         else if (st === '1' || st.toLowerCase().includes('progress')) counts['In Progress'] += 1;
         else if (st === '2' || st.toLowerCase().includes('complet')) counts.Completed += 1;

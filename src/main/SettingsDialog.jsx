@@ -23,6 +23,7 @@ import SMSTab from "../settings/sms/SMSTab";
 import UserInterfaceTab from "../settings/userinterface/UserInterfaceTab";
 import MyAccountTab from "../settings/myaccount/MyAccountTab";
 import SubAccountsTab from "../settings/subaccounts/SubAccountsTab";
+import KmlTab from "../settings/kml/KmlTab";
 
 const useStyles = makeStyles()((theme) => ({
   dialog: {
@@ -239,6 +240,7 @@ const SettingsDialog = ({ open, onClose }) => {
             <Tab label="User interface" />
             <Tab label="My account" />
             <Tab label="Sub akun" />
+            {/* <Tab label="KML" /> */}
           </Tabs>
           {showSaveButton && (
             <Box className={classes.saveButton} onClick={handleSave}>
@@ -308,6 +310,10 @@ const SettingsDialog = ({ open, onClose }) => {
 
         <TabPanel value={tabValue} index={6} className={classes.tabPanel}>
           <SubAccountsTab />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={7} className={classes.tabPanel}>
+          <KmlTab />
         </TabPanel>
       </DialogContent>
 

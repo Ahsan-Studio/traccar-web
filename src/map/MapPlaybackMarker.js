@@ -7,7 +7,6 @@ import { findFonts } from './core/mapUtil';
 import dayjs from 'dayjs';
 
 const PLAYBACK_ICON = 'playback-arrow';
-let playbackIconLoaded = false;
 
 // Create a green arrow icon for the playback marker
 const createPlaybackIcon = () => {
@@ -42,15 +41,21 @@ const createPlaybackIcon = () => {
 
   ctx.restore();
 
-  return ctx.getImageData(0, 0, size, size);
+  // Return ImageData with proper width/height for maplibre
+  const imageData = ctx.getImageData(0, 0, size, size);
+  return { data: imageData, width: size, height: size };
 };
 
 const ensurePlaybackIcon = () => {
-  if (playbackIconLoaded) return;
-  if (!map.hasImage(PLAYBACK_ICON)) {
-    map.addImage(PLAYBACK_ICON, createPlaybackIcon(), { sdf: false });
+  // Always check the map directly instead of relying on module-level variable
+  if (map.hasImage(PLAYBACK_ICON)) return;
+
+  try {
+    const iconData = createPlaybackIcon();
+    map.addImage(PLAYBACK_ICON, iconData.data, { sdf: false });
+  } catch (error) {
+    console.warn('Failed to add playback icon:', error);
   }
-  playbackIconLoaded = true;
 };
 
 const MapPlaybackMarker = ({ position }) => {

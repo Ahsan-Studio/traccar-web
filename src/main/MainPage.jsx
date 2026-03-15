@@ -46,7 +46,7 @@ import InfoDialog from "./InfoDialog";
 import DashboardDialog from "./DashboardDialog";
 import ShowPointDialog from "./ShowPointDialog";
 import AddressSearchDialog from "./AddressSearchDialog";
-import ReportsDialog from "./ReportsDialog";
+import ReportsDialog from "./reports";
 import TasksDialog from "./TasksDialog";
 import LogbookDialog from "./LogbookDialog";
 import DTCDialog from "./DTCDialog";
@@ -57,6 +57,8 @@ import ChatDialog from "./ChatDialog";
 import ShareDialog from "./ShareDialog";
 import BillingDialog from "./BillingDialog";
 import CpanelDialog from "./CpanelDialog";
+import EventStatusCard from "../common/components/EventStatusCard";
+import { getEventTypeLabel } from "../common/constants/eventTypes";
 
 const useStyles = makeStyles()((theme) => ({
   root: {
@@ -298,7 +300,26 @@ const MainPage = () => {
   const [snappedCoordinates, setSnappedCoordinates] = useState(null);
   const snapCacheRef = useRef(null); // Cache snapped result per route
 
+  // Event marker and popup state
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEventPosition, setSelectedEventPosition] = useState(null);
+  const [selectedEventDevice, setSelectedEventDevice] = useState(null);
+
   const onEventsClick = useCallback(() => setEventsOpen(true), [setEventsOpen]);
+
+  // Handle event selection from EventsList
+  const handleEventSelect = useCallback((event, position, device) => {
+    setSelectedEvent(event);
+    setSelectedEventPosition(position);
+    setSelectedEventDevice(device);
+  }, []);
+
+  // Close event status card
+  const handleEventStatusClose = useCallback(() => {
+    setSelectedEvent(null);
+    setSelectedEventPosition(null);
+    setSelectedEventDevice(null);
+  }, []);
 
   const handleShowHistory = useCallback((deviceId, period) => {
     setHistoryTrigger({ deviceId, period });
@@ -381,11 +402,14 @@ const MainPage = () => {
           playSpeed: pointData.playSpeed || 1,
         });
 
-        map.flyTo({
-          center: [pointData.longitude, pointData.latitude],
-          zoom: Math.max(map.getZoom(), 16),
-          duration: pointData.isPlaying ? 0 : 1000,
-        });
+        // Only pan map when NOT playing - let user freely explore during playback
+        if (!pointData.isPlaying) {
+          map.flyTo({
+            center: [pointData.longitude, pointData.latitude],
+            zoom: Math.max(map.getZoom(), 16),
+            duration: 1000,
+          });
+        }
       }
     },
     [map]
@@ -850,7 +874,7 @@ const MainPage = () => {
           )}
           {currentTab === 1 && (
             <div className={classes.deviceListContainer}>
-              <EventsList />
+              <EventsList onEventSelect={handleEventSelect} />
             </div>
           )}
           {currentTab === 2 && (
@@ -913,6 +937,8 @@ const MainPage = () => {
               onNewZone={handleMapNewZone}
               onNewTask={handleMapNewTask}
               onRouteBetweenPoints={handleMapRouteBetweenPoints}
+              selectedEventPosition={selectedEventPosition}
+              selectedEventLabel={selectedEvent ? getEventTypeLabel(selectedEvent.type) : ''}
             />
             {historyRoute && (
               <HistoryControls
@@ -964,6 +990,14 @@ const MainPage = () => {
           historyRoute={historyRoute}
           onGraphPointClick={handleGraphPointClick}
           sidebarTab={currentTab}
+        />
+      )}
+      {selectedEvent && selectedEventPosition && (
+        <EventStatusCard
+          event={selectedEvent}
+          position={selectedEventPosition}
+          device={selectedEventDevice}
+          onClose={handleEventStatusClose}
         />
       )}
     </div>

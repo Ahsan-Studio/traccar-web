@@ -226,7 +226,7 @@ const EventEditDialog = ({ open, onClose, item, onSave }) => {
       // Parse notificator flags
       let dayTimeObj;
       try { dayTimeObj = item.dayTime ? JSON.parse(item.dayTime) : defaultDayTime(); } catch { dayTimeObj = defaultDayTime(); }
-      const weekDays = item.weekDays ? item.weekDays.split(',') : ['true', 'true', 'true', 'true', 'true', 'true', 'true'];
+      const weekDays = item.weekDays ? item.weekDays.split(',').map((v) => (v === '1' ? 'true' : 'false')) : ['true', 'true', 'true', 'true', 'true', 'true', 'true'];
       const selectedDevs = item.selectedDevices ? item.selectedDevices.split(',').filter(Boolean) : [];
 
       setForm({
@@ -370,7 +370,7 @@ const EventEditDialog = ({ open, onClose, item, onSave }) => {
   const playSound = () => {
     const file = form.soundFile || 'alarm1.mp3';
     if (audioRef.current) { audioRef.current.pause(); }
-    audioRef.current = new Audio(`/sounds/${file}`);
+    audioRef.current = new Audio(`/resources/sounds/${file}`);
     audioRef.current.play().catch(() => {});
   };
 
@@ -462,7 +462,7 @@ const EventEditDialog = ({ open, onClose, item, onSave }) => {
       // Time fields
       durationFromLastEvent: !!form.durationFromLastEvent,
       durationMinutes: parseInt(form.durationMinutes, 10) || 0,
-      weekDays: (form._weekDaysList || []).join(','),
+      weekDays: (form._weekDaysList || []).map((v) => (v === 'true' ? '1' : '0')).join(','),
       dayTime: JSON.stringify(form._dayTimeObj || defaultDayTime()),
 
       // Advanced conditions
@@ -856,12 +856,12 @@ const EventEditDialog = ({ open, onClose, item, onSave }) => {
             </>,
           )}
 
-          {/* SMS */}
-          {renderFormRow('SMS to mobile phone',
+          {/* WhatsApp */}
+          {renderFormRow('Send WhatsApp',
             <>
               <Checkbox size="small" checked={!!form._notifySms} onChange={(e) => setField('_notifySms', e.target.checked)} sx={{ p: 0 }} />
               {form._notifySms && (
-                <TextField size="small" placeholder="Phone number with code" value={form.smsNumbers || ''} onChange={(e) => setField('smsNumbers', e.target.value)} inputProps={{ style: smallInput }} sx={{ flex: 1 }} />
+                <TextField size="small" placeholder="WhatsApp number" value={form.smsNumbers || ''} onChange={(e) => setField('smsNumbers', e.target.value)} inputProps={{ style: smallInput }} sx={{ flex: 1 }} />
               )}
             </>,
           )}
@@ -877,7 +877,7 @@ const EventEditDialog = ({ open, onClose, item, onSave }) => {
               </Select>
             </FormControl>,
           )}
-          {renderFormRow('SMS template',
+          {renderFormRow('WhatsApp template',
             <FormControl size="small" fullWidth>
               <Select value={form.smsTemplateId || 0} onChange={(e) => setField('smsTemplateId', e.target.value || 0)} sx={smallSelect}>
                 <MenuItem value={0} sx={{ fontSize: '11px' }}>&mdash; Default &mdash;</MenuItem>

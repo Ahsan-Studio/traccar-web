@@ -183,14 +183,14 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-const EventsList = () => {
+const EventsList = ({ onEventSelect }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
-  
+
   // Redux selectors - Only devices and positions needed
   const devices = useSelector((state) => state.devices.items);
   const positions = useSelector((state) => state.session.positions);
-  
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -219,44 +219,67 @@ const EventsList = () => {
   // Memoized event click handler
   const handleEventClick = useCallback(async (event) => {
     console.log('Event clicked:', event);
-    
+
     let position = positions[event.positionId];
-    
+
+    // Try to fetch position by positionId if not in Redux
     if (!position && event.positionId) {
       try {
-        console.log('Fetching position:', event.positionId);
+        console.log('Fetching position by positionId:', event.positionId);
         const response = await fetchOrThrow(`/api/positions?id=${event.positionId}`);
         const positionsData = await response.json();
         if (positionsData.length > 0) {
           position = positionsData[0];
-          console.log('Position fetched:', position);
+          console.log('Position fetched by positionId:', position);
         }
       } catch (err) {
-        console.error('Error fetching position:', err);
-        return;
+        console.error('Error fetching position by positionId:', err);
       }
     }
-    
+
+    // Fallback: try to get latest position for the device
     if (!position || !position.latitude || !position.longitude) {
-      console.warn('Position not available for event:', event);
-      return;
-    }
-    
-    dispatch(devicesActions.selectId(event.deviceId));
-    
-    if (map) {
       try {
-        map.easeTo({
-          center: [position.longitude, position.latitude],
-          zoom: Math.max(map.getZoom(), 15),
-          duration: 1000,
-        });
-        console.log('Map panned to:', position.latitude, position.longitude);
+        console.log('Fetching latest position for device:', event.deviceId);
+        const response = await fetchOrThrow(`/api/positions?deviceId=${event.deviceId}&limit=1`);
+        const positionsData = await response.json();
+        if (positionsData.length > 0) {
+          position = positionsData[0];
+          console.log('Latest position fetched:', position);
+        }
       } catch (err) {
-        console.error('Error panning map:', err);
+        console.error('Error fetching latest position:', err);
       }
     }
-  }, [positions, dispatch]);
+
+    // Final check - if still no position, log but continue to show event info
+    if (!position || !position.latitude || !position.longitude) {
+      console.warn('Position not available for event:', event, '- showing event info without location');
+      position = null;
+    } else {
+      dispatch(devicesActions.selectId(event.deviceId));
+
+      if (map) {
+        try {
+          map.easeTo({
+            center: [position.longitude, position.latitude],
+            zoom: Math.max(map.getZoom(), 15),
+            duration: 1000,
+          });
+          console.log('Map panned to:', position.latitude, position.longitude);
+        } catch (err) {
+          console.error('Error panning map:', err);
+        }
+      }
+    }
+
+    // Call the onEventSelect callback with event, position, and device info
+    // Always show event info even if position is null
+    if (onEventSelect) {
+      const device = devices[event.deviceId];
+      onEventSelect(event, position, device);
+    }
+  }, [positions, dispatch, onEventSelect, devices]);
 
   // Memoized refresh handler
   const handleRefresh = useCallback(async () => {
@@ -373,12 +396,14 @@ const EventsList = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           size="small"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ fontSize: '16px', color: '#666666' }} />
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ fontSize: '16px', color: '#666666' }} />
+                </InputAdornment>
+              ),
+            },
           }}
         />
         <IconButton 

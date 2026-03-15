@@ -16,6 +16,8 @@ const ROUTE_MARKER_ICONS = [
   'route-end',
   'route-stop',
   'route-event',
+  'route-drive',
+  'route-data-point',
 ];
 
 export const preloadMarkerIcons = async () => {

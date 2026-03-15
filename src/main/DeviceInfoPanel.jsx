@@ -567,9 +567,11 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick, sidebarTab }) => {
 
   // Update messages when history route changes
   useEffect(() => {
-    if (historyRoute && historyRoute.positions) {
+    if (historyRoute && historyRoute.positions && historyRoute.positions.length > 0) {
       setMessagesData(historyRoute.positions);
       setMessagesPage(0);
+      setExpandedRow(null);
+      setSelectedMessages(new Set());
     }
   }, [historyRoute]);
 
@@ -1513,7 +1515,7 @@ const DeviceInfoPanel = ({ historyRoute, onGraphPointClick, sidebarTab }) => {
             ) : (
               <>
                 {/* Messages Table */}
-                <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0, maxHeight: 110 }}>
                   <table style={{ 
                     width: '100%', 
                     borderCollapse: 'collapse', 

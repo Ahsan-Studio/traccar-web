@@ -25,9 +25,10 @@ import MapPlaybackMarker from '../map/MapPlaybackMarker';
 import MapRouteArrows from '../map/MapRouteArrows';
 import MapRouteDataPoints from '../map/MapRouteDataPoints';
 import MapContextMenu from '../map/MapContextMenu';
+import MapEventMarker from '../map/MapEventMarker';
 
 const MainMap = ({
- filteredPositions, selectedPosition, onEventsClick, historyRoute, highlightedSegment, playbackPosition, routeToggles, onShowPoint, onNewMarker, onNewRoute, onNewZone, onNewTask, onRouteBetweenPoints 
+ filteredPositions, selectedPosition, onEventsClick, historyRoute, highlightedSegment, playbackPosition, routeToggles, onShowPoint, onNewMarker, onNewRoute, onNewZone, onNewTask, onRouteBetweenPoints, selectedEventPosition, selectedEventLabel
 }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
@@ -83,13 +84,16 @@ const MainMap = ({
                 isHighlightedSegment
               />
             )}
-            <MapCamera 
-              key={`history-${historyRoute.deviceId}-${historyRoute.coordinates.length}`}
-              coordinates={historyRoute.coordinates} 
+            <MapCamera
+              key={`history-${historyRoute.deviceId}`}
+              coordinates={historyRoute.coordinates}
             />
           </>
         )}
         {playbackPosition && <MapPlaybackMarker position={playbackPosition} />}
+        {selectedEventPosition && (
+          <MapEventMarker position={selectedEventPosition} label={selectedEventLabel} />
+        )}
         {!historyRoute && <MapDefaultCamera />}
         <MapSelectedDevice />
         <PoiMap />

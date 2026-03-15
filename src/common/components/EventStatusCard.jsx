@@ -5,19 +5,16 @@ import {
   Card,
   CardContent,
   Typography,
-  CardActions,
   IconButton,
   Table,
   TableBody,
   TableRow,
   TableCell,
   Link,
-  Tooltip,
   CircularProgress,
 } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
 import CloseIcon from '@mui/icons-material/Close';
-import ReplayIcon from '@mui/icons-material/Replay';
 
 import { useTranslation } from './LocalizationProvider';
 import dayjs from 'dayjs';

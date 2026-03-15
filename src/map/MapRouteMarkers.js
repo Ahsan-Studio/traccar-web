@@ -1,5 +1,5 @@
 import {
- useId, useEffect, useMemo, useCallback, useState, useRef 
+ useId, useEffect, useMemo, useCallback, useRef 
 } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
@@ -10,7 +10,6 @@ import dayjs from 'dayjs';
 
 const MapRouteMarkers = ({ positions, showStops = true, showEvents = true, onMarkerClick }) => {
   const id = useId();
-  const popupId = useId();
 
   const theme = useTheme();
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -105,6 +104,7 @@ const MapRouteMarkers = ({ positions, showStops = true, showEvents = true, onMar
           // First position of a new stop cluster → add one marker
           stopCount += 1;
           stopStartIdx = i;
+          console.log(stopStartIdx)
           result.push({
             type: 'Feature',
             geometry: {

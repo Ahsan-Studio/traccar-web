@@ -265,7 +265,7 @@ const MainTab = ({ formData, onFormDataChange }) => {
         </div>
 
         <div className={classes.row2}>
-          <div className={classes.width40}>Engine hours (h)</div>
+          <div className={classes.width40}>Engine hours (hours)</div>
           {/* <div className={classes.width19}>
             <select
               className={`${classes.select} ${classes.width100}`}

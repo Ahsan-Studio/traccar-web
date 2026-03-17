@@ -132,8 +132,15 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
     },
     trailerId: device?.trailerId || "",
     gpsType: device?.attributes?.gpsType || "GPS H700",
-    odometer: device?.attributes?.totalDistance ? (device.attributes.totalDistance / 1000) : 0, // Fallback to device attributes
-    engineHours: device?.attributes?.hours || 0, // Fallback to device attributes
+    odometer: (() => {
+      const dist = Number(device?.attributes?.totalDistance || 0);
+      return (dist >= 0 && Number.isFinite(dist)) ? dist / 1000 : 0;
+    })(), // Fallback to device attributes with validation
+    engineHours: (() => {
+      const hrsMs = Number(device?.attributes?.hours || 0);
+      // Convert milliseconds to hours
+      return (hrsMs >= 0 && Number.isFinite(hrsMs)) ? hrsMs / 3600000 : 0;
+    })(), // Fallback to device attributes with validation (converts ms to hours)
   });
 
   // Update formData when device changes
@@ -151,24 +158,43 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
           // Get the latest position (first in array)
           if (positionData && positionData.length > 0) {
             const latestPosition = positionData[0];
-            
+
             // Get odometer from totalDistance in attributes (convert meters to km)
             if (latestPosition.attributes?.totalDistance) {
-              odometer = latestPosition.attributes.totalDistance / 1000;
+              const totalDistance = Number(latestPosition.attributes.totalDistance);
+              // Validate: must be positive and not Infinity/NaN
+              if (totalDistance >= 0 && Number.isFinite(totalDistance)) {
+                odometer = totalDistance / 1000;
+                // Format to reasonable decimal places
+                odometer = Math.round(odometer * 100) / 100;
+              }
             }
-            
-            // Get engine hours from hours in attributes
+
+            // Get engine hours from hours in attributes (convert milliseconds to hours)
             if (latestPosition.attributes?.hours !== undefined) {
-              engineHours = latestPosition.attributes.hours;
+              const hoursMs = Number(latestPosition.attributes.hours);
+              // Validate: must be positive and not Infinity/NaN
+              if (hoursMs >= 0 && Number.isFinite(hoursMs)) {
+                // Convert milliseconds to hours (divide by 3600000)
+                engineHours = hoursMs / 3600000;
+                // Format to 2 decimal places
+                engineHours = Math.round(engineHours * 100) / 100;
+              }
             }
           } else {
-            odometer = device?.attributes?.totalDistance ? (device.attributes.totalDistance / 1000) : 0;
-            engineHours = device?.attributes?.hours || 0;
+            // Fallback to device attributes with validation
+            const totalDistance = Number(device?.attributes?.totalDistance || 0);
+            const hoursMs = Number(device?.attributes?.hours || 0);
+            odometer = (totalDistance >= 0 && Number.isFinite(totalDistance)) ? totalDistance / 1000 : 0;
+            // Convert milliseconds to hours
+            engineHours = (hoursMs >= 0 && Number.isFinite(hoursMs)) ? hoursMs / 3600000 : 0;
           }
         } catch {
           // Fallback to device attributes if position API fails
           odometer = device?.attributes?.totalDistance ? (device.attributes.totalDistance / 1000) : 0;
-          engineHours = device?.attributes?.hours || 0;
+          // Convert milliseconds to hours for fallback as well
+          const fallbackHours = Number(device?.attributes?.hours || 0);
+          engineHours = (fallbackHours >= 0 && Number.isFinite(fallbackHours)) ? fallbackHours / 3600000 : 0;
         }
 
         setFormData({
@@ -276,8 +302,9 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
           }
           
           if (hasEngineHoursChange) {
-            accumulatorsData.hours = Number(formData.engineHours) || 0;
-            console.log('Updating engine hours:', formData.engineHours);
+            // Convert hours to milliseconds (multiply by 3600000)
+            accumulatorsData.hours = (Number(formData.engineHours) || 0) * 3600000;
+            console.log('Updating engine hours:', formData.engineHours, 'h =', accumulatorsData.hours, 'ms');
           }
           
           await fetchOrThrow(`/api/devices/${device.id}/accumulators`, {
@@ -360,18 +387,26 @@ const EditDeviceDialog = ({ open, onClose, device }) => {
           // Get the latest position (first in array)
           if (positionData && positionData.length > 0) {
             const latestPosition = positionData[0];
-            
+
             // Update device attributes with engine hours and odometer from position
             const updatedAttributes = { ...refreshedDevice.attributes };
-            
+
             if (latestPosition.attributes?.hours !== undefined) {
-              updatedAttributes.hours = latestPosition.attributes.hours;
+              const hours = Number(latestPosition.attributes.hours);
+              // Validate hours before updating
+              if (hours >= 0 && Number.isFinite(hours)) {
+                updatedAttributes.hours = hours;
+              }
             }
-            
+
             if (latestPosition.attributes?.totalDistance !== undefined) {
-              updatedAttributes.totalDistance = latestPosition.attributes.totalDistance;
+              const totalDistance = Number(latestPosition.attributes.totalDistance);
+              // Validate totalDistance before updating
+              if (totalDistance >= 0 && Number.isFinite(totalDistance)) {
+                updatedAttributes.totalDistance = totalDistance;
+              }
             }
-            
+
             refreshedDevice.attributes = updatedAttributes;
           }
         } catch {

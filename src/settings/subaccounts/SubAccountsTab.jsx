@@ -45,6 +45,26 @@ const SubAccountsTab = () => {
     try {
       const response = await fetchOrThrow('/api/subaccounts');
       const data = await response.json();
+      // why this function not call after creata a new sub account? Please check the code of EditSubAccountDialog.jsx
+      data.forEach((account) => {
+        if (account.deviceAccess) {
+          account.totalDevices = account.deviceAccess.split(',').length;
+        } else {
+          account.totalDevices = '0';
+        }
+        // please handle if markeraccess, route access and zone access is null or empty string, otherwise it will throw error when split
+        account.totalPlaces = account.markerAccess ? account.markerAccess.split(',').length : 0;
+        if (account.routeAccess) {
+          account.totalPlaces += '/' + account.routeAccess.split(',').length;
+        } else {
+          account.totalPlaces += '/0';
+        }
+        if (account.zoneAccess) {
+          account.totalPlaces += '/' + account.zoneAccess.split(',').length;
+        } else {
+          account.totalPlaces += '/0';
+        }
+      })
       setSubAccounts(data);
     } catch (error) {
       console.error('Failed to fetch sub accounts:', error);
@@ -70,18 +90,19 @@ const SubAccountsTab = () => {
       format: (value) => (!value ? "Yes" : "No"),
     },
     {
-      key: "deviceLimit",
-      label: "Device Limit",
+      key: "totalDevices",
+      label: "Objects",
       minWidth: 100,
       align: "center",
-      format: (value) => value || "Unlimited",
+      format: (value) => value || null,
     },
     {
-      key: "expirationTime",
-      label: "Expiration",
-      minWidth: 150,
-      format: (value) => (value ? new Date(value).toLocaleDateString() : "Never"),
-    },
+      key: "totalPlaces",
+      label: "Places",
+      minWidth: 100,
+      align: "center",
+      format: (value) => value || null,
+    }
   ];
 
   const handleSelectAllClick = (event) => {
@@ -143,12 +164,30 @@ const SubAccountsTab = () => {
   const handleDialogClose = async (saved) => {
     setDialogOpen(false);
     setEditingSubAccount(null);
-    
+
     // Refresh sub accounts list if saved
     if (saved) {
       try {
         const response = await fetchOrThrow('/api/subaccounts');
         const data = await response.json();
+        data.forEach((account) => {
+          if (account.deviceAccess) {
+            account.totalDevices = account.deviceAccess.split(',').length;
+          } else {
+            account.totalDevices = '0';
+          }
+          account.totalPlaces = account.markerAccess ? account.markerAccess.split(',').length : 0;
+          if (account.routeAccess) {
+            account.totalPlaces += '/' + account.routeAccess.split(',').length;
+          } else {
+            account.totalPlaces += '/0';
+          }
+          if (account.zoneAccess) {
+            account.totalPlaces += '/' + account.zoneAccess.split(',').length;
+          } else {
+            account.totalPlaces += '/0';
+          }
+        })
         setSubAccounts(data);
       } catch (error) {
         console.error('Failed to refresh sub accounts:', error);

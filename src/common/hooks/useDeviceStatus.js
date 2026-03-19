@@ -16,7 +16,7 @@ const useDeviceStatus = (device, position, connectionTimeout = 600) => {
   });
 
   useEffect(() => {
-    if (!device || !position) {
+    if (!device) {
       setStatus({
         type: 'unknown',
         duration: 0,
@@ -28,25 +28,52 @@ const useDeviceStatus = (device, position, connectionTimeout = 600) => {
 
     const calculateStatus = () => {
       const now = new Date();
-      const serverTime = new Date(position.serverTime);
-      
-      // Calculate time difference
-      const timeDiff = Math.floor((now - serverTime) / 1000); // in seconds
-      
-      // Check if device is offline (no connection)
-      if (timeDiff > connectionTimeout) {
+
+      // Use device.status from API as the primary source of truth for online/offline
+      const deviceStatus = device.status;
+
+      // Calculate time difference from lastUpdate or position.serverTime
+      let serverTime;
+      if (position?.serverTime) {
+        serverTime = new Date(position.serverTime);
+      } else if (device.lastUpdate) {
+        serverTime = new Date(device.lastUpdate);
+      }
+      const timeDiff = serverTime ? Math.floor((now - serverTime) / 1000) : 0;
+
+      // If device status from API is offline, show offline
+      if (deviceStatus === 'offline') {
         return {
           type: 'offline',
           duration: timeDiff,
           text: `Offline ${formatDuration(timeDiff)}`,
-          color: '#f44336', // red
+          color: '#9e9e9e', // grey
         };
       }
 
+      // If no position data but device is online (could be connected but no GPS yet)
+      if (!position) {
+        if (deviceStatus === 'online') {
+          return {
+            type: 'online',
+            duration: timeDiff,
+            text: 'Online (No GPS)',
+            color: '#4caf50', // green
+          };
+        }
+        return {
+          type: 'unknown',
+          duration: 0,
+          text: 'No data',
+          color: '#9e9e9e',
+        };
+      }
+
+      // Device is online - check position validity and determine sub-status
       // Check if position is valid
       if (!position.valid) {
         return {
-          type: 'offline',
+          type: 'online',
           duration: timeDiff,
           text: `No GPS ${formatDuration(timeDiff)}`,
           color: '#ff9800', // orange
@@ -56,7 +83,7 @@ const useDeviceStatus = (device, position, connectionTimeout = 600) => {
       // Get speed and ignition status
       const speed = position.speed || 0;
       const ignition = position.attributes?.ignition;
-      
+
       // Determine status based on speed and ignition
       // Moving: speed > 5 km/h
       if (speed > 5) {
@@ -67,7 +94,7 @@ const useDeviceStatus = (device, position, connectionTimeout = 600) => {
           color: '#4caf50', // green
         };
       }
-      
+
       // Engine Idle: ignition on but not moving
       if (ignition === true && speed <= 5) {
         return {
@@ -77,7 +104,7 @@ const useDeviceStatus = (device, position, connectionTimeout = 600) => {
           color: '#ffc107', // yellow/amber
         };
       }
-      
+
       // Stopped: ignition off or low speed
       if (ignition === false || speed <= 5) {
         return {
@@ -88,12 +115,12 @@ const useDeviceStatus = (device, position, connectionTimeout = 600) => {
         };
       }
 
-      // Default
+      // Default - device is online but status unknown
       return {
-        type: 'unknown',
+        type: 'online',
         duration: timeDiff,
-        text: `Unknown ${formatDuration(timeDiff)}`,
-        color: '#9e9e9e', // grey
+        text: `Online ${formatDuration(timeDiff)}`,
+        color: '#4caf50', // green
       };
     };
 

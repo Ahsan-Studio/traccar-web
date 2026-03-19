@@ -35,6 +35,7 @@ import DeviceInfoPanel from "./DeviceInfoPanel";
 import EventsList from "./EventsList";
 import SettingsDialog from "./SettingsDialog";
 import { useAttributePreference } from "../common/util/preferences";
+import { useCanEdit } from "../common/util/permissions";
 import MarkersTab from "./places/MarkersTab";
 import RoutesTab from "./places/RoutesTab";
 import ZonesTab from "./places/ZonesTab";
@@ -228,6 +229,7 @@ const MainPage = () => {
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const positions = useSelector((state) => state.session.positions);
   const user = useSelector((state) => state.session.user);
+  const canEdit = useCanEdit();
 
   // Active theme brand colors from palette
   const brandColors = theme.palette.brand;
@@ -853,13 +855,16 @@ const MainPage = () => {
                         />
                       )}
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      className={classes.iconButton}
-                      onClick={() => setAddDeviceOpen(true)}
-                    >
-                      <AddIcon fontSize="small" sx={{ color: "#444444" }} />
-                    </IconButton>
+                    {/* Add button - hidden for sub-accounts (V1 parity) */}
+                    {canEdit && (
+                      <IconButton
+                        size="small"
+                        className={classes.iconButton}
+                        onClick={() => setAddDeviceOpen(true)}
+                      >
+                        <AddIcon fontSize="small" sx={{ color: "#444444" }} />
+                      </IconButton>
+                    )}
                   </div>
                 </Box>
               </div>

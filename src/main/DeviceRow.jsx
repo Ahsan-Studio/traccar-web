@@ -20,7 +20,7 @@ import BuildIcon from "@mui/icons-material/Build";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { devicesActions } from "../store";
-import { useAdministrator } from "../common/util/permissions";
+import { useAdministrator, useCanEdit } from "../common/util/permissions";
 import { useAttributePreference } from "../common/util/preferences";
 import EditDeviceDialog from "../settings/object/EditDeviceDialog";
 import FollowDialog from "./FollowDialog";
@@ -66,6 +66,7 @@ const DeviceRow = ({
   const dispatch = useDispatch();
   const t = useTranslation();
   const admin = useAdministrator();
+  const canEdit = useCanEdit();
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const visibility = useSelector((state) => state.devices.visibility);
   const focused = useSelector((state) => state.devices.focused);
@@ -518,24 +519,27 @@ const DeviceRow = ({
                 Send command
               </Typography>
             </MenuItem>
-            <MenuItem
-              onClick={handleEdit}
-              sx={{
-                py: "5px",
-                px: "10px",
-                minHeight: "auto",
-                "&:hover": { backgroundColor: "#f5f5f5" },
-              }}
-            >
-              <Box
-                component="img"
-                src="/img/theme/edit.svg"
-                sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0 }}
-              />
-              <Typography sx={{ fontSize: "13px", color: "#444" }}>
-                Edit
-              </Typography>
-            </MenuItem>
+            {/* Edit menu - hidden for sub-accounts (V1 parity) */}
+            {canEdit && (
+              <MenuItem
+                onClick={handleEdit}
+                sx={{
+                  py: "5px",
+                  px: "10px",
+                  minHeight: "auto",
+                  "&:hover": { backgroundColor: "#f5f5f5" },
+                }}
+              >
+                <Box
+                  component="img"
+                  src="/img/theme/edit.svg"
+                  sx={{ width: 10, height: 10, mr: "8px", flexShrink: 0 }}
+                />
+                <Typography sx={{ fontSize: "13px", color: "#444" }}>
+                  Edit
+                </Typography>
+              </MenuItem>
+            )}
           </Menu>
 
           {/* Show history submenu */}

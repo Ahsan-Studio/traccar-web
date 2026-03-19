@@ -161,7 +161,9 @@ const LoginPage = () => {
     event.preventDefault();
     setFailed(false);
     try {
-      const query = `email=${encodeURIComponent(
+      // Support login with email OR username (V1 parity)
+      // Use 'login' parameter - backend should handle both formats
+      const query = `login=${encodeURIComponent(
         email
       )}&password=${encodeURIComponent(password)}`;
       const response = await fetch("/api/session", {
@@ -290,7 +292,7 @@ const LoginPage = () => {
             <TextField
               required
               error={failed}
-              placeholder={t('userEmail')}
+              placeholder={t('userEmailOrUsername') || 'Email / Username'}
               name="email"
               value={email}
               autoComplete="email"

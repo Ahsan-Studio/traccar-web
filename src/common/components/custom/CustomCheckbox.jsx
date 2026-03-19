@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import './CustomCheckbox.css';
 
-const CustomCheckbox = ({ 
+const CustomCheckbox = ({
   checked = false,
   onChange,
   label = '',
@@ -22,6 +22,11 @@ const CustomCheckbox = ({
     }
   }, [indeterminate]);
 
+  // Sync with external checked prop changes
+  useEffect(() => {
+    setIsChecked(checked);
+  }, [checked]);
+
   const handleChange = (e) => {
     const newValue = e.target.checked;
     setIsChecked(newValue);
@@ -29,11 +34,6 @@ const CustomCheckbox = ({
       onChange(newValue);
     }
   };
-
-  // Sync with external checked prop changes
-  if (checked !== isChecked) {
-    setIsChecked(checked);
-  }
 
   const checkboxElement = (
     <input

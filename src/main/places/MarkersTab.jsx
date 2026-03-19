@@ -18,6 +18,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { makeStyles } from 'tss-react/mui';
 import fetchOrThrow from '../../common/util/fetchOrThrow';
+import { useCanEdit } from '../../common/util/permissions';
 import { geofencesActions } from '../../store';
 import RemoveDialog from '../../common/components/RemoveDialog';
 import MarkerDialog from './MarkerDialog';
@@ -133,6 +134,7 @@ const useStyles = makeStyles()(() => ({
 const MarkersTab = ({ onFocusLocation, onCountChange }) => {
   const { classes } = useStyles();
   const dispatch = useDispatch();
+  const canEdit = useCanEdit();
   const fileInputRef = useRef(null);
   const [items, setItems] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -402,26 +404,32 @@ const MarkersTab = ({ onFocusLocation, onCountChange }) => {
         <IconButton className={classes.actionButton} onClick={onRefresh} title="Reload">
           <img src="/img/theme/refresh-color.svg" alt="Reload" className={classes.buttonIcon} />
         </IconButton>
-        {/* 2. Add Marker */}
-        <IconButton className={classes.actionButton} onClick={onAdd} title="Add Marker">
-          <img src="/img/theme/marker-add.svg" alt="Add" className={classes.buttonIcon} />
-        </IconButton>
+        {/* 2. Add Marker - hidden for sub-accounts (V1 parity) */}
+        {canEdit && (
+          <IconButton className={classes.actionButton} onClick={onAdd} title="Add Marker">
+            <img src="/img/theme/marker-add.svg" alt="Add" className={classes.buttonIcon} />
+          </IconButton>
+        )}
         {/* 3. Groups */}
         <IconButton className={classes.actionButton} onClick={() => setGroupsDialogOpen(true)} title="Groups">
           <img src="/img/theme/groups.svg" alt="Groups" className={classes.buttonIcon} />
         </IconButton>
-        {/* 4. Import */}
-        <IconButton className={classes.actionButton} onClick={() => fileInputRef.current?.click()} title="Import">
-          <img src="/img/theme/import.svg" alt="Import" className={classes.buttonIcon} />
-        </IconButton>
+        {/* 4. Import - hidden for sub-accounts (V1 parity) */}
+        {canEdit && (
+          <IconButton className={classes.actionButton} onClick={() => fileInputRef.current?.click()} title="Import">
+            <img src="/img/theme/import.svg" alt="Import" className={classes.buttonIcon} />
+          </IconButton>
+        )}
         {/* 5. Export */}
         <IconButton className={classes.actionButton} onClick={handleExport} title="Export" disabled={items.length === 0}>
           <img src="/img/theme/export.svg" alt="Export" className={classes.buttonIcon} style={{ opacity: items.length === 0 ? 0.5 : 1 }} />
         </IconButton>
-        {/* 6. Delete All */}
-        <IconButton className={classes.actionButton} onClick={handleDeleteAll} title="Delete All Markers" disabled={items.length === 0}>
-          <img src="/img/theme/remove2.svg" alt="Delete All" className={classes.buttonIcon} style={{ opacity: items.length === 0 ? 0.5 : 1 }} />
-        </IconButton>
+        {/* 6. Delete All - hidden for sub-accounts (V1 parity) */}
+        {canEdit && (
+          <IconButton className={classes.actionButton} onClick={handleDeleteAll} title="Delete All Markers" disabled={items.length === 0}>
+            <img src="/img/theme/remove2.svg" alt="Delete All" className={classes.buttonIcon} style={{ opacity: items.length === 0 ? 0.5 : 1 }} />
+          </IconButton>
+        )}
       </Box>
 
       {/* Hidden file input for import */}

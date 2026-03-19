@@ -9,10 +9,7 @@ import {
 import { makeStyles } from "tss-react/mui";
 import { useSelector } from "react-redux";
 import {
-  CustomSelect,
   CustomCheckbox,
-  CustomButton,
-  CustomInput,
 } from "../../common/components/custom";
 
 const useStyles = makeStyles()((theme) => ({
@@ -57,22 +54,6 @@ const useStyles = makeStyles()((theme) => ({
     marginBottom: "12px",
     lineHeight: 1.5,
   },
-  queueRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1),
-  },
-  queueValue: {
-    fontSize: 12,
-    color: "#444",
-    minWidth: "40px",
-  },
-  identifierInput: {
-    "& input": {
-      backgroundColor: "#f5f5f5",
-      color: "#666",
-    },
-  },
   loading: {
     display: "flex",
     justifyContent: "center",
@@ -81,11 +62,6 @@ const useStyles = makeStyles()((theme) => ({
   },
 }));
 
-const GATEWAY_TYPE_OPTIONS = [
-  { value: "app", label: "Mobile application" },
-  { value: "http", label: "HTTP" },
-];
-
 const SMSTab = ({ onSave }) => {
   const { classes } = useStyles();
   const user = useSelector((state) => state.session.user);
@@ -93,10 +69,7 @@ const SMSTab = ({ onSave }) => {
   const [loading, setLoading] = useState(true);
   const [smsConfig, setSmsConfig] = useState(null);
   const [enabled, setEnabled] = useState(false);
-  const [gatewayType, setGatewayType] = useState("app");
-  const [identifier, setIdentifier] = useState("");
   const [gatewayUrl, setGatewayUrl] = useState("");
-  const [queue, setQueue] = useState(0);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -114,10 +87,7 @@ const SMSTab = ({ onSave }) => {
           const config = configs[0];
           setSmsConfig(config);
           setEnabled(config.enabled || false);
-          setGatewayType(config.gatewayType || "app");
-          setIdentifier(config.httpUser || "");
           setGatewayUrl(config.httpUrl || "");
-          setQueue(config.queueCount || 0);
         }
       }
     } catch (err) {
@@ -125,17 +95,6 @@ const SMSTab = ({ onSave }) => {
       setError("Failed to load WhatsApp configuration");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleClearQueue = async () => {
-    try {
-      if (smsConfig?.id) {
-        await fetch(`/api/user-sms-configs/${smsConfig.id}/clear-queue`, { method: "POST" });
-        setQueue(0);
-      }
-    } catch (err) {
-      console.error("Error clearing queue:", err);
     }
   };
 
@@ -147,11 +106,10 @@ const SMSTab = ({ onSave }) => {
       const data = {
         userId: user?.id,
         enabled,
-        gatewayType,
-        httpUser: identifier,
         httpUrl: gatewayUrl,
         httpAuthorizationHeader: "",
         httpAuthorization: "",
+        httpUser: "",
         httpTemplate: "",
         awsAccess: "",
         awsRegion: "",
@@ -190,7 +148,7 @@ const SMSTab = ({ onSave }) => {
   useEffect(() => {
     window.smsTabSave = handleSave;
     return () => { delete window.smsTabSave; };
-  }, [enabled, gatewayType, identifier, gatewayUrl, smsConfig, user]);
+  }, [enabled, gatewayUrl, smsConfig, user]);
 
   if (loading) {
     return (
@@ -216,84 +174,44 @@ const SMSTab = ({ onSave }) => {
               />
             </Box>
           </Box>
-
-          <Box className={classes.formRow}>
-            <Typography className={classes.label}>WhatsApp Gateway type</Typography>
-            <CustomSelect
-              value={gatewayType}
-              onChange={(val) => setGatewayType(val)}
-              options={GATEWAY_TYPE_OPTIONS}
-            />
-          </Box>
         </Box>
 
-        {/* Section 2: Mobile application (shown when type = app) */}
-        {gatewayType === "app" && (
-          <Box className={classes.section}>
-            <Typography className={classes.sectionTitle}>Mobile application</Typography>
-            <Typography className={classes.helpText}>
-              Mobile application should be used which allows to use mobile device as WhatsApp Gateway. Below WhatsApp Gateway identifier should be entered in mobile application settings.
-            </Typography>
+        {/* Section 2: HTTP Gateway (fixed to HTTP) */}
+        <Box className={classes.section}>
+          <Typography className={classes.sectionTitle}>HTTP Gateway</Typography>
+          <Typography className={classes.helpText}>
+            WhatsApp Gateway, which can send messages via HTTP GET should be used.
+          </Typography>
+          <Typography className={classes.helpText}>
+            WhatsApp Gateway URL example: http://WHATSAPP_GATEWAY/sendsms.php?username=USER&amp;password=PASSWORD&amp;number=%NUMBER%&amp;message=%MESSAGE%
+          </Typography>
 
-            <Box className={classes.formRow}>
-              <Typography className={classes.label}>WhatsApp Gateway identifier</Typography>
-              <CustomInput
-                value={identifier}
-                disabled
-                className={classes.identifierInput}
-              />
-            </Box>
-
-            <Box className={classes.formRow}>
-              <Typography className={classes.label}>Total WhatsApp in queue to send</Typography>
-              <Box className={classes.queueRow}>
-                <Typography className={classes.queueValue}>{queue}</Typography>
-                <CustomButton variant="outlined" onClick={handleClearQueue}>
-                  Clear
-                </CustomButton>
-              </Box>
-            </Box>
+          <Box className={classes.formRow}>
+            <Typography className={classes.label}>WhatsApp Gateway URL</Typography>
+            <textarea
+              value={gatewayUrl}
+              onChange={(e) => setGatewayUrl(e.target.value)}
+              placeholder="ex. http://full_address_here"
+              style={{
+                flex: 1,
+                height: '75px',
+                fontSize: '12px',
+                fontFamily: 'inherit',
+                border: '1px solid #ccc',
+                padding: '6px 8px',
+                resize: 'vertical',
+                borderRadius: '2px',
+              }}
+              maxLength={2048}
+            />
           </Box>
-        )}
 
-        {/* Section 3: HTTP (shown when type = http) */}
-        {gatewayType === "http" && (
-          <Box className={classes.section}>
-            <Typography className={classes.sectionTitle}>HTTP</Typography>
-            <Typography className={classes.helpText}>
-              WhatsApp Gateway, which can send messages via HTTP GET should be used.
-            </Typography>
-            <Typography className={classes.helpText}>
-              WhatsApp Gateway URL example: http://WHATSAPP_GATEWAY/sendsms.php?username=USER&amp;password=PASSWORD&amp;number=%NUMBER%&amp;message=%MESSAGE%
-            </Typography>
-
-            <Box className={classes.formRow}>
-              <Typography className={classes.label}>WhatsApp Gateway URL</Typography>
-              <textarea
-                value={gatewayUrl}
-                onChange={(e) => setGatewayUrl(e.target.value)}
-                placeholder="ex. http://full_address_here"
-                style={{
-                  flex: 1,
-                  height: '75px',
-                  fontSize: '12px',
-                  fontFamily: 'inherit',
-                  border: '1px solid #ccc',
-                  padding: '6px 8px',
-                  resize: 'vertical',
-                  borderRadius: '2px',
-                }}
-                maxLength={2048}
-              />
-            </Box>
-
-            <Box className={classes.section} style={{ marginTop: 16 }}>
-              <Typography className={classes.sectionTitle}>Variables</Typography>
-              <Typography className={classes.helpText}>%NUMBER% - phone number, where WhatsApp message will be sent</Typography>
-              <Typography className={classes.helpText}>%MESSAGE% - text of WhatsApp message</Typography>
-            </Box>
+          <Box className={classes.section} style={{ marginTop: 16 }}>
+            <Typography className={classes.sectionTitle}>Variables</Typography>
+            <Typography className={classes.helpText}>%NUMBER% - phone number, where WhatsApp message will be sent</Typography>
+            <Typography className={classes.helpText}>%MESSAGE% - text of WhatsApp message</Typography>
           </Box>
-        )}
+        </Box>
       </Box>
 
       <Snackbar

@@ -24,15 +24,15 @@ const useStyles = makeStyles()((theme) => ({
   dialog: {
     "& .MuiDialog-paper": {
       width: "750px",
-      maxWidth: "90vw",
-      maxHeight: "80vh",
+      maxWidth: "700px",
+      maxHeight: "600px",
     },
   },
   dialogTitle: {
     backgroundColor: "#2b82d4",
     color: "white",
-    padding: "8px 16px",
-    fontSize: "14px",
+    padding: "4px 10px",
+    fontSize: "13px",
     fontWeight: 500,
     display: "flex",
     alignItems: "center",
@@ -51,7 +51,7 @@ const useStyles = makeStyles()((theme) => ({
   formRow: {
     display: "flex",
     alignItems: "center",
-    marginBottom: theme.spacing(1.5),
+    marginBottom: theme.spacing(0.6),
   },
   label: {
     fontSize: "11px",

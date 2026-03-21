@@ -35,7 +35,20 @@ import DeviceInfoPanel from "./DeviceInfoPanel";
 import EventsList from "./EventsList";
 import SettingsDialog from "./SettingsDialog";
 import { useAttributePreference } from "../common/util/preferences";
-import { useCanEdit } from "../common/util/permissions";
+import {
+  useCanEdit,
+  usePermissionDashboard,
+  usePermissionReports,
+  usePermissionTasks,
+  usePermissionRilogbook,
+  usePermissionDtc,
+  usePermissionMaintenance,
+  usePermissionExpenses,
+  usePermissionObjectControl,
+  usePermissionImageGallery,
+  usePermissionChat,
+  usePermissionHistory,
+} from "../common/util/permissions";
 import MarkersTab from "./places/MarkersTab";
 import RoutesTab from "./places/RoutesTab";
 import ZonesTab from "./places/ZonesTab";
@@ -230,6 +243,19 @@ const MainPage = () => {
   const positions = useSelector((state) => state.session.positions);
   const user = useSelector((state) => state.session.user);
   const canEdit = useCanEdit();
+
+  // Sub-account permissions
+  const hasDashboard = usePermissionDashboard();
+  const hasReports = usePermissionReports();
+  const hasTasks = usePermissionTasks();
+  const hasRilogbook = usePermissionRilogbook();
+  usePermissionDtc();
+  const hasMaintenance = usePermissionMaintenance();
+  usePermissionExpenses();
+  const hasObjectControl = usePermissionObjectControl();
+  usePermissionImageGallery();
+  usePermissionChat();
+  const hasHistory = usePermissionHistory();
 
   // Active theme brand colors from palette
   const brandColors = theme.palette.brand;
@@ -662,6 +688,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton> */}
+          {hasDashboard && (
           <IconButton className={classes.navButton} onClick={() => setDashboardOpen(true)}>
             <img
               src="/img/top-nav/dashboard.svg"
@@ -669,6 +696,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          )}
           <IconButton className={classes.navButton} onClick={() => setShowPointOpen(true)}>
             <img
               src="/img/top-nav/marker.svg"
@@ -683,6 +711,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          {hasReports && (
           <IconButton className={classes.navButton} onClick={() => setReportsOpen(true)}>
             <img
               src="/img/top-nav/report.svg"
@@ -690,6 +719,8 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          )}
+          {hasTasks && (
           <IconButton className={classes.navButton} onClick={() => setTasksOpen(true)}>
             <img
               src="/img/top-nav/tasks.svg"
@@ -697,6 +728,8 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          )}
+          {hasRilogbook && (
           <IconButton className={classes.navButton} onClick={() => setLogbookOpen(true)}>
             <img
               src="/img/top-nav/logbook.svg"
@@ -704,6 +737,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          )}
           {/* <IconButton className={classes.navButton} onClick={() => setDtcOpen(true)}>
             <img
               src="/img/top-nav/dtc.svg"
@@ -711,6 +745,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton> */}
+          {hasMaintenance && (
           <IconButton className={classes.navButton} onClick={() => setMaintenanceOpen(true)}>
             <img
               src="/img/top-nav/maintenance.svg"
@@ -718,6 +753,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          )}
           {/* <IconButton className={classes.navButton} onClick={() => setExpensesOpen(true)}>
             <img
               src="/img/top-nav/expenses.svg"
@@ -726,6 +762,7 @@ const MainPage = () => {
             />
           </IconButton> */}
           {/* Button Object Control (Command) */}
+          {hasObjectControl && (
           <IconButton
             className={classes.navButton}
             onClick={() => setObjectControlOpen(true)}
@@ -736,6 +773,7 @@ const MainPage = () => {
               style={{ width: "16px", height: "16px" }}
             />
           </IconButton>
+          )}
           {/* <IconButton className={classes.navButton} onClick={() => setGalleryOpen(true)}>
             <img
               src="/img/top-nav/gallery.svg"
@@ -805,7 +843,7 @@ const MainPage = () => {
             <Tab label="Objects" />
             <Tab label="Events" />
             <Tab label="Places" />
-            <Tab label="History" />
+            {hasHistory && <Tab label="History" />}
           </Tabs>
 
           {currentTab === 0 && (
@@ -916,7 +954,7 @@ const MainPage = () => {
               </div>
             </>
           )}
-          {currentTab === 3 && (
+          {hasHistory && currentTab === 3 && (
             <HistoryTab
               onRouteChange={setHistoryRoute}
               onSegmentHighlight={setHighlightedSegment}

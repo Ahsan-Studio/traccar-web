@@ -20,7 +20,9 @@ import BuildIcon from "@mui/icons-material/Build";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { devicesActions } from "../store";
-import { useAdministrator, useCanEdit } from "../common/util/permissions";
+import {
+ useAdministrator, useCanEdit, usePermissionHistory, usePermissionObjectControl 
+} from "../common/util/permissions";
 import { useAttributePreference } from "../common/util/preferences";
 import EditDeviceDialog from "../settings/object/EditDeviceDialog";
 import FollowDialog from "./FollowDialog";
@@ -67,6 +69,8 @@ const DeviceRow = ({
   const t = useTranslation();
   const admin = useAdministrator();
   const canEdit = useCanEdit();
+  const hasHistory = usePermissionHistory();
+  const hasObjectControl = usePermissionObjectControl();
   const selectedDeviceId = useSelector((state) => state.devices.selectedId);
   const visibility = useSelector((state) => state.devices.visibility);
   const focused = useSelector((state) => state.devices.focused);
@@ -411,6 +415,7 @@ const DeviceRow = ({
             }}
           >
             {/* Show history — first item gets blue top border accent */}
+            {hasHistory && (
             <MenuItem
               onClick={handleHistoryMenuOpen}
               sx={{
@@ -436,6 +441,7 @@ const DeviceRow = ({
                 sx={{ width: 10, height: 10, ml: "8px", flexShrink: 0 }}
               />
             </MenuItem>
+            )}
             <MenuItem
               onClick={handleFollow}
               sx={{
@@ -500,6 +506,7 @@ const DeviceRow = ({
                 Street View (new window)
               </Typography>
             </MenuItem>
+            {hasObjectControl && (
             <MenuItem
               onClick={handleSendCommand}
               sx={{
@@ -519,6 +526,7 @@ const DeviceRow = ({
                 Send command
               </Typography>
             </MenuItem>
+            )}
             {/* Edit menu - hidden for sub-accounts (V1 parity) */}
             {canEdit && (
               <MenuItem
@@ -543,6 +551,7 @@ const DeviceRow = ({
           </Menu>
 
           {/* Show history submenu */}
+          {hasHistory && (
           <Menu
             anchorEl={historyMenuAnchorEl}
             open={historyMenuOpen}
@@ -590,6 +599,7 @@ const DeviceRow = ({
               </MenuItem>
             ))}
           </Menu>
+          )}
         </Box>
       </ListItemButton>
 

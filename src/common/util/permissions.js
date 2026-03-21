@@ -45,3 +45,84 @@ export const useCanEdit = () => useSelector((state) => {
   // Can edit if admin OR not readonly AND not deviceReadonly
   return admin || (!userDeviceReadonly && !userReadonly);
 });
+
+// Sub-account permission hooks
+// For admin/manager: always return true (full access)
+// For sub-accounts: return the specific permission value from user object
+
+export const usePermissionDashboard = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.dashboard ?? false;
+});
+
+export const usePermissionHistory = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.history ?? false;
+});
+
+export const usePermissionReports = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.reports ?? false;
+});
+
+export const usePermissionTasks = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.tasks ?? false;
+});
+
+export const usePermissionRilogbook = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.rilogbook ?? false;
+});
+
+export const usePermissionDtc = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.dtc ?? false;
+});
+
+export const usePermissionMaintenance = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.maintenance ?? false;
+});
+
+export const usePermissionExpenses = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.expenses ?? false;
+});
+
+export const usePermissionObjectControl = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.objectControl ?? false;
+});
+
+export const usePermissionImageGallery = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.imageGallery ?? false;
+});
+
+export const usePermissionChat = () => useSelector((state) => {
+  const admin = state.session.user.administrator;
+  const manager = (state.session.user.userLimit || 0) !== 0;
+  if (admin || manager) return true;
+  return state.session.user.chat ?? false;
+});

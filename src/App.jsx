@@ -54,7 +54,8 @@ const App = () => {
         dispatch(sessionActions.updateUser(await response.json()));
       } else {
         window.sessionStorage.setItem('postLogin', pathname + search);
-        navigate(newServer ? '/register' : '/login', { replace: true });
+        // Preserve query params (like ?au= for auto-login) when redirecting
+        navigate((newServer ? '/register' : '/login') + search, { replace: true });
       }
     }
     return null;

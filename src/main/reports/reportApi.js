@@ -80,10 +80,319 @@ export const deleteUserTemplate = async (serverId) => {
   }
 };
 
-/** Re-fetch report data from Traccar API using stored params */
+/* ─────────── Marker/Zone filtering helpers (V1 parity) ─────────── */
+
+/** Calculate distance between two points (Haversine formula) */
+const getDistance = (lat1, lng1, lat2, lng2) => {
+  const R = 6371000; // Earth radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+/** Check if point is inside a polygon */
+const isPointInPolygon = (lat, lng, polygon) => {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lat;
+    const yi = polygon[i].lng;
+    const xj = polygon[j].lat;
+    const yj = polygon[j].lng;
+
+    const intersect = ((yi > lng) !== (yj > lng))
+      && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+};
+
+/** Check if point is inside a geofence */
+const isPointInGeofence = (lat, lng, geofence) => {
+  if (!geofence.area) return false;
+
+  const areaStr = geofence.area;
+
+  // Parse WKT polygon
+  if (areaStr.startsWith('POLYGON')) {
+    const coordsMatch = areaStr.match(/\(([^)]+)\)/);
+    if (!coordsMatch) return false;
+
+    const coords = coordsMatch[1].split(',').map((c) => {
+      const [lngStr, latStr] = c.trim().split(' ');
+      return { lat: parseFloat(latStr), lng: parseFloat(lngStr) };
+    });
+
+    return isPointInPolygon(lat, lng, coords);
+  }
+
+  // Circle geofence
+  if (areaStr.startsWith('CIRCLE')) {
+    const centerMatch = areaStr.match(/CIRCLE\s*\(\s*([0-9.-]+)\s+([0-9.-]+)\s*,\s*([0-9.]+)\s*\)/);
+    if (!centerMatch) return false;
+
+    const centerLng = parseFloat(centerMatch[1]);
+    const centerLat = parseFloat(centerMatch[2]);
+    const radius = parseFloat(centerMatch[3]);
+
+    const distance = getDistance(lat, lng, centerLat, centerLng);
+    return distance <= radius;
+  }
+
+  return false;
+};
+
+/** Fetch markers from API */
+const fetchMarkers = async () => {
+  try {
+    const response = await fetch('/api/markers', { headers: { Accept: 'application/json' } });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (e) {
+    console.error('Failed to fetch markers:', e);
+  }
+  return [];
+};
+
+/** Fetch geofences from API */
+const fetchGeofences = async () => {
+  try {
+    const response = await fetch('/api/geofences', { headers: { Accept: 'application/json' } });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (e) {
+    console.error('Failed to fetch geofences:', e);
+  }
+  return [];
+};
+
+/** Filter route data by markers (V1 parity for marker_in_out reports) */
+const filterDataByMarkers = async (data, markerIds) => {
+  if (!markerIds || markerIds.length === 0) {
+    return data;
+  }
+
+  const allMarkers = await fetchMarkers();
+  const selectedMarkers = allMarkers.filter((m) => markerIds.includes(m.id));
+
+  if (selectedMarkers.length === 0) {
+    return data;
+  }
+
+  // For each position, check if it's inside any selected marker radius
+  return data.filter((pos) => {
+    if (!pos.latitude || !pos.longitude) return false;
+
+    for (const marker of selectedMarkers) {
+      const markerLat = marker.latitude || marker.attributes?.latitude;
+      const markerLng = marker.longitude || marker.attributes?.longitude;
+      const radius = marker.attributes?.radius || 100;
+
+      if (markerLat && markerLng) {
+        const distance = getDistance(pos.latitude, pos.longitude, markerLat, markerLng);
+        if (distance <= radius) {
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+};
+
+/** Filter route data by zones (V1 parity for zone_in_out reports) */
+const filterDataByZones = async (data, zoneIds) => {
+  if (!zoneIds || zoneIds.length === 0) {
+    return data;
+  }
+
+  const allGeofences = await fetchGeofences();
+  const selectedZones = allGeofences.filter((g) => zoneIds.includes(g.id));
+
+  if (selectedZones.length === 0) {
+    return data;
+  }
+
+  // For each position, check if it's inside any selected zone
+  return data.filter((pos) => {
+    if (!pos.latitude || !pos.longitude) return false;
+
+    for (const zone of selectedZones) {
+      if (isPointInGeofence(pos.latitude, pos.longitude, zone)) {
+        return true;
+      }
+    }
+    return false;
+  });
+};
+
+/** Generate marker in/out events from route data (V1 parity) */
+const generateMarkerInOutEvents = async (data, markerIds) => {
+  if (!markerIds || markerIds.length === 0) {
+    return [];
+  }
+
+  const allMarkers = await fetchMarkers();
+  const selectedMarkers = allMarkers.filter((m) => markerIds.includes(m.id));
+
+  if (selectedMarkers.length === 0 || data.length === 0) {
+    return [];
+  }
+
+  const events = [];
+  const sortedData = [...data].sort((a, b) => new Date(a.fixTime) - new Date(b.fixTime));
+
+  // Track which markers we're currently inside
+  const insideMarkers = new Map(); // markerId -> entryTime, entryPosition
+
+  for (const pos of sortedData) {
+    if (!pos.latitude || !pos.longitude) continue;
+
+    for (const marker of selectedMarkers) {
+      const markerLat = marker.latitude || marker.attributes?.latitude;
+      const markerLng = marker.longitude || marker.attributes?.longitude;
+      const radius = marker.attributes?.radius || 100;
+      const markerId = marker.id;
+
+      const distance = getDistance(pos.latitude, pos.longitude, markerLat, markerLng);
+      const isInside = distance <= radius;
+
+      const wasInside = insideMarkers.has(markerId);
+
+      if (isInside && !wasInside) {
+        // Entered marker
+        insideMarkers.set(markerId, {
+          entryTime: pos.fixTime,
+          entryPosition: pos,
+          entryOdometer: pos.attributes?.odometer || 0,
+        });
+      } else if (!isInside && wasInside) {
+        // Exited marker
+        const entry = insideMarkers.get(markerId);
+        const exitTime = pos.fixTime;
+        const duration = new Date(exitTime) - new Date(entry.entryTime);
+
+        events.push({
+          type: 'marker_in_out',
+          markerId,
+          markerName: marker.name,
+          markerIn: entry.entryTime,
+          markerOut: exitTime,
+          duration,
+          routeLength: Math.abs((pos.attributes?.odometer || 0) - entry.entryOdometer),
+          position: `${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`,
+          address: pos.address || '',
+        });
+
+        insideMarkers.delete(markerId);
+      }
+    }
+  }
+
+  // Handle markers we're still inside at the end
+  for (const [markerId, entry] of insideMarkers) {
+    const marker = selectedMarkers.find((m) => m.id === markerId);
+    events.push({
+      type: 'marker_in_out',
+      markerId,
+      markerName: marker?.name || `Marker ${markerId}`,
+      markerIn: entry.entryTime,
+      markerOut: null,
+      duration: null,
+      routeLength: 0,
+      position: `${entry.entryPosition.latitude.toFixed(6)}, ${entry.entryPosition.longitude.toFixed(6)}`,
+      address: entry.entryPosition.address || '',
+    });
+  }
+
+  return events;
+};
+
+/** Generate zone in/out events from route data (V1 parity) */
+const generateZoneInOutEvents = async (data, zoneIds) => {
+  if (!zoneIds || zoneIds.length === 0) {
+    return [];
+  }
+
+  const allGeofences = await fetchGeofences();
+  const selectedZones = allGeofences.filter((g) => zoneIds.includes(g.id));
+
+  if (selectedZones.length === 0 || data.length === 0) {
+    return [];
+  }
+
+  const events = [];
+  const sortedData = [...data].sort((a, b) => new Date(a.fixTime) - new Date(b.fixTime));
+
+  // Track which zones we're currently inside
+  const insideZones = new Map(); // zoneId -> entryTime, entryPosition
+
+  for (const pos of sortedData) {
+    if (!pos.latitude || !pos.longitude) continue;
+
+    for (const zone of selectedZones) {
+      const zoneId = zone.id;
+      const isInside = isPointInGeofence(pos.latitude, pos.longitude, zone);
+      const wasInside = insideZones.has(zoneId);
+
+      if (isInside && !wasInside) {
+        // Entered zone
+        insideZones.set(zoneId, {
+          entryTime: pos.fixTime,
+          entryPosition: pos,
+          entryOdometer: pos.attributes?.odometer || 0,
+        });
+      } else if (!isInside && wasInside) {
+        // Exited zone
+        const entry = insideZones.get(zoneId);
+        const exitTime = pos.fixTime;
+        const duration = new Date(exitTime) - new Date(entry.entryTime);
+
+        events.push({
+          type: 'zone_in_out',
+          zoneId,
+          zoneName: zone.name,
+          zoneIn: entry.entryTime,
+          zoneOut: exitTime,
+          duration,
+          routeLength: Math.abs((pos.attributes?.odometer || 0) - entry.entryOdometer),
+          position: `${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`,
+          address: pos.address || '',
+        });
+
+        insideZones.delete(zoneId);
+      }
+    }
+  }
+
+  // Handle zones we're still inside at the end
+  for (const [zoneId, entry] of insideZones) {
+    const zone = selectedZones.find((g) => g.id === zoneId);
+    events.push({
+      type: 'zone_in_out',
+      zoneId,
+      zoneName: zone?.name || `Zone ${zoneId}`,
+      zoneIn: entry.entryTime,
+      zoneOut: null,
+      duration: null,
+      routeLength: 0,
+      position: `${entry.entryPosition.latitude.toFixed(6)}, ${entry.entryPosition.longitude.toFixed(6)}`,
+      address: entry.entryPosition.address || '',
+    });
+  }
+
+  return events;
+};
+
+/** Re-fetch report data from Traccar API using stored params (V1 parity) */
 export const refetchReportData = async (gen) => {
   const rt = REPORT_TYPE_MAP[gen.type];
   if (!rt || !gen.deviceIds?.length || !gen.dateFrom || !gen.dateTo) return [];
+
   const from = new Date(gen.dateFrom).toISOString();
   const to = new Date(gen.dateTo).toISOString();
 
@@ -92,6 +401,35 @@ export const refetchReportData = async (gen) => {
     return computeRagReport(gen.deviceIds, from, to);
   }
 
+  // Marker in/out reports - generate events from route data
+  if (gen.type === 'marker_in_out' || gen.type === 'marker_in_out_gen') {
+    const allData = [];
+    for (const devId of gen.deviceIds) {
+      const url = `${rt.endpoint}?deviceId=${devId}&from=${from}&to=${to}`;
+      const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (resp.ok) {
+        const json = await resp.json();
+        allData.push(...json);
+      }
+    }
+    return generateMarkerInOutEvents(allData, gen.markerIds);
+  }
+
+  // Zone in/out reports - generate events from route data
+  if (gen.type === 'zone_in_out' || gen.type === 'zone_in_out_general') {
+    const allData = [];
+    for (const devId of gen.deviceIds) {
+      const url = `${rt.endpoint}?deviceId=${devId}&from=${from}&to=${to}`;
+      const resp = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (resp.ok) {
+        const json = await resp.json();
+        allData.push(...json);
+      }
+    }
+    return generateZoneInOutEvents(allData, gen.zoneIds);
+  }
+
+  // Standard reports - fetch data from API
   const allData = [];
   for (const devId of gen.deviceIds) {
     const url = `${rt.endpoint}?deviceId=${devId}&from=${from}&to=${to}`;
@@ -101,6 +439,13 @@ export const refetchReportData = async (gen) => {
       allData.push(...json);
     }
   }
+
+  // Apply speed limit filter for overspeed reports
+  if ((gen.type === 'overspeed' || gen.type === 'overspeed_count') && gen.speedLimit > 0) {
+    const speedLimitKnots = gen.speedLimit / 1.852; // Convert km/h to knots
+    return allData.filter((pos) => (pos.speed || 0) > speedLimitKnots);
+  }
+
   return allData;
 };
 

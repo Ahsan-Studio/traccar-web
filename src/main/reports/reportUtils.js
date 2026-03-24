@@ -9,6 +9,15 @@ export const fmtShort = (iso) => {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+/* ─────────── Format date for date input (YYYY-MM-DD) ─────────── */
+export const fmtDateInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+/* ─────────── Build ISO datetime from separate fields (V1 parity) ─────────── */
+export const buildDateTime = (dateStr, hour, minute) => {
+  if (!dateStr) return '';
+  return `${dateStr}T${pad(hour)}:${pad(minute)}`;
+};
+
 export const applyTimeFilter = (filterId) => {
   const now = new Date();
   let from;
@@ -58,7 +67,18 @@ export const applyTimeFilter = (filterId) => {
     case 'lastMonth': from = new Date(now.getFullYear(), now.getMonth() - 1, 1); to = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59); break;
     default: from = new Date(now.getFullYear(), now.getMonth(), now.getDate()); to = now;
   }
-  return { from: fmtLocal(from), to: fmtLocal(to) };
+  // Return both combined and separate values (V1 parity)
+  return {
+    from: fmtLocal(from),
+    to: fmtLocal(to),
+    // Separate fields for V1 parity
+    dateFrom: fmtDateInput(from),
+    hourFrom: from.getHours(),
+    minuteFrom: from.getMinutes(),
+    dateTo: fmtDateInput(to),
+    hourTo: to.getHours(),
+    minuteTo: to.getMinutes(),
+  };
 };
 
 /* ─────────── Filename helper ─────────── */

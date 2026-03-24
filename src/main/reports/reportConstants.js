@@ -1,5 +1,6 @@
 /* ─────────── Data Items per Report Type (V1 parity) ─────────── */
 export const DATA_ITEMS = {
+  // Text Reports
   general: ['route_start', 'route_end', 'route_length', 'move_duration', 'stop_duration', 'stop_count', 'top_speed', 'avg_speed', 'overspeed_count', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'odometer', 'engine_hours', 'driver', 'trailer', 'custom_fields'],
   general_merged: ['route_start', 'route_end', 'route_length', 'move_duration', 'stop_duration', 'stop_count', 'top_speed', 'avg_speed', 'overspeed_count', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'odometer', 'engine_hours', 'driver', 'trailer', 'total'],
   object_info: ['imei', 'group', 'transport_model', 'vin', 'plate_number', 'odometer', 'engine_hours', 'driver', 'trailer', 'gps_device', 'sim_card_number'],
@@ -7,7 +8,7 @@ export const DATA_ITEMS = {
   current_position_off: ['time', 'position', 'speed', 'altitude', 'angle', 'status', 'odometer', 'engine_hours', 'driver', 'trailer'],
   route: ['time', 'position', 'speed', 'altitude', 'angle'],
   route_data_sensors: ['time', 'position', 'speed', 'altitude', 'angle'],
-  trips: ['status', 'start', 'end', 'duration', 'move_duration', 'stop_duration', 'route_length', 'top_speed', 'avg_speed', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'driver', 'trailer'],
+  drives_stops: ['status', 'start', 'end', 'duration', 'move_duration', 'stop_duration', 'route_length', 'top_speed', 'avg_speed', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'driver', 'trailer'],
   drives_stops_sensors: ['status', 'start', 'end', 'duration', 'move_duration', 'stop_duration', 'route_length', 'top_speed', 'avg_speed', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'driver', 'trailer'],
   drives_stops_logic: ['status', 'start', 'end', 'duration', 'move_duration', 'stop_duration', 'route_length', 'top_speed', 'avg_speed', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'driver', 'trailer'],
   travel_sheet: ['time_a', 'position_a', 'odometer_a', 'time_b', 'position_b', 'odometer_b', 'duration', 'route_length', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'driver', 'trailer', 'total'],
@@ -17,6 +18,8 @@ export const DATA_ITEMS = {
   overspeed_count: ['route_start', 'route_end', 'route_length', 'move_duration', 'top_speed', 'avg_speed', 'overspeed_count'],
   underspeed: ['start', 'end', 'duration', 'top_speed', 'avg_speed', 'underspeed_position', 'driver', 'trailer'],
   underspeed_count: ['route_start', 'route_end', 'route_length', 'move_duration', 'top_speed', 'avg_speed', 'underspeed_count'],
+  marker_in_out: ['marker_in', 'marker_out', 'duration', 'route_length', 'engine_hours', 'marker_name', 'marker_position', 'total'],
+  marker_in_out_gen: ['route_start', 'route_end', 'route_length', 'move_duration', 'stop_duration', 'stop_count', 'top_speed', 'avg_speed', 'overspeed_count', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'odometer', 'engine_hours', 'driver', 'trailer', 'total'],
   zone_in_out: ['zone_in', 'zone_out', 'duration', 'route_length', 'engine_hours', 'zone_name', 'zone_position', 'total'],
   zone_in_out_general: ['zone_in', 'zone_out', 'duration', 'route_length', 'engine_hours', 'zone_name', 'zone_position', 'total'],
   events: ['time', 'event', 'event_position', 'driver', 'trailer', 'total'],
@@ -30,14 +33,16 @@ export const DATA_ITEMS = {
   dtc: ['code', 'position'],
   expenses: ['date', 'name', 'object', 'quantity', 'cost', 'supplier', 'buyer', 'odometer', 'engine_hours', 'description', 'total'],
   logic_sensors: ['sensor', 'activation_time', 'deactivation_time', 'duration', 'activation_position', 'deactivation_position'],
+  // Graphical Reports (no data items - graphs only)
   speed_graph: [],
   altitude_graph: [],
   acc_graph: [],
   fuellevel_graph: [],
   temperature_graph: [],
   sensor_graph: [],
-  routes_map: ['route_start', 'route_end', 'route_length', 'move_duration', 'stop_duration', 'stop_count', 'top_speed', 'avg_speed', 'overspeed_count', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'odometer', 'engine_hours', 'driver', 'trailer'],
-  routes_stops_map: ['route_start', 'route_end', 'route_length', 'move_duration', 'stop_duration', 'stop_count', 'top_speed', 'avg_speed', 'overspeed_count', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'odometer', 'engine_hours', 'driver', 'trailer'],
+  // Map Reports
+  routes: ['route_start', 'route_end', 'route_length', 'move_duration', 'stop_duration', 'stop_count', 'top_speed', 'avg_speed', 'overspeed_count', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'odometer', 'engine_hours', 'driver', 'trailer'],
+  routes_stops: ['route_start', 'route_end', 'route_length', 'move_duration', 'stop_duration', 'stop_count', 'top_speed', 'avg_speed', 'overspeed_count', 'fuel_consumption', 'avg_fuel_consumption', 'fuel_cost', 'engine_work', 'engine_idle', 'odometer', 'engine_hours', 'driver', 'trailer'],
   image_gallery: ['time', 'position'],
 };
 
@@ -91,6 +96,10 @@ export const DATA_ITEM_LABELS = {
   zone_out: 'Zone Out',
   zone_name: 'Zone Name',
   zone_position: 'Zone Position',
+  marker_in: 'Marker In',
+  marker_out: 'Marker Out',
+  marker_name: 'Marker Name',
+  marker_position: 'Marker Position',
   event: 'Event',
   event_position: 'Event Position',
   service: 'Service',
@@ -132,12 +141,10 @@ export const REPORT_TYPES = [
   { id: 'object_info', label: 'Object Information', group: 'Text Reports', endpoint: '/api/reports/summary' },
   { id: 'current_position', label: 'Current Position', group: 'Text Reports', endpoint: '/api/reports/summary' },
   { id: 'current_position_off', label: 'Current Position (Offline)', group: 'Text Reports', endpoint: '/api/reports/summary' },
-  { id: 'route', label: 'Route Data', group: 'Text Reports', endpoint: '/api/reports/route' },
   { id: 'route_data_sensors', label: 'Route Data with Sensors', group: 'Text Reports', endpoint: '/api/reports/route' },
-  { id: 'trips', label: 'Drives and Stops', group: 'Text Reports', endpoint: '/api/reports/trips' },
+  { id: 'drives_stops', label: 'Drives and Stops', group: 'Text Reports', endpoint: '/api/reports/trips' },
   { id: 'drives_stops_sensors', label: 'Drives and Stops with Sensors', group: 'Text Reports', endpoint: '/api/reports/trips' },
   { id: 'drives_stops_logic', label: 'Drives and Stops with Logic Sensors', group: 'Text Reports', endpoint: '/api/reports/trips' },
-  { id: 'stops', label: 'Stops', group: 'Text Reports', endpoint: '/api/reports/stops' },
   { id: 'travel_sheet', label: 'Travel Sheet', group: 'Text Reports', endpoint: '/api/reports/trips' },
   { id: 'travel_sheet_dn', label: 'Travel Sheet (Day/Night)', group: 'Text Reports', endpoint: '/api/reports/trips' },
   { id: 'mileage_daily', label: 'Mileage Daily', group: 'Text Reports', endpoint: '/api/reports/summary' },
@@ -145,6 +152,8 @@ export const REPORT_TYPES = [
   { id: 'overspeed_count', label: 'Overspeed Count (Merged)', group: 'Text Reports', endpoint: '/api/reports/route' },
   { id: 'underspeed', label: 'Underspeeds', group: 'Text Reports', endpoint: '/api/reports/route' },
   { id: 'underspeed_count', label: 'Underspeed Count (Merged)', group: 'Text Reports', endpoint: '/api/reports/route' },
+  { id: 'marker_in_out', label: 'Marker In/Out', group: 'Text Reports', endpoint: '/api/reports/events' },
+  { id: 'marker_in_out_gen', label: 'Marker In/Out with Gen Info', group: 'Text Reports', endpoint: '/api/reports/events' },
   { id: 'zone_in_out', label: 'Zone In/Out', group: 'Text Reports', endpoint: '/api/reports/events' },
   { id: 'zone_in_out_general', label: 'Zone In/Out with General Info', group: 'Text Reports', endpoint: '/api/reports/events' },
   { id: 'events', label: 'Events', group: 'Text Reports', endpoint: '/api/reports/events' },
@@ -166,9 +175,9 @@ export const REPORT_TYPES = [
   { id: 'temperature_graph', label: 'Temperature', group: 'Graphical Reports', endpoint: '/api/reports/route' },
   { id: 'sensor_graph', label: 'Sensor', group: 'Graphical Reports', endpoint: '/api/reports/route' },
   // Map Reports
-  { id: 'routes_map', label: 'Routes', group: 'Map Reports', endpoint: '/api/reports/route' },
-  { id: 'routes_stops_map', label: 'Routes with Stops', group: 'Map Reports', endpoint: '/api/reports/route' },
-  { id: 'image_gallery', label: 'Image Gallery', group: 'Map Reports', endpoint: '/api/reports/route' },
+  { id: 'routes', label: 'Routes', group: 'Map Reports', endpoint: '/api/reports/route' },
+  { id: 'routes_stops', label: 'Routes with Stops', group: 'Map Reports', endpoint: '/api/reports/route' },
+  { id: 'image_gallery', label: 'Image Gallery', group: 'Media Reports', endpoint: '/api/reports/route' },
 ];
 
 export const REPORT_TYPE_MAP = {};
@@ -207,6 +216,36 @@ export const STOP_DURATIONS = [
 
 /* ─────────── Derived select options for custom components ─────────── */
 export const TYPE_OPTIONS = REPORT_TYPES.map((rt) => ({ value: rt.id, label: rt.label }));
+
+/* ─────────── Grouped type options (V1 parity with optgroups) ─────────── */
+export const TYPE_OPTIONS_GROUPED = [
+  {
+    group: 'Text Reports',
+    options: REPORT_TYPES.filter((rt) => rt.group === 'Text Reports').map((rt) => ({ value: rt.id, label: rt.label })),
+  },
+  {
+    group: 'Graphical Reports',
+    options: REPORT_TYPES.filter((rt) => rt.group === 'Graphical Reports').map((rt) => ({ value: rt.id, label: rt.label })),
+  },
+  {
+    group: 'Map Reports',
+    options: REPORT_TYPES.filter((rt) => rt.group === 'Map Reports').map((rt) => ({ value: rt.id, label: rt.label })),
+  },
+  {
+    group: 'Media Reports',
+    options: REPORT_TYPES.filter((rt) => rt.group === 'Media Reports').map((rt) => ({ value: rt.id, label: rt.label })),
+  },
+];
+
+/* ─────────── Check if report type should only have HTML format (V1 parity) ─────────── */
+export const isGraphicalOrMapReport = (type) => {
+  const htmlOnlyTypes = [
+    'speed_graph', 'altitude_graph', 'acc_graph', 'fuellevel_graph',
+    'temperature_graph', 'sensor_graph', 'routes', 'routes_stops', 'image_gallery',
+  ];
+  return htmlOnlyTypes.includes(type);
+};
+
 export const FORMAT_SELECT_OPTIONS = FORMAT_OPTIONS.map((f) => ({ value: f.id, label: f.label }));
 export const TIME_FILTER_OPTIONS = TIME_FILTERS.map((f) => ({ value: f.id, label: f.label }));
 export const STOP_DURATION_OPTIONS = STOP_DURATIONS.map((s) => ({ value: s.value, label: s.label }));
@@ -229,15 +268,21 @@ export const emptyTemplate = () => ({
   ignoreEmpty: false,
   showCoordinates: true,
   showAddresses: false,
+  markersAddresses: false,
   zonesAddresses: false,
   stopDuration: '1',
   speedLimit: '',
   daily: false,
   weekly: false,
   scheduleEmail: '',
-  timeFilter: 'today',
+  timeFilter: '',
+  // V1 parity: separate date and time fields
   dateFrom: '',
+  hourFrom: 0,
+  minuteFrom: 0,
   dateTo: '',
+  hourTo: 23,
+  minuteTo: 59,
   // Day/Night config for travel_sheet_dn
   nightStartHour: 22,
   nightStartMinute: 0,

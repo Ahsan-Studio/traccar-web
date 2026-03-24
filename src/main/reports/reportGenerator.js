@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { REPORT_TYPE_MAP } from './reportConstants';
-import { RESULT_COLUMNS } from './reportColumns';
+import { RESULT_COLUMNS, getColumnsForDataItems, getAllColumnsForReportType } from './reportColumns';
 import { fmtShort, buildFilenameBase } from './reportUtils';
 import { CHART_CONFIGS } from './ChartReport';
 
@@ -9,6 +9,140 @@ import { CHART_CONFIGS } from './ChartReport';
 export const GRAPHICAL_REPORT_TYPES = ['speed_graph', 'altitude_graph', 'acc_graph', 'fuellevel_graph', 'temperature_graph', 'sensor_graph'];
 
 export const isGraphicalReport = (reportType) => GRAPHICAL_REPORT_TYPES.includes(reportType);
+
+/* ─────────── Position formatting helpers (V1 parity) ─────────── */
+const formatCoordinates = (lat, lng) => {
+  if (lat == null || lng == null) return '';
+  return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+};
+
+/* ─────────── Get position display based on settings (V1 parity) ─────────── */
+const getPositionDisplay = (row, template, geofences, markers) => {
+  const { showCoordinates, showAddresses, markersAddresses, zonesAddresses } = template;
+
+  // Priority: markers > zones > addresses > coordinates
+  if (markersAddresses && markers && markers.length > 0) {
+    // Find nearest marker
+    const nearestMarker = findNearestMarker(row.latitude, row.longitude, markers);
+    if (nearestMarker) {
+      return nearestMarker.name;
+    }
+  }
+
+  if (zonesAddresses && geofences && geofences.length > 0) {
+    // Find containing zone
+    const containingZone = findContainingZone(row.latitude, row.longitude, geofences);
+    if (containingZone) {
+      return containingZone.name;
+    }
+  }
+
+  if (showAddresses && row.address) {
+    return row.address;
+  }
+
+  if (showCoordinates) {
+    return formatCoordinates(row.latitude, row.longitude);
+  }
+
+  // Default: show address if available, otherwise coordinates
+  return row.address || formatCoordinates(row.latitude, row.longitude);
+};
+
+/* ─────────── Find nearest marker within radius ─────────── */
+const findNearestMarker = (lat, lng, markers) => {
+  if (!markers || markers.length === 0) return null;
+
+  let nearest = null;
+  let minDistance = Infinity;
+
+  for (const marker of markers) {
+    const distance = getDistance(lat, lng, marker.latitude, marker.longitude);
+    const radius = marker.attributes?.radius || 100; // Default 100m radius
+
+    if (distance <= radius && distance < minDistance) {
+      minDistance = distance;
+      nearest = marker;
+    }
+  }
+
+  return nearest;
+};
+
+/* ─────────── Find containing zone/geofence ─────────── */
+const findContainingZone = (lat, lng, geofences) => {
+  if (!geofences || geofences.length === 0) return null;
+
+  for (const zone of geofences) {
+    if (isPointInGeofence(lat, lng, zone)) {
+      return zone;
+    }
+  }
+
+  return null;
+};
+
+/* ─────────── Calculate distance between two points (Haversine) ─────────── */
+const getDistance = (lat1, lng1, lat2, lng2) => {
+  const R = 6371000; // Earth radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+/* ─────────── Check if point is in geofence ─────────── */
+const isPointInGeofence = (lat, lng, geofence) => {
+  if (!geofence.area) return false;
+
+  // Parse WKT polygon
+  const areaStr = geofence.area;
+  if (areaStr.startsWith('POLYGON')) {
+    const coordsMatch = areaStr.match(/\(([^)]+)\)/);
+    if (!coordsMatch) return false;
+
+    const coords = coordsMatch[1].split(',').map((c) => {
+      const [lngStr, latStr] = c.trim().split(' ');
+      return { lat: parseFloat(latStr), lng: parseFloat(lngStr) };
+    });
+
+    return isPointInPolygon(lat, lng, coords);
+  }
+
+  // Circle geofence
+  if (areaStr.startsWith('CIRCLE')) {
+    const centerMatch = areaStr.match(/CIRCLE\s*\(\s*([0-9.-]+)\s+([0-9.-]+)\s*,\s*([0-9.]+)\s*\)/);
+    if (!centerMatch) return false;
+
+    const centerLng = parseFloat(centerMatch[1]);
+    const centerLat = parseFloat(centerMatch[2]);
+    const radius = parseFloat(centerMatch[3]);
+
+    const distance = getDistance(lat, lng, centerLat, centerLng);
+    return distance <= radius;
+  }
+
+  return false;
+};
+
+/* ─────────── Check if point is in polygon (ray casting) ─────────── */
+const isPointInPolygon = (lat, lng, polygon) => {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lat;
+    const yi = polygon[i].lng;
+    const xj = polygon[j].lat;
+    const yj = polygon[j].lng;
+
+    const intersect = ((yi > lng) !== (yj > lng))
+      && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+};
 
 /* ─────────── Day/Night classification helper ─────────── */
 const isNightTime = (dateTime, nightStartHour, nightStartMinute, nightEndHour, nightEndMinute) => {
@@ -48,6 +182,47 @@ const classifyRagScore = (score, lowScore, highScore) => {
   if (normalizedScore < 0.33) return 'Red';
   if (normalizedScore < 0.66) return 'Amber';
   return 'Green';
+};
+
+/* ─────────── Filter data based on speed limit (V1 parity) ─────────── */
+const filterOverspeedData = (data, speedLimit) => {
+  if (!speedLimit || speedLimit <= 0) return data;
+
+  return data.filter((row) => {
+    const speed = row.speed || 0;
+    const speedKmh = speed * 1.852; // Convert knots to km/h
+    return speedKmh > speedLimit;
+  });
+};
+
+/* ─────────── Filter stops based on duration (V1 parity) ─────────── */
+const filterStopsByDuration = (data, stopDurationMinutes) => {
+  if (!stopDurationMinutes || stopDurationMinutes <= 0) return data;
+
+  const minDurationMs = stopDurationMinutes * 60 * 1000;
+
+  return data.filter((row) => {
+    const duration = row.duration || row.stopDuration || 0;
+    return duration >= minDurationMs;
+  });
+};
+
+/* ─────────── Filter empty data if ignoreEmpty is true (V1 parity) ─────────── */
+const filterEmptyData = (data, template) => {
+  if (!template.ignoreEmpty) return data;
+
+  // Group data by device
+  const deviceData = {};
+  data.forEach((row) => {
+    const deviceId = row.deviceId || row.device_id;
+    if (!deviceData[deviceId]) {
+      deviceData[deviceId] = [];
+    }
+    deviceData[deviceId].push(row);
+  });
+
+  // Only keep devices with data
+  return Object.values(deviceData).flat();
 };
 
 /* ─────────── Build chart SVG for graphical reports ─────────── */
@@ -115,7 +290,7 @@ const buildChartSvg = (data, config, width = 800, height = 400) => {
 };
 
 /* ─────────── HTML report generator (V1 parity) ─────────── */
-export const buildHtmlReport = (data, template, devices, dateFrom, dateTo) => {
+export const buildHtmlReport = (data, template, devices, dateFrom, dateTo, geofences = [], markers = []) => {
   const rt = REPORT_TYPE_MAP[template.type];
   const reportLabel = rt?.label || template.type;
   const deviceNames = (template.deviceIds || [])
@@ -129,8 +304,34 @@ export const buildHtmlReport = (data, template, devices, dateFrom, dateTo) => {
     return buildGraphicalHtmlReport(data, template, devices, dateFrom, dateTo, reportLabel, deviceNames, periodFrom, periodTo);
   }
 
-  /* Determine columns for this type */
-  let columns = RESULT_COLUMNS[template.type] || RESULT_COLUMNS.summary;
+  /* V1 parity: Filter data based on settings */
+  let filteredData = [...data];
+
+  // Filter by speed limit for overspeed reports
+  if (template.type === 'overspeed' || template.type === 'overspeed_count') {
+    filteredData = filterOverspeedData(filteredData, template.speedLimit);
+  }
+
+  // Filter by stop duration
+  if (template.stopDuration && template.stopDuration > 0) {
+    filteredData = filterStopsByDuration(filteredData, parseInt(template.stopDuration, 10));
+  }
+
+  // Filter empty data if ignoreEmpty is true
+  filteredData = filterEmptyData(filteredData, template);
+
+  /* V1 parity: Get columns based on dataItems selection */
+  let columns;
+  if (template.dataItems && template.dataItems.length > 0) {
+    columns = getColumnsForDataItems(template.type, template.dataItems);
+  } else {
+    columns = getAllColumnsForReportType(template.type);
+  }
+
+  // Fallback to legacy columns if no columns found
+  if (!columns || columns.length === 0) {
+    columns = RESULT_COLUMNS[template.type] || RESULT_COLUMNS.summary;
+  }
 
   // Add day/night column for travel_sheet_dn
   const isDayNightReport = template.type === 'travel_sheet_dn';
@@ -141,8 +342,8 @@ export const buildHtmlReport = (data, template, devices, dateFrom, dateTo) => {
     ];
   }
 
-  /* Build data rows */
-  const dataRows = data.map((row, i) => {
+  /* Build data rows with position formatting */
+  const dataRows = filteredData.map((row, i) => {
     // Add day/night classification
     if (isDayNightReport) {
       row.dayNight = classifyTripAsDayNight(
@@ -169,8 +370,19 @@ export const buildHtmlReport = (data, template, devices, dateFrom, dateTo) => {
       row.ragRating = classifyRagScore(totalScore, lowScore, highScore);
     }
 
+    // Add position display based on settings
+    if (template.showCoordinates || template.showAddresses || template.markersAddresses || template.zonesAddresses) {
+      row.position = getPositionDisplay(row, template, geofences, markers);
+    }
+
     const cells = columns.map((c) => {
-      const val = row[c.key];
+      let val = row[c.key];
+
+      // Special handling for position column
+      if (c.key === 'position' || c.key === 'address') {
+        val = getPositionDisplay(row, template, geofences, markers);
+      }
+
       const formatted = c.format ? c.format(val) : (val ?? '');
 
       // Add color styling for RAG rating
@@ -259,9 +471,9 @@ table.report tr:hover { background-color: #f8f8f8; }
   <thead><tr><th>#</th>${headerCells}</tr></thead>
   <tbody>${dataRows}</tbody>
 </table>
-${data.length === 0 ? '<p style="color:#999;margin-top:8px">Nothing has been found on your request.</p>' : ''}
+${filteredData.length === 0 ? '<p style="color:#999;margin-top:8px">Nothing has been found on your request.</p>' : ''}
 <div class="footer">
-  Generated: ${new Date().toLocaleString()} | Records: ${data.length}
+  Generated: ${new Date().toLocaleString()} | Records: ${filteredData.length}
 </div>
 </body>
 </html>`;
@@ -377,7 +589,7 @@ ${data.length === 0 ? '<p style="color:#999;margin-top:8px">Nothing has been fou
 };
 
 /** Generate PDF from report data using jspdf-autotable */
-export const generatePdfFromData = (data, template, devices, dateFrom, dateTo, reportLabel) => {
+export const generatePdfFromData = (data, template, devices, dateFrom, dateTo, reportLabel, geofences = [], markers = []) => {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const deviceNames = (template.deviceIds || [])
     .map((id) => devices.find((d) => d.id === id)?.name || `Device ${id}`)
@@ -446,7 +658,34 @@ export const generatePdfFromData = (data, template, devices, dateFrom, dateTo, r
     return doc;
   }
 
-  let columns = RESULT_COLUMNS[template.type] || RESULT_COLUMNS.summary;
+  /* V1 parity: Filter data based on settings */
+  let filteredData = [...data];
+
+  // Filter by speed limit for overspeed reports
+  if (template.type === 'overspeed' || template.type === 'overspeed_count') {
+    filteredData = filterOverspeedData(filteredData, template.speedLimit);
+  }
+
+  // Filter by stop duration
+  if (template.stopDuration && template.stopDuration > 0) {
+    filteredData = filterStopsByDuration(filteredData, parseInt(template.stopDuration, 10));
+  }
+
+  // Filter empty data if ignoreEmpty is true
+  filteredData = filterEmptyData(filteredData, template);
+
+  /* V1 parity: Get columns based on dataItems selection */
+  let columns;
+  if (template.dataItems && template.dataItems.length > 0) {
+    columns = getColumnsForDataItems(template.type, template.dataItems);
+  } else {
+    columns = getAllColumnsForReportType(template.type);
+  }
+
+  // Fallback to legacy columns if no columns found
+  if (!columns || columns.length === 0) {
+    columns = RESULT_COLUMNS[template.type] || RESULT_COLUMNS.summary;
+  }
 
   // Add day/night column for travel_sheet_dn
   const isDayNightReport = template.type === 'travel_sheet_dn';
@@ -461,7 +700,7 @@ export const generatePdfFromData = (data, template, devices, dateFrom, dateTo, r
   const headers = ['#', ...columns.map((c) => c.label)];
 
   // Table data
-  const rows = data.map((row, i) => {
+  const rows = filteredData.map((row, i) => {
     // Add day/night classification
     if (isDayNightReport) {
       row.dayNight = classifyTripAsDayNight(
@@ -488,8 +727,19 @@ export const generatePdfFromData = (data, template, devices, dateFrom, dateTo, r
       row.ragRating = classifyRagScore(totalScore, lowScore, highScore);
     }
 
+    // Add position display based on settings
+    if (template.showCoordinates || template.showAddresses || template.markersAddresses || template.zonesAddresses) {
+      row.position = getPositionDisplay(row, template, geofences, markers);
+    }
+
     const cells = columns.map((c) => {
-      const val = row[c.key];
+      let val = row[c.key];
+
+      // Special handling for position column
+      if (c.key === 'position' || c.key === 'address') {
+        val = getPositionDisplay(row, template, geofences, markers);
+      }
+
       if (c.format) {
         const formatted = c.format(val);
         // Handle HTML formatting - strip tags and use plain text

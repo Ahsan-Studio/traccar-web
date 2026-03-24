@@ -663,7 +663,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 RFID and iButton logbook
               </Typography>
             </Box>
-            <Box className={classes.checkboxRow}>
+            {/* <Box className={classes.checkboxRow}>
               <CustomCheckbox
                 checked={permissions.dtc}
                 onChange={handlePermissionChange("dtc")}
@@ -671,7 +671,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               <Typography className={classes.checkboxLabel}>
                 DTC (Diagnostic Trouble Codes)
               </Typography>
-            </Box>
+            </Box> */}
             <Box className={classes.checkboxRow}>
               <CustomCheckbox
                 checked={permissions.maintenance}
@@ -681,7 +681,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 Maintenance
               </Typography>
             </Box>
-            <Box className={classes.checkboxRow}>
+            {/* <Box className={classes.checkboxRow}>
               <CustomCheckbox
                 checked={permissions.expenses}
                 onChange={handlePermissionChange("expenses")}
@@ -689,7 +689,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               <Typography className={classes.checkboxLabel}>
                 Expenses
               </Typography>
-            </Box>
+            </Box> */}
             <Box className={classes.checkboxRow}>
               <CustomCheckbox
                 checked={permissions.objectControl}
@@ -699,7 +699,7 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
                 Object control
               </Typography>
             </Box>
-            <Box className={classes.checkboxRow}>
+            {/* <Box className={classes.checkboxRow}>
               <CustomCheckbox
                 checked={permissions.imageGallery}
                 onChange={handlePermissionChange("imageGallery")}
@@ -707,14 +707,14 @@ const EditSubAccountDialog = ({ open, onClose, subAccount }) => {
               <Typography className={classes.checkboxLabel}>
                 Image gallery
               </Typography>
-            </Box>
-            <Box className={classes.checkboxRow}>
+            </Box> */}
+            {/* <Box className={classes.checkboxRow}>
               <CustomCheckbox
                 checked={permissions.chat}
                 onChange={handlePermissionChange("chat")}
               />
               <Typography className={classes.checkboxLabel}>Chat</Typography>
-            </Box>
+            </Box> */}
           </Box>
         </Box>
 

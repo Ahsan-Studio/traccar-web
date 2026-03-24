@@ -48,13 +48,26 @@ const App = () => {
   });
 
   useEffectAsync(async () => {
+    // Check for auto-login parameter - if present, force logout and redirect to login
+    const params = new URLSearchParams(search);
+    const auToken = params.get('au');
+
+    if (auToken) {
+      // Logout existing session first, then redirect to login for auto-login
+      await fetch('/api/session', { method: 'DELETE' });
+      dispatch(sessionActions.updateUser(null));
+      window.sessionStorage.setItem('postLogin', pathname);
+      navigate('/login' + search, { replace: true });
+      return null;
+    }
+
     if (!user) {
       const response = await fetch('/api/session');
       if (response.ok) {
         dispatch(sessionActions.updateUser(await response.json()));
       } else {
         window.sessionStorage.setItem('postLogin', pathname + search);
-        // Preserve query params (like ?au= for auto-login) when redirecting
+        // Preserve query params when redirecting
         navigate((newServer ? '/register' : '/login') + search, { replace: true });
       }
     }

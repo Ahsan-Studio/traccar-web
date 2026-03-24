@@ -106,12 +106,13 @@ const ReportsDialog = ({ open, onClose }) => {
       || (REPORT_TYPE_MAP[g.type]?.label || '').toLowerCase().includes(q));
   }, [generated, generatedSearch]);
 
-  /* ── CustomTable column definitions ── */
+  /* ── CustomTable column definitions (V1 parity) ── */
   const templateColumns = useMemo(() => [
     { key: 'name', label: 'Name' },
     { key: 'type', label: 'Type', render: (row) => REPORT_TYPE_MAP[row.type]?.label || row.type },
     { key: 'format', label: 'Format', render: (row) => (row.format || '').toUpperCase() },
     { key: 'deviceIds', label: 'Objects', align: 'center', render: (row) => row.deviceIds?.length || 0 },
+    { key: 'markerIds', label: 'Markers', align: 'center', render: (row) => row.markerIds?.length || 0 },
     { key: 'zoneIds', label: 'Zones', align: 'center', render: (row) => row.zoneIds?.length || 0 },
     { key: 'sensorIds', label: 'Sensors', align: 'center', render: (row) => row.sensorIds?.length || 0 },
     { key: 'daily', label: 'Daily', align: 'center', render: (row) => <BoolIcon value={row.daily} /> },
@@ -124,9 +125,10 @@ const ReportsDialog = ({ open, onClose }) => {
     { key: 'type', label: 'Type', render: (row) => REPORT_TYPE_MAP[row.type]?.label || row.type },
     { key: 'format', label: 'Format', render: (row) => (row.format || '').toUpperCase() },
     { key: 'deviceIds', label: 'Objects', align: 'center', render: (row) => row.deviceIds?.length || 0 },
+    { key: 'markerIds', label: 'Markers', align: 'center', render: (row) => row.markerIds?.length || 0 },
     { key: 'zoneIds', label: 'Zones', align: 'center', render: (row) => row.zoneIds?.length || 0 },
+    { key: 'sensorIds', label: 'Sensors', align: 'center', render: (row) => row.sensorIds?.length || 0 },
     { key: 'schedule', label: 'Schedule', align: 'center', render: (row) => <BoolIcon value={row.schedule} /> },
-    { key: 'recordCount', label: 'Records', render: (row) => row.recordCount ?? (row.data?.length || 0) },
   ], []);
 
   /* ── Template CRUD ── */
@@ -201,13 +203,15 @@ const ReportsDialog = ({ open, onClose }) => {
         setChartOpen(true);
         setLoading(false);
 
-        // Save metadata to server
+        // Save metadata to server (V1 parity: include all columns)
         const genMeta = {
           name: tpl.name || 'Untitled',
           type: tpl.type,
           format: tpl.format,
           deviceIds: tpl.deviceIds,
+          markerIds: tpl.markerIds,
           zoneIds: tpl.zoneIds,
+          sensorIds: tpl.sensorIds,
           schedule: tpl.daily || tpl.weekly,
           dateFrom: tpl.dateFrom,
           dateTo: tpl.dateTo,
@@ -224,26 +228,28 @@ const ReportsDialog = ({ open, onClose }) => {
 
       /* Generate report and download directly */
       const fmt = tpl.format || 'html';
-      const html = buildHtmlReport(allData, tpl, deviceList, tpl.dateFrom, tpl.dateTo);
+      const html = buildHtmlReport(allData, tpl, deviceList, tpl.dateFrom, tpl.dateTo, geofenceList, markers);
       const rt = REPORT_TYPE_MAP[tpl.type];
       const reportLabel = rt?.label || tpl.type;
 
       // Generate PDF document if format is pdf
       let pdfDoc = null;
       if (fmt === 'pdf') {
-        pdfDoc = generatePdfFromData(allData, tpl, deviceList, tpl.dateFrom, tpl.dateTo, reportLabel);
+        pdfDoc = generatePdfFromData(allData, tpl, deviceList, tpl.dateFrom, tpl.dateTo, reportLabel, geofenceList, markers);
       }
 
       // Download the file directly
       downloadReportFile(html, tpl.name, tpl.dateFrom, tpl.dateTo, fmt, pdfDoc);
 
-      // Save metadata to server (no raw data blob)
+      // Save metadata to server (no raw data blob) - V1 parity
       const genMeta = {
         name: tpl.name || 'Untitled',
         type: tpl.type,
         format: tpl.format,
         deviceIds: tpl.deviceIds,
+        markerIds: tpl.markerIds,
         zoneIds: tpl.zoneIds,
+        sensorIds: tpl.sensorIds,
         schedule: tpl.daily || tpl.weekly,
         dateFrom: tpl.dateFrom,
         dateTo: tpl.dateTo,
@@ -260,7 +266,7 @@ const ReportsDialog = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [deviceList]);
+  }, [deviceList, geofenceList, markers]);
 
   /* ── Quick Generate from gear dropdown (time filter) ── */
   const handleQuickGenerate = useCallback(async (filterId) => {
@@ -322,14 +328,14 @@ const ReportsDialog = ({ open, onClose }) => {
 
       // For non-graphical reports, download directly
       const fmt = report.format || 'html';
-      const html = buildHtmlReport(data, report, deviceList, report.dateFrom, report.dateTo);
+      const html = buildHtmlReport(data, report, deviceList, report.dateFrom, report.dateTo, geofenceList, markers);
       const rt = REPORT_TYPE_MAP[report.type];
       const reportLabel = rt?.label || report.type;
 
       // Generate PDF document if format is pdf
       let pdfDoc = null;
       if (fmt === 'pdf') {
-        pdfDoc = generatePdfFromData(data, report, deviceList, report.dateFrom, report.dateTo, reportLabel);
+        pdfDoc = generatePdfFromData(data, report, deviceList, report.dateFrom, report.dateTo, reportLabel, geofenceList, markers);
       }
 
       downloadReportFile(html, report.name, report.dateFrom, report.dateTo, fmt, pdfDoc);
@@ -338,21 +344,21 @@ const ReportsDialog = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [deviceList]);
+  }, [deviceList, geofenceList, markers]);
 
   const handleDownloadGenerated = useCallback(async (report) => {
     setLoading(true);
     try {
       const fmt = report.format || 'html';
       const data = await refetchReportData(report);
-      const html = buildHtmlReport(data, report, deviceList, report.dateFrom, report.dateTo);
+      const html = buildHtmlReport(data, report, deviceList, report.dateFrom, report.dateTo, geofenceList, markers);
       const rt = REPORT_TYPE_MAP[report.type];
       const reportLabel = rt?.label || report.type;
 
       // Generate PDF document if format is pdf
       let pdfDoc = null;
       if (fmt === 'pdf') {
-        pdfDoc = generatePdfFromData(data, report, deviceList, report.dateFrom, report.dateTo, reportLabel);
+        pdfDoc = generatePdfFromData(data, report, deviceList, report.dateFrom, report.dateTo, reportLabel, geofenceList, markers);
       }
 
       downloadReportFile(html, report.name, report.dateFrom, report.dateTo, fmt, pdfDoc);
@@ -361,7 +367,7 @@ const ReportsDialog = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [deviceList]);
+  }, [deviceList, geofenceList, markers]);
 
   /* ── Toggle helpers ── */
   const onToggleTemplateAll = useCallback(() => {

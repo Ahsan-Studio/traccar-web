@@ -119,3 +119,26 @@
 .custom-select-dropdown::-webkit-scrollbar-thumb:hover {
   background: #999;
 }
+
+/* Optgroup Styling (V1 parity) */
+.custom-select-optgroup {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.custom-select-optgroup-label {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #e0e0e0;
+  cursor: default;
+}
+
+.custom-select-optgroup-options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}

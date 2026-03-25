@@ -171,65 +171,6 @@ const fetchGeofences = async () => {
   return [];
 };
 
-/** Filter route data by markers (V1 parity for marker_in_out reports) */
-const filterDataByMarkers = async (data, markerIds) => {
-  if (!markerIds || markerIds.length === 0) {
-    return data;
-  }
-
-  const allMarkers = await fetchMarkers();
-  const selectedMarkers = allMarkers.filter((m) => markerIds.includes(m.id));
-
-  if (selectedMarkers.length === 0) {
-    return data;
-  }
-
-  // For each position, check if it's inside any selected marker radius
-  return data.filter((pos) => {
-    if (!pos.latitude || !pos.longitude) return false;
-
-    for (const marker of selectedMarkers) {
-      const markerLat = marker.latitude || marker.attributes?.latitude;
-      const markerLng = marker.longitude || marker.attributes?.longitude;
-      const radius = marker.attributes?.radius || 100;
-
-      if (markerLat && markerLng) {
-        const distance = getDistance(pos.latitude, pos.longitude, markerLat, markerLng);
-        if (distance <= radius) {
-          return true;
-        }
-      }
-    }
-    return false;
-  });
-};
-
-/** Filter route data by zones (V1 parity for zone_in_out reports) */
-const filterDataByZones = async (data, zoneIds) => {
-  if (!zoneIds || zoneIds.length === 0) {
-    return data;
-  }
-
-  const allGeofences = await fetchGeofences();
-  const selectedZones = allGeofences.filter((g) => zoneIds.includes(g.id));
-
-  if (selectedZones.length === 0) {
-    return data;
-  }
-
-  // For each position, check if it's inside any selected zone
-  return data.filter((pos) => {
-    if (!pos.latitude || !pos.longitude) return false;
-
-    for (const zone of selectedZones) {
-      if (isPointInGeofence(pos.latitude, pos.longitude, zone)) {
-        return true;
-      }
-    }
-    return false;
-  });
-};
-
 /** Generate marker in/out events from route data (V1 parity) */
 const generateMarkerInOutEvents = async (data, markerIds) => {
   if (!markerIds || markerIds.length === 0) {

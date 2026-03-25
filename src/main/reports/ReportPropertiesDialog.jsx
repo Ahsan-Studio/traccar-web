@@ -191,12 +191,6 @@ const ReportPropertiesDialog = ({
     return sensorTypes.includes(form.type);
   }, [form.type]);
 
-  /* Check if data items should be shown for this report type */
-  const showDataItems = useMemo(() => {
-    const dataItemsTypes = DATA_ITEMS[form.type];
-    return dataItemsTypes && dataItemsTypes.length > 0;
-  }, [form.type]);
-
   /* Check if markers should be enabled for this report type (V1 parity) */
   const showMarkers = useMemo(() => {
     const markerTypes = ['marker_in_out', 'marker_in_out_gen'];

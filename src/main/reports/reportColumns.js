@@ -2,7 +2,6 @@
 const formatDateTime = (dt) => { if (!dt) return ''; return new Date(dt).toLocaleString(); };
 const formatShortDateTime = (dt) => { if (!dt) return ''; const d = new Date(dt); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 const formatDuration = (ms) => { if (!ms) return ''; const s = Math.floor(ms / 1000); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const sec = s % 60; return `${h}h ${m}m ${sec}s`; };
-const formatDurationShort = (ms) => { if (!ms) return ''; const s = Math.floor(ms / 1000); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h}h ${m}m`; };
 const formatDistance = (m) => (m ? `${(m / 1000).toFixed(2)} km` : '0 km');
 const formatSpeed = (v) => (v ? `${(v * 1.852).toFixed(1)} km/h` : '0 km/h');
 const formatFuel = (v) => (v ? `${v.toFixed(2)} L` : '0 L');
@@ -87,7 +86,7 @@ export const COLUMN_MAP = {
   // Service columns
   service: { key: 'serviceName', label: 'Service' },
   last_service: { key: 'lastService', label: 'Last Service', format: formatShortDateTime },
-  status: { key: 'status', label: 'Status' },
+  service_status: { key: 'status', label: 'Status' },
 
   // Fuel columns
   before: { key: 'fuelBefore', label: 'Before', format: formatFuel },

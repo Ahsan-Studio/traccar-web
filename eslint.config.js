@@ -13,6 +13,7 @@ export default [
       'theme.js',
       'vite.config.js',
       'vitest.config.js',
+      'playwright.config.js',
       'e2e/**',
       '**/__tests__/**',
       '**/*.test.js',

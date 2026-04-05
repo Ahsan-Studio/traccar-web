@@ -76,8 +76,8 @@ export const createScheduledReport = async (template, calendarId) => {
     body: JSON.stringify({
       calendarId: calendarId,
       type: traccarReportType,
-      description: JSON.stringify({
-        name: template.name,
+      description: template.name || 'Report',
+      attributes: {
         originalType: template.type,
         format: template.format || 'html',
         deviceIds: template.deviceIds || [],
@@ -87,16 +87,13 @@ export const createScheduledReport = async (template, calendarId) => {
         showAddresses: template.showAddresses,
         stopDuration: template.stopDuration,
         speedLimit: template.speedLimit,
-        // Day/Night config
         nightStartHour: template.nightStartHour,
         nightStartMinute: template.nightStartMinute,
         nightEndHour: template.nightEndHour,
         nightEndMinute: template.nightEndMinute,
-        // RAG config
         ragLowScore: template.ragLowScore,
         ragHighScore: template.ragHighScore,
-      }),
-      attributes: {},
+      },
     }),
   });
 
@@ -148,8 +145,8 @@ export const updateScheduledReport = async (reportId, template, calendarId) => {
       id: reportId,
       calendarId: calendarId,
       type: traccarReportType,
-      description: JSON.stringify({
-        name: template.name,
+      description: template.name || 'Report',
+      attributes: {
         originalType: template.type,
         format: template.format || 'html',
         deviceIds: template.deviceIds || [],
@@ -165,8 +162,7 @@ export const updateScheduledReport = async (reportId, template, calendarId) => {
         nightEndMinute: template.nightEndMinute,
         ragLowScore: template.ragLowScore,
         ragHighScore: template.ragHighScore,
-      }),
-      attributes: {},
+      },
     }),
   });
 
@@ -200,13 +196,16 @@ export const fetchScheduledReports = async () => {
 
   const reports = await response.json();
 
-  // Parse description JSON
+  // Parse attributes (config stored in attributes, name in description)
   return reports.map((report) => {
     try {
-      const desc = JSON.parse(report.description || '{}');
+      const attrs = typeof report.attributes === 'string'
+        ? JSON.parse(report.attributes || '{}')
+        : (report.attributes || {});
       return {
         ...report,
-        ...desc,
+        name: report.description || attrs.name || 'Report',
+        ...attrs,
         traccarId: report.id,
         calendarId: report.calendarId,
       };

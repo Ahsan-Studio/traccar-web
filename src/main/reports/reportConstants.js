@@ -141,6 +141,7 @@ export const REPORT_TYPES = [
   { id: 'object_info', label: 'Object Information', group: 'Text Reports', endpoint: '/api/reports/summary' },
   { id: 'current_position', label: 'Current Position', group: 'Text Reports', endpoint: '/api/reports/summary' },
   { id: 'current_position_off', label: 'Current Position (Offline)', group: 'Text Reports', endpoint: '/api/reports/summary' },
+  { id: 'route', label: 'Route', group: 'Text Reports', endpoint: '/api/reports/route' },
   { id: 'route_data_sensors', label: 'Route Data with Sensors', group: 'Text Reports', endpoint: '/api/reports/route' },
   { id: 'drives_stops', label: 'Drives and Stops', group: 'Text Reports', endpoint: '/api/reports/trips' },
   { id: 'drives_stops_sensors', label: 'Drives and Stops with Sensors', group: 'Text Reports', endpoint: '/api/reports/trips' },

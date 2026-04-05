@@ -329,13 +329,43 @@ const generateZoneInOutEvents = async (data, zoneIds) => {
   return events;
 };
 
+/** Maximum records to fetch per device to prevent stack overflow */
+const MAX_RECORDS_PER_DEVICE = 10000;
+/** Maximum days allowed in date range */
+const MAX_DATE_RANGE_DAYS = 90;
+
 /** Re-fetch report data from Traccar API using stored params (V1 parity) */
 export const refetchReportData = async (gen) => {
-  const rt = REPORT_TYPE_MAP[gen.type];
-  if (!rt || !gen.deviceIds?.length || !gen.dateFrom || !gen.dateTo) return [];
+  console.log('[DEBUG] refetchReportData called with:', { type: gen.type, deviceIds: gen.deviceIds, dateFrom: gen.dateFrom, dateTo: gen.dateTo });
 
-  const from = new Date(gen.dateFrom).toISOString();
-  const to = new Date(gen.dateTo).toISOString();
+  const rt = REPORT_TYPE_MAP[gen.type];
+  if (!rt) {
+    console.error('[DEBUG] Report type not found in REPORT_TYPE_MAP:', gen.type);
+    return [];
+  }
+  if (!gen.deviceIds?.length) {
+    console.error('[DEBUG] No deviceIds provided');
+    return [];
+  }
+  if (!gen.dateFrom || !gen.dateTo) {
+    console.error('[DEBUG] Missing dateFrom or dateTo');
+    return [];
+  }
+
+  const fromDate = new Date(gen.dateFrom);
+  const toDate = new Date(gen.dateTo);
+  const from = fromDate.toISOString();
+  const to = toDate.toISOString();
+
+  // Check date range - warn if too large
+  const daysDiff = (toDate - fromDate) / (1000 * 60 * 60 * 24);
+  if (daysDiff > MAX_DATE_RANGE_DAYS) {
+    console.warn(`Date range too large: ${Math.round(daysDiff)} days. Max recommended: ${MAX_DATE_RANGE_DAYS} days.`);
+    // Auto-limit the date range to prevent overflow
+    const limitedFrom = new Date(toDate.getTime() - MAX_DATE_RANGE_DAYS * 24 * 60 * 60 * 1000);
+    gen.dateFrom = limitedFrom.toISOString();
+    console.warn(`Auto-limited date range to last ${MAX_DATE_RANGE_DAYS} days: ${gen.dateFrom} to ${gen.dateTo}`);
+  }
 
   // RAG reports need route data to compute scores
   if (gen.type === 'rag' || gen.type === 'rag_driver') {
@@ -377,7 +407,13 @@ export const refetchReportData = async (gen) => {
     const resp = await fetch(url, { headers: { Accept: 'application/json' } });
     if (resp.ok) {
       const json = await resp.json();
-      allData.push(...json);
+      // Limit data to prevent stack overflow
+      if (json.length > MAX_RECORDS_PER_DEVICE) {
+        console.warn(`Device ${devId} returned ${json.length} records, limiting to ${MAX_RECORDS_PER_DEVICE}`);
+        allData.push(...json.slice(-MAX_RECORDS_PER_DEVICE)); // Take most recent records
+      } else {
+        allData.push(...json);
+      }
     }
   }
 
